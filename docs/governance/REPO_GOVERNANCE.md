@@ -28,7 +28,7 @@ One coherent concern per branch.
 type(scope): description
 
 Examples:
-feat(auth): add parent auth emulator session support
+feat(auth): add example auth session support
 docs(governance): add phase model documentation
 fix(build): resolve TypeScript strict mode errors
 chore(repo): update .gitignore for build outputs

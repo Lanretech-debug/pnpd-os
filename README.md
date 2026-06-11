@@ -1,10 +1,15 @@
 # PNPD-OS
 
 > **Project Normalisation & Product Delivery Operating System**
+> **Version:** v0.1.0 — early-stage governance and orchestration documentation framework
 
 A reusable governance, agent orchestration, review/audit, and product strategy framework for AI-assisted software projects.
 
 ---
+
+## Version Status
+
+PNPD OS is currently **v0.1.0**. It is an **early-stage governance and orchestration documentation framework**. It does not guarantee correctness, security, compliance, or zero drift. It does not replace human review or owner judgment.
 
 ## What PNPD-OS Is
 

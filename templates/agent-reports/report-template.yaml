@@ -1,0 +1,97 @@
+# Agent Report Template
+
+> Generic template for agent-generated reports (self-review, verification, audit, decision).
+> Fill in all fields. No inline secrets. Reference evidence by file path.
+
+---
+
+```yaml
+verdict:            # PASS | FAIL | BLOCKED | NEEDS_CHANGES | ACCEPTED_WITH_CAVEATS
+agent:              # agent_id of the reporting agent
+task_id:            # task identifier
+branch:             # git branch name
+scope:              # brief scope summary
+evidence:           # list of evidence file paths (never inline content)
+gates:              # list of gates executed and their results
+risks:              # list of identified risks with severity
+next_action:        # single next action for the receiving agent
+timestamp:          # ISO 8601 UTC
+```
+
+---
+
+## Field Definitions
+
+### `verdict`
+The overall conclusion of this report. One of:
+- `PASS` — all checks passed, no issues found
+- `FAIL` — checks failed, issues found
+- `BLOCKED` — cannot proceed due to blocker
+- `NEEDS_CHANGES` — changes required before re-evaluation
+- `ACCEPTED_WITH_CAVEATS` — acceptable but owner must acknowledge listed caveats
+
+### `agent`
+The agent that generated this report. Use the agent_id from the Agent Registry.
+
+### `task_id`
+The task this report relates to. Must match the task ledger entry.
+
+### `branch`
+The git branch where the work was performed.
+
+### `scope`
+Brief description of what was evaluated.
+
+### `evidence`
+List of file paths to evidence documents. Never include evidence content inline.
+Example: `"audits/self-review-TASK-001.md"`
+
+### `gates`
+List of gates executed and their results. Each gate entry includes:
+- `name`: gate name
+- `result`: PASS | FAIL | SKIPPED | BLOCKED | NOT_RUN
+- `detail`: brief result detail
+
+### `risks`
+List of identified risks. Each risk includes:
+- `description`: risk description
+- `severity`: LOW | MEDIUM | HIGH | CRITICAL
+- `mitigation`: how the risk is mitigated (if applicable)
+
+### `next_action`
+A single, concrete next action for the receiving agent. Must not be empty.
+
+### `timestamp`
+ISO 8601 UTC timestamp when the report was generated.
+
+---
+
+## Example (Generic)
+
+```yaml
+verdict: "PASS"
+agent: "example-agent"
+task_id: "TASK-001"
+branch: "feature/example-branch"
+scope: "Implement example feature with tests"
+evidence:
+  - "audits/report-TASK-001.md"
+  - "audits/diff-TASK-001.txt"
+gates:
+  - name: "scope_check"
+    result: "PASS"
+    detail: "All changes within allowed files"
+  - name: "secret_scan"
+    result: "PASS"
+    detail: "No secrets detected"
+risks:
+  - description: "Example risk description"
+    severity: "LOW"
+    mitigation: "Example mitigation"
+next_action: "Route to next agent for verification"
+timestamp: "2026-06-10T12:00:00Z"
+```
+
+---
+
+*This template is part of the PNPD-OS AgentBridge reporting framework.*

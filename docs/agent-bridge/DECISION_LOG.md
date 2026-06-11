@@ -135,7 +135,7 @@ merge_authorization:
   branch: "feat/example-feature"
   target: "main"
   timestamp: "2026-06-10T12:30:00Z"
-next_action: "DeepSeek merge PR #99 into main"
+next_action: "DeepSeek merge PR into main"
 timestamp: "2026-06-10T12:30:00Z"
 evidence_refs:
   - "audits/decision-DEC-001.md"
@@ -160,7 +160,7 @@ merge_authorization:
   branch: "feat/another-feature"
   target: "main"
   timestamp: "2026-06-10T13:00:00Z"
-next_action: "DeepSeek merge PR #100; create follow-up TASK-007 for missing test"
+next_action: "DeepSeek merge PR; create follow-up TASK-007 for missing test"
 timestamp: "2026-06-10T13:00:00Z"
 evidence_refs:
   - "audits/decision-DEC-002.md"
@@ -184,7 +184,7 @@ merge_authorized: true
 merge_authorization:
   pr_number: "N/A"
   branch: "docs/pnpd-agentbridge"
-  target: "docs/pnpd-os-phase1"
+  target: "docs/example-protocol/"
   timestamp: "2026-06-10T14:00:00Z"
 next_action: "DeepSeek merge governance docs PR; queue post-merge audit"
 timestamp: "2026-06-10T14:00:00Z"

@@ -26,11 +26,11 @@ branch: "feat/example-feature"
 target_branch: "main"
 risk_level: "MEDIUM"
 files_changed: 12
-scope_summary: "Add parent auth emulator session support"
+scope_summary: "Add example auth session support"
 evidence:
   - hermes_verification: "audits/hermes-verify-TASK-001.md"
   - deepseek_self_review: "audits/self-review-TASK-001.md"
-  - full_diff: "PR #99 diff"
+  - full_diff: "audits/example-diff.txt"
 next_action: "Codex perform full pre-merge audit"
 timestamp: "2026-06-10T12:00:00Z"
 ```
@@ -51,7 +51,7 @@ merge_commit: "abc123def456"
 risk_level: "HIGH"
 risk_categories:
   - "auth"
-  - "child_data"
+  - "domain_data"
 reason_for_post_merge: "Owner override accepted; must verify merged state"
 owner_decision_ref: "DEC-005"
 evidence:

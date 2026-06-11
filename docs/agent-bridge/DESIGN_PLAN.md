@@ -3,7 +3,7 @@
 > **Status:** Phase 1 (docs-only bootstrap)
 > **Branch:** `docs/pnpd-agentbridge`
 > **Created:** 2026-06-10
-> **Parent PR:** `docs/pnpd-os-phase1` (PR #1)
+> **Base PR:** `docs/example-protocol/` (example PR)
 > **Do not merge into product branches.**
 
 ---
@@ -176,7 +176,7 @@ Phase 1 (current): docs only.
 
 **Branch:** `docs/pnpd-agentbridge`
 
-**Reason:** PNPD AgentBridge is substantial and should not bloat PR #1 or touch PR #2. It builds on the Review & Audit Layer from PR #1 and should merge independently after owner review.
+**Reason:** PNPD AgentBridge is substantial and should not bloat preceding PRs. It builds on the Review & Audit Layer from earlier governance PRs and should merge independently after owner review.
 
 ---
 

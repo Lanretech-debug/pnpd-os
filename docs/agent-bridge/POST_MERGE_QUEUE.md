@@ -25,10 +25,10 @@ A PR is high-risk if it touches any of these categories:
 | Category                | Examples                                                          |
 | ----------------------- | ----------------------------------------------------------------- |
 | `auth`                  | Authentication, session, login, token handling, OAuth             |
-| `child_data`            | Any child PII, learning data, progress records, profile data      |
-| `production_firebase`   | Firestore rules, Firebase config, production database changes     |
+| `domain_data`           | Any domain-specific PII, user data, progress records, profile data      |
+| `production_integration`| Production configuration, database changes, integration endpoints     |
 | `ai_safety`             | AI/ML model changes, prompt changes, content filtering            |
-| `rules_security`        | Security rules, Firestore rules, Storage rules, IAM changes       |
+| `rules_security`        | Security rules, Storage rules, IAM changes       |
 | `large_integration_pr`  | PR touching 10+ files across multiple domains                     |
 | `owner_override_accepted`| Owner accepted caveats or overrode audit gate                     |
 
@@ -50,8 +50,8 @@ merge_commit: "abc123def456"
 risk_level: "HIGH"
 risk_categories:
   - "auth"
-  - "child_data"
-reason_for_post_merge_audit: "PR touches auth and child data categories. Post-merge audit required per policy."
+  - "domain_data"
+reason_for_post_merge_audit: "PR touches auth and domain data categories. Post-merge audit required per policy."
 owner_decision_ref: "DEC-001"
 status: "POST_MERGE_AUDIT_REQUESTED"
 next_action: "Codex post-merge audit of merged diff in target branch"

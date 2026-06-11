@@ -1,0 +1,120 @@
+# Post-Merge Audit Template
+
+> Generic template for post-merge audits.
+> Post-merge audit reviews the merged state in the target branch — not just the PR diff.
+
+---
+
+## Audit Metadata
+
+| Field | Value |
+| ----- | ----- |
+| **Audit ID** | |
+| **Task ID** | |
+| **PR Number** | |
+| **Merged Branch** | |
+| **Target Branch** | |
+| **Merge Commit** | |
+| **Auditor** | |
+| **Date** | |
+| **Trigger** | `HIGH_RISK` / `OWNER_OVERRIDE` / `OWNER_REQUEST` / `OPTIONAL` |
+
+---
+
+## Merge Verification
+
+- [ ] Merge commit present in target branch history
+- [ ] Merged diff matches approved PR scope
+- [ ] No merge-resolution errors detected
+- [ ] No cross-PR drift introduced
+
+**Notes:**
+
+---
+
+## Main Branch Sync
+
+- [ ] Target branch is up to date with main before merge
+- [ ] No merge conflicts resolved incorrectly
+- [ ] No orphaned files or directories
+
+**Notes:**
+
+---
+
+## Post-Merge Gates
+
+- [ ] Post-merge build/tests (if applicable) passing
+- [ ] Documentation updated to reflect merged changes
+- [ ] AgentBridge state files updated (if applicable)
+- [ ] Task ledger reflects MERGED state
+
+**Notes:**
+
+---
+
+## State / Doc Update Check
+
+- [ ] AGENTS.md (or equivalent) reflects new state if needed
+- [ ] Governance docs updated if governance changed
+- [ ] No stale references to pre-merge state
+
+**Notes:**
+
+---
+
+## Risk Review
+
+| Risk | Severity | Identified? | Mitigation |
+| ---- | -------- | ----------- | ---------- |
+| Scope drift in merge | | | |
+| Secret exposure in merged state | | | |
+| Authority bypass | | | |
+| Broken gate chain | | | |
+| Stale documentation | | | |
+
+---
+
+## Findings
+
+<!-- List all findings with severity. -->
+
+| # | Finding | Severity |
+| - | ------- | -------- |
+| 1 | | |
+| 2 | | |
+
+---
+
+## Rollback Recommendation
+
+- [ ] Rollback NOT recommended
+- [ ] Rollback RECOMMENDED
+
+**Rationale (if rollback recommended):**
+
+---
+
+## Follow-Up Actions
+
+| Action | Assigned To | Priority |
+| ------ | ----------- | -------- |
+| | | |
+
+---
+
+## Overall Verdict
+
+- [ ] `POST_MERGE_VERIFIED` — Merged state is clean
+- [ ] `POST_MERGE_ISSUES_FOUND` — Issues found, follow-up required
+- [ ] `POST_MERGE_ROLLBACK_RECOMMENDED` — Rollback recommended
+
+---
+
+## Next Action
+
+<!-- Single concrete next action. -->
+
+---
+
+*This template is part of the PNPD-OS Review & Audit Layer.*

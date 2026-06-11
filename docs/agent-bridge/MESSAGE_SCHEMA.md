@@ -79,11 +79,11 @@ allowed_files:
   - "docs/agent-bridge/*.md"
 forbidden_files:
   - "AGENTS.md"
-  - ".agents/skills/*"
+  - "skills/example-skill/*"
   - "docs/product/*"
   - "docs/brain/*"
   - "src/*"
-  - "firebase/*"
+  - "config/example-config/*"
 gates_run:
   - "scope_check"
   - "forbidden_files_check"
@@ -181,10 +181,10 @@ requested_by: "hermes"
 assigned_to: "codex"
 pr_number: "N/A"
 branch: "docs/pnpd-agentbridge"
-base_branch: "docs/pnpd-os-phase1"
+base_branch: "docs/example-protocol/"
 pr_size: "SMALL"  # SMALL | MEDIUM | LARGE
 risk_level: "LOW"
-risk_categories: []  # auth, child_data, production_firebase, ai_safety, rules_security
+risk_categories: []  # auth, domain_data, production_integration, ai_safety, rules_security
 evidence:
   - herm_verification: "audits/hermes-verify-TASK-001.md"
   - deepseek_self_review: "audits/self-review-TASK-001.md"
@@ -262,7 +262,7 @@ decision_id: "DEC-001"
 task_id: "TASK-001"
 owner: "owner"
 decision_type: "accept_caveat"  # approve_merge | reject_merge | request_patch | accept_caveat | override_audit_gate | defer | rollback
-rationale: "Caveat CV-001 (AGENTS.md wiring deferred) is acceptable. Wiring should be a separate small PR after PR #1 merges. Proceeding with merge."
+rationale: "Caveat CV-001 (AGENTS.md wiring deferred) is acceptable. Wiring should be a separate small follow-up PR. Proceeding with merge."
 accepted_risks:
   - "AgentBridge protocol not yet wired into AGENTS.md — low risk, docs-only"
 rejected_recommendations: []
@@ -271,7 +271,7 @@ merge_authorized: true
 merge_authorization:
   pr_number: "N/A"
   branch: "docs/pnpd-agentbridge"
-  target: "docs/pnpd-os-phase1"
+  target: "docs/example-protocol/"
   timestamp: "2026-06-10T12:30:00Z"
 next_action: "DeepSeek prepare for merge; Codex queue post-merge audit if high-risk"
 timestamp: "2026-06-10T12:30:00Z"
@@ -292,7 +292,7 @@ requested_by: "owner"
 assigned_to: "codex"
 pr_number: "N/A"
 merged_branch: "docs/pnpd-agentbridge"
-target_branch: "docs/pnpd-os-phase1"
+target_branch: "docs/example-protocol/"
 merge_commit: "ghi789jkl012"
 risk_level: "MEDIUM"
 risk_categories:

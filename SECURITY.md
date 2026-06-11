@@ -8,10 +8,8 @@ If you discover a vulnerability in PNPD-OS documentation (e.g., a governance rul
 
 **Do not open a public issue.**
 
-Email the maintainer directly. Include:
-- A description of the vulnerability
-- Steps to reproduce or a proof of concept
-- Your assessment of severity
+Report vulnerabilities using GitHub private vulnerability reporting if enabled on the repository.
+If private vulnerability reporting is unavailable, open a GitHub security advisory request or create a minimal issue requesting a secure contact channel without disclosing sensitive details.
 
 You will receive a response within 72 hours.
 

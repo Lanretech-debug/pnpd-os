@@ -1,0 +1,111 @@
+# PR Audit Checklist
+
+> Generic pre-merge PR audit checklist.
+> Complete all items. Document any failures or caveats.
+
+---
+
+## Audit Metadata
+
+| Field | Value |
+| ----- | ----- |
+| **Audit ID** | |
+| **PR Number** | |
+| **Branch** | |
+| **Target Branch** | |
+| **Task ID** | |
+| **Auditor** | |
+| **Date** | |
+
+---
+
+## Audit Checklist
+
+### 1. Scope Check
+
+- [ ] PR scope matches approved task scope
+- [ ] No files changed outside allowed file list
+- [ ] No unrelated changes mixed in
+- [ ] No forbidden files modified
+
+**Notes:**
+
+---
+
+### 2. File Diff Check
+
+- [ ] All file changes reviewed
+- [ ] No generated files committed (build outputs, dependency folders)
+- [ ] No `.env` or configuration secrets in diff
+- [ ] File renames/deletions are intentional
+
+**Notes:**
+
+---
+
+### 3. Test / Gate Check
+
+- [ ] All required gates executed (not skipped without reason)
+- [ ] Failed gates are recorded, not silently passed
+- [ ] Self-review completed and documented
+- [ ] Verification completed (if applicable)
+
+**Notes:**
+
+---
+
+### 4. Secret Scan
+
+- [ ] No API keys, tokens, or credentials in diff
+- [ ] No private keys or certificates
+- [ ] No hardcoded passwords
+- [ ] No provider-specific secret patterns
+
+**Notes:**
+
+---
+
+### 5. Authority Drift Scan
+
+- [ ] No agent certified its own work as final
+- [ ] Merge-authorized only by owner (not by implementing agent)
+- [ ] Audit chain preserved (implement → verify → audit → owner)
+- [ ] No gate skipped without recorded reason
+
+**Notes:**
+
+---
+
+### 6. Merge Recommendation
+
+- [ ] `MERGE_OK` — PR is safe to merge as-is
+- [ ] `MERGE_OK_OWNER_ACCEPTS_CAVEATS` — Owner must accept listed caveats
+- [ ] `DO_NOT_MERGE_REQUEST_CHANGES` — Changes required before merge
+- [ ] `DO_NOT_MERGE_BLOCKED` — Blocker must be resolved first
+
+**Recommendation:**
+
+**Caveats (if any):**
+
+---
+
+## Audit Summary
+
+| Check | Result |
+| ----- | ------ |
+| Scope Check | |
+| File Diff Check | |
+| Test / Gate Check | |
+| Secret Scan | |
+| Authority Drift Scan | |
+| **Overall** | |
+
+---
+
+## Next Action
+
+<!-- Single concrete next action. -->
+
+---
+
+*This checklist is part of the PNPD-OS Review & Audit Layer.*
