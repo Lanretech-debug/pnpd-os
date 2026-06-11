@@ -1,9 +1,9 @@
 # PNPD AgentBridge — Design Plan
 
 > **Status:** Phase 1 (docs-only bootstrap)
-> **Branch:** `docs/pnpd-agentbridge`
+> **Branch:** `example-governance-branch`
 > **Created:** 2026-06-10
-> **Base PR:** `docs/example-protocol/` (example PR)
+> **Dependency:** `docs/example-protocol/`
 > **Do not merge into product branches.**
 
 ---
@@ -174,9 +174,9 @@ Phase 1 (current): docs only.
 
 `CREATE_FOLLOWUP_GOVERNANCE_BRANCH`
 
-**Branch:** `docs/pnpd-agentbridge`
+**Branch:** `example-governance-branch`
 
-**Reason:** PNPD AgentBridge is substantial and should not bloat preceding PRs. It builds on the Review & Audit Layer from earlier governance PRs and should merge independently after owner review.
+**Reason:** PNPD AgentBridge is substantial and should not bloat earlier changes. It builds on the Review & Audit Layer from earlier governance changes and should merge independently after owner review.
 
 ---
 

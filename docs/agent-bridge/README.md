@@ -2,7 +2,7 @@
 
 > **Communication & State Layer for PNPD-OS**
 > Phase 1 — docs-only bootstrap
-> Branch: `docs/pnpd-agentbridge`
+> Branch: `example-governance-branch`
 
 ---
 

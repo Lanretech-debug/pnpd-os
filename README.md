@@ -11,6 +11,16 @@ A reusable governance, agent orchestration, review/audit, and product strategy f
 
 PNPD OS is currently **v0.1.0**. It is an **early-stage governance and orchestration documentation framework**. It does not guarantee correctness, security, compliance, or zero drift. It does not replace human review or owner judgment.
 
+## Public Release Gate
+
+Public release or visibility changes require:
+
+1. clean verification,
+2. Codex pre-publication audit,
+3. final owner approval.
+
+Do not publish or change visibility based only on implementation or self-review.
+
 ## What PNPD-OS Is
 
 PNPD-OS is a **framework**, not a runtime. It provides the rules, protocols, state machines, and strategy layers that keep AI-assisted software projects on track — from idea capture through production delivery.

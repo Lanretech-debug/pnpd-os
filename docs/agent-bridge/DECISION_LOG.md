@@ -22,7 +22,7 @@ overridden_gates:
   - "gate_name: reason for override"
 merge_authorized: true
 merge_authorization:
-  pr_number: "99"
+  pr_id: "PR-EXAMPLE"
   branch: "feat/example"
   target: "main"
   timestamp: "2026-06-10T12:30:00Z"
@@ -97,7 +97,7 @@ If `merge_authorized: true`, the decision MUST include:
 
 ```yaml
 merge_authorization:
-  pr_number: "99"
+  pr_id: "PR-EXAMPLE"
   branch: "feat/example"
   target: "main"
   timestamp: "2026-06-10T12:30:00Z"
@@ -131,7 +131,7 @@ rejected_recommendations: []
 overridden_gates: []
 merge_authorized: true
 merge_authorization:
-  pr_number: "99"
+  pr_id: "PR-EXAMPLE"
   branch: "feat/example-feature"
   target: "main"
   timestamp: "2026-06-10T12:30:00Z"
@@ -156,7 +156,7 @@ rejected_recommendations: []
 overridden_gates: []
 merge_authorized: true
 merge_authorization:
-  pr_number: "100"
+  pr_id: "PR-EXAMPLE"
   branch: "feat/another-feature"
   target: "main"
   timestamp: "2026-06-10T13:00:00Z"
@@ -183,7 +183,7 @@ overridden_gates:
 merge_authorized: true
 merge_authorization:
   pr_number: "N/A"
-  branch: "docs/pnpd-agentbridge"
+  branch: "example-governance-branch"
   target: "docs/example-protocol/"
   timestamp: "2026-06-10T14:00:00Z"
 next_action: "DeepSeek merge governance docs PR; queue post-merge audit"
