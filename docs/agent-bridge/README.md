@@ -148,7 +148,7 @@ Full controls in `TASK_LEDGER.md`.
 
 ## AGENTS.md Wiring (Deferred)
 
-AGENTS.md wiring for AgentBridge should be added **later**, after the base governance PR is merged, or when the owner explicitly approves a small follow-up wiring PR. Do not modify AGENTS.md as part of this Phase 1 bootstrap.
+AGENTS.md wiring for AgentBridge should be added later when the owner explicitly approves a small follow-up governance update.
 
 ---
 
