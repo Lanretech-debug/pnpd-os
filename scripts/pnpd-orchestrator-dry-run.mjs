@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import process from "node:process";
 
 const STATES = new Set([
@@ -29,6 +30,7 @@ const SECRET_VALUE_PATTERN = /(sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9_]{12,}|xox[b
 const FORBIDDEN_LEDGER_PATH = ["/Users/lanretech/Documents", "BricLab Kids"].join("/");
 const LEDGER_DEFAULT_DIR = ".pnpd/ledger";
 const HANDOFF_DEFAULT_DIR = ".pnpd/handoffs";
+const LOCK_DEFAULT_DIR = ".pnpd/locks";
 const GENERATOR_VERSION = "1.0.0";
 
 function parseArgs(argv) {
@@ -39,7 +41,9 @@ function parseArgs(argv) {
     writeHandoff: false,
     noWrite: false,
     ledgerDir: null,
-    handoffDir: null
+    handoffDir: null,
+    useLock: false,
+    lockDir: null
   };
 
   for (let i = 2; i < argv.length; i += 1) {
@@ -52,6 +56,14 @@ function parseArgs(argv) {
       args.noWrite = true;
     } else if (arg === "--write-handoff") {
       args.writeHandoff = true;
+    } else if (arg === "--use-lock") {
+      args.useLock = true;
+    } else if (arg === "--lock-dir") {
+      if (!argv[i + 1] || argv[i + 1].startsWith("--")) {
+        throw new Error("--lock-dir requires a path value.");
+      }
+      args.lockDir = argv[i + 1];
+      i += 1;
     } else if (arg === "--handoff-dir") {
       if (!argv[i + 1] || argv[i + 1].startsWith("--")) {
         throw new Error("--handoff-dir requires a path value.");
@@ -92,7 +104,9 @@ Phase 0 constraints:
   - runs local git read commands only
   - writes no files unless --write-ledger or --write-handoff is explicitly provided
   - creates no agent threads
-  - performs no merge, deploy, push, or GitHub mutation\n\nWrite flags (opt-in, off by default):\n  --write-ledger         Append one JSONL ledger record per repo.\n  --write-handoff        Create one local handoff JSON file per repo.\n  --no-write             Override all write flags; perform zero writes.\n  --ledger-dir <path>    Custom ledger directory under .pnpd/ledger.\n  --handoff-dir <path>   Custom handoff directory under .pnpd/handoffs.`);
+  - performs no merge, deploy, push, or GitHub mutation\n\nWrite flags (opt-in, off by default):\n  --write-ledger         Append one JSONL ledger record per repo.\n  --write-handoff        Create one local handoff JSON file per repo.\n  --no-write             Override all write flags; perform zero writes.\n  --ledger-dir <path>    Custom ledger directory under .pnpd/ledger.\n  --use-lock            Acquire a lockfile before writes; release on exit.
+  --lock-dir <path>      Custom lock directory under .pnpd/locks.
+  --handoff-dir <path>   Custom handoff directory under .pnpd/handoffs.`);
 }
 
 function readRegistry(registryPath) {
@@ -425,6 +439,41 @@ function generateRunId() {
   return "pnpd-orchestrator-" + ts + "-" + rand;
 }
 
+
+function validateLockDirPath(requestedDir, repoRoot) {
+  const lockBase = path.resolve(repoRoot, LOCK_DEFAULT_DIR);
+  
+  if (!requestedDir) return { valid: true, resolved: lockBase };
+  
+  if (path.isAbsolute(requestedDir)) {
+    return { valid: false, reason: "lock-dir must be a relative path" };
+  }
+  
+  if (requestedDir.includes("..")) {
+    return { valid: false, reason: "lock-dir must not contain .." };
+  }
+  
+  const resolved = path.resolve(repoRoot, requestedDir);
+  
+  const rel = path.relative(lockBase, resolved);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    return { valid: false, reason: "lock-dir must be inside " + LOCK_DEFAULT_DIR };
+  }
+  
+  if (fs.existsSync(resolved)) {
+    try {
+      const real = fs.realpathSync(resolved);
+      const realRel = path.relative(lockBase, real);
+      if (realRel.startsWith("..") || path.isAbsolute(realRel)) {
+        return { valid: false, reason: "lock-dir resolves outside " + LOCK_DEFAULT_DIR + " via symlink" };
+      }
+    } catch (e) {
+      return { valid: false, reason: "lock-dir realpath check failed: " + e.message };
+    }
+  }
+  
+  return { valid: true, resolved };
+}
 
 function validateHandoffDirPath(requestedDir, repoRoot) {
   const handoffBase = path.resolve(repoRoot, HANDOFF_DEFAULT_DIR);
@@ -850,8 +899,133 @@ function writeHandoffRecords(summary, args, registryRoot, runId) {
   }
 }
 
+function buildLockRecord(runId, repoRoot, args) {
+  return {
+    lockVersion: 1,
+    runId: runId,
+    createdAt: new Date().toISOString(),
+    pid: process.pid,
+    hostname: os.hostname(),
+    repoRoot: repoRoot,
+    source: "pnpd-orchestrator-dry-run",
+    mode: "dry-run",
+    writeLedger: !!args.writeLedger,
+    writeHandoff: !!args.writeHandoff
+  };
+}
+
+function isStaleLock(lockData, thresholdMs) {
+  const createdAt = new Date(lockData.createdAt).getTime();
+  if (isNaN(createdAt)) return false;
+  
+  const age = Date.now() - createdAt;
+  if (age < thresholdMs) return false;
+  
+  try {
+    process.kill(lockData.pid, 0);
+    return false;
+  } catch (e) {
+    if (e.code === "ESRCH") return true;
+    if (e.code === "EPERM") return false;
+    return false;
+  }
+}
+
+function acquireLock(args, repoRoot, runId) {
+  const pathCheck = validateLockDirPath(args.lockDir, repoRoot);
+  if (!pathCheck.valid) {
+    console.error("pnpd-orchestrator-dry-run: lock blocked: " + pathCheck.reason);
+    process.exit(1);
+  }
+  
+  const lockDir = pathCheck.resolved;
+  const lockPath = path.join(lockDir, "orchestrator.lock");
+  
+  if (!fs.existsSync(lockDir)) {
+    fs.mkdirSync(lockDir, { recursive: true });
+  }
+  
+  if (fs.existsSync(lockPath)) {
+    let lockData = null;
+    try {
+      lockData = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+    } catch (e) {
+      console.error("pnpd-orchestrator-dry-run: existing lock is unreadable at " + lockPath);
+      process.exit(1);
+    }
+    
+    const STALE_THRESHOLD_MS = 5 * 60 * 1000;
+    const stale = isStaleLock(lockData, STALE_THRESHOLD_MS);
+    
+    const meta = "pid=" + lockData.pid +
+      " createdAt=" + lockData.createdAt +
+      " source=" + (lockData.source || "unknown") +
+      " repoRoot=" + (lockData.repoRoot || "unknown");
+    
+    if (stale) {
+      console.error("pnpd-orchestrator-dry-run: stale lock detected at " + lockPath);
+      console.error("  " + meta);
+      console.error("  The lock appears stale (PID not alive).");
+      console.error("  Manual removal: rm " + lockPath);
+    } else {
+      console.error("pnpd-orchestrator-dry-run: lock exists at " + lockPath);
+      console.error("  " + meta);
+      console.error("  Lock is still valid (PID alive or unknown).");
+    }
+    process.exit(1);
+  }
+  
+  const record = buildLockRecord(runId, repoRoot, args);
+  fs.writeFileSync(lockPath, JSON.stringify(record, null, 2), { flag: "wx" });
+  
+  process.stderr.write("pnpd-orchestrator-dry-run: lock acquired at " + lockPath + "\n");
+  
+  return { lockPath, record };
+}
+
+function releaseLock(lockInfo, runId) {
+  if (!lockInfo || !lockInfo.lockPath) return false;
+  
+  const lockPath = lockInfo.lockPath;
+  
+  if (!fs.existsSync(lockPath)) return false;
+  
+  let lockData = null;
+  try {
+    lockData = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+  } catch (e) {
+    console.error("pnpd-orchestrator-dry-run: cannot release unreadable lock at " + lockPath);
+    return false;
+  }
+  
+  if (lockData.runId !== runId) {
+    console.error("pnpd-orchestrator-dry-run: lock runId mismatch; refusing to release");
+    return false;
+  }
+  
+  if (lockData.source !== "pnpd-orchestrator-dry-run") {
+    console.error("pnpd-orchestrator-dry-run: lock source mismatch; refusing to release");
+    return false;
+  }
+  
+  if (lockData.pid !== process.pid) {
+    console.error("pnpd-orchestrator-dry-run: lock pid mismatch; refusing to release");
+    return false;
+  }
+  
+  try {
+    fs.unlinkSync(lockPath);
+    process.stderr.write("pnpd-orchestrator-dry-run: lock released at " + lockPath + "\n");
+    return true;
+  } catch (e) {
+    console.error("pnpd-orchestrator-dry-run: failed to release lock at " + lockPath + ": " + e.message);
+    return false;
+  }
+}
+
 function main() {
   const args = parseArgs(process.argv);
+  let acquiredLock = null;
   const { data, absolutePath } = readRegistry(args.registry);
   const registryRoot = process.cwd();
   const repos = [...data.repos]
@@ -866,25 +1040,36 @@ function main() {
     repos
   };
 
-  // Shared run ID for ledger + handoff correlation
-  const sharedRunId = (args.writeLedger || args.writeHandoff) && !args.noWrite ? generateRunId() : null;
+  // Shared run ID for ledger + handoff + lock correlation
+  const sharedRunId = (args.writeLedger || args.writeHandoff || args.useLock) && !args.noWrite ? generateRunId() : null;
 
-  // Ledger write (opt-in, off by default)
-  const doLedgerWrite = args.writeLedger && !args.noWrite;
-  if (doLedgerWrite) {
-    writeLedgerRecords(summary, args, registryRoot, sharedRunId);
+  // Acquire lock (opt-in, off by default)
+  if (args.useLock && !args.noWrite) {
+    acquiredLock = acquireLock(args, registryRoot, sharedRunId);
   }
 
-  // Handoff write (opt-in, off by default)
-  const doHandoffWrite = args.writeHandoff && !args.noWrite;
-  if (doHandoffWrite) {
-    writeHandoffRecords(summary, args, registryRoot, sharedRunId);
-  }
+  try {
+    // Ledger write (opt-in, off by default)
+    const doLedgerWrite = args.writeLedger && !args.noWrite;
+    if (doLedgerWrite) {
+      writeLedgerRecords(summary, args, registryRoot, sharedRunId);
+    }
 
-  if (args.json) {
-    console.log(JSON.stringify(summary, null, 2));
-  } else {
-    renderText(summary);
+    // Handoff write (opt-in, off by default)
+    const doHandoffWrite = args.writeHandoff && !args.noWrite;
+    if (doHandoffWrite) {
+      writeHandoffRecords(summary, args, registryRoot, sharedRunId);
+    }
+
+    if (args.json) {
+      console.log(JSON.stringify(summary, null, 2));
+    } else {
+      renderText(summary);
+    }
+  } finally {
+    if (acquiredLock) {
+      releaseLock(acquiredLock, sharedRunId);
+    }
   }
 }
 
