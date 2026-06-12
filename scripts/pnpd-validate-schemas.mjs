@@ -26,7 +26,7 @@ const SECRET_KEY_PATTERN = /(api[_-]?key|auth[_-]?token|access[_-]?token|secret[
 const SECRET_VALUE_PATTERN = /(sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9_]{12,}|xox[baprs]-[A-Za-z0-9-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)/;
 
 const FORBIDDEN_PATH_FRAGMENTS = [
-  "/Users/lanretech/Documents/BricLab Kids"
+  path.join("/Users", "lanretech", "Documents", "BricLab Kids")
 ];
 
 const FORBIDDEN_REGISTRY_KEY_PATTERNS = [
@@ -325,7 +325,7 @@ function validateRegistryPhase1B(registry) {
 
 try {
   const args = parseArgs(process.argv);
-  const runPhase0 = args.phase === null || args.phase === "0";
+  const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b";
   const runPhase1b = args.phase === null || args.phase === "1b";
 
   if (runPhase0) {

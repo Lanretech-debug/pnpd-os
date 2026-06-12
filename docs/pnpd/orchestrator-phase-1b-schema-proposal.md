@@ -21,8 +21,8 @@ Hermes performed no implementation, no file edits, and no branch creation.
 
 ## Scope — Schema Only
 
-This branch adds optional schema fields, a validator update, and an
-example registry update.  It does not implement any runtime behavior.
+This branch adds optional schema fields, a validator update, and this design
+record.  It does not implement any runtime behavior.
 
 ### Files Changed
 
@@ -30,13 +30,13 @@ example registry update.  It does not implement any runtime behavior.
 |---|---|
 | `.pnpd/repos.schema.json` | Extended — optional Phase 1B repo fields |
 | `.pnpd/orchestrator.schema.json` | Extended — optional Phase 1B output fields |
-| `.pnpd/repos.example.json` | Updated — Phase 1B example fields, all disabled/safe |
 | `scripts/pnpd-validate-schemas.mjs` | Extended — Phase 1B invariant checks |
 | `docs/pnpd/orchestrator-phase-1b-schema-proposal.md` | This document |
 
 ### Files Not Changed
 
 - `scripts/pnpd-orchestrator-dry-run.mjs` — no runtime change
+- `.pnpd/repos.example.json` — unchanged; remains Phase 0-compatible
 - `tests/` — no test changes
 - `.gitignore` — unchanged
 - `.pnpd/locks/` — no lock files created
@@ -119,9 +119,22 @@ This branch explicitly does NOT add:
 All new fields are optional (not in `required` arrays).  Phase 0 dry-run
 output validates unchanged against the extended schema.
 
-## Example Registry — `.pnpd/repos.example.json`
+## Example Registry Limitation — `.pnpd/repos.example.json`
 
-Phase 1B fields added to the `pnpd-os` repo entry only, all disabled/safe:
+`.pnpd/repos.example.json` is intentionally unchanged in this docs/schema
+proposal. It remains a Phase 0-compatible dry-run registry file.
+
+Reason: the current Phase 0 dry-run CLI still performs broad registry scanning.
+Adding otherwise safe Phase 1B demonstration fields such as `secrets` and
+`tokenLimit` to the example could create a runtime scanner conflict before the
+runtime scanner is explicitly updated in a later owner-approved phase.
+
+This does not hide unsafe behavior. The Phase 1B schema and validator still
+define and check the proposed fields, but the existing example registry does not
+exercise them yet.
+
+When a future owner-approved runtime or example-update phase is opened, any
+Phase 1B fields added to registry examples must remain disabled/safe:
 
 - `scheduler.enabled: false`
 - `authority.dispatchAllowed: false`
@@ -162,7 +175,7 @@ Phase 1B fields added to the `pnpd-os` repo entry only, all disabled/safe:
 ### Phase Flags
 
 - `--phase 0` — run Phase 0 invariant checks only
-- `--phase 1b` — run Phase 1B invariant checks (includes Phase 0)
+- `--phase 1b` — run Phase 0 checks and Phase 1B invariant checks
 - Default (no flag) — run all checks
 
 ## Validation Invariants
@@ -204,7 +217,7 @@ Codex must verify:
 3. No field grants dispatch, merge, deploy, or production authority
 4. All `const: false` declarations are verified in both schemas
 5. Validator checks match schema declarations
-6. Example registry contains only disabled/safe values
+6. Example registry remains Phase 0-compatible; Phase 1B example-field omission is documented
 7. No runtime code was modified
 8. No forbidden files were modified
 
@@ -218,6 +231,8 @@ Owner approval is required before Codex may merge this branch to `main`.
   `const: false` guards without explicit Owner authorization and Codex audit
 - The validator is a static check only; it does not prevent runtime
   modification of schemas after validation passes
+- The example registry does not yet demonstrate Phase 1B fields because the
+  Phase 0 dry-run scanner has not been updated for those field names
 - Example registry paths reference local filesystems that may not exist on
   other machines; this is intentional for Phase 0/1B
 
@@ -226,4 +241,4 @@ Owner approval is required before Codex may merge this branch to `main`.
 1. Codex formal audit of this branch
 2. Owner review and approval
 3. If approved: Codex merges to `main`
-4. Phase 2 planning begins from updated schema baseline
+4. Next owner-approved phase planning begins from the updated schema baseline
