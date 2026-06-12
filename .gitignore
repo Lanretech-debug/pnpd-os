@@ -1,0 +1,4 @@
+# PNPD local state (not tracked)
+.pnpd/ledger/
+.pnpd/handoffs/
+.pnpd/locks/
