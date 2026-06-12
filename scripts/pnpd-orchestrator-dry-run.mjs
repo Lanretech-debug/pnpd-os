@@ -102,7 +102,7 @@ Usage:
 Phase 0 constraints:
   - reads local registry only
   - runs local git read commands only
-  - writes no files unless --write-ledger or --write-handoff is explicitly provided
+  - writes no files unless --write-ledger, --write-handoff, or --use-lock is explicitly provided
   - creates no agent threads
   - performs no merge, deploy, push, or GitHub mutation\n\nWrite flags (opt-in, off by default):\n  --write-ledger         Append one JSONL ledger record per repo.\n  --write-handoff        Create one local handoff JSON file per repo.\n  --no-write             Override all write flags; perform zero writes.\n  --ledger-dir <path>    Custom ledger directory under .pnpd/ledger.\n  --use-lock            Acquire a lockfile before writes; release on exit.
   --lock-dir <path>      Custom lock directory under .pnpd/locks.
@@ -439,118 +439,62 @@ function generateRunId() {
   return "pnpd-orchestrator-" + ts + "-" + rand;
 }
 
+function isInsidePath(base, target) {
+  const rel = path.relative(base, target);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
+function validateStateDirPath(requestedDir, repoRoot, defaultDir, optionName) {
+  const base = path.resolve(repoRoot, defaultDir);
+
+  let resolved = base;
+
+  if (requestedDir) {
+    if (path.isAbsolute(requestedDir)) {
+      return { valid: false, reason: optionName + " must be a relative path" };
+    }
+
+    if (requestedDir.includes("..")) {
+      return { valid: false, reason: optionName + " must not contain .." };
+    }
+
+    resolved = path.resolve(repoRoot, requestedDir);
+  }
+
+  if (!isInsidePath(base, resolved)) {
+    return { valid: false, reason: optionName + " must be inside " + defaultDir };
+  }
+
+  let existing = resolved;
+  while (!fs.existsSync(existing)) {
+    const parent = path.dirname(existing);
+    if (parent === existing) break;
+    existing = parent;
+  }
+
+  try {
+    const realExisting = fs.realpathSync(existing);
+    const realResolved = path.resolve(realExisting, path.relative(existing, resolved));
+    if (!isInsidePath(base, realResolved)) {
+      return { valid: false, reason: optionName + " resolves outside " + defaultDir + " via symlink" };
+    }
+  } catch (e) {
+    return { valid: false, reason: optionName + " realpath check failed: " + e.message };
+  }
+
+  return { valid: true, resolved };
+}
 
 function validateLockDirPath(requestedDir, repoRoot) {
-  const lockBase = path.resolve(repoRoot, LOCK_DEFAULT_DIR);
-  
-  if (!requestedDir) return { valid: true, resolved: lockBase };
-  
-  if (path.isAbsolute(requestedDir)) {
-    return { valid: false, reason: "lock-dir must be a relative path" };
-  }
-  
-  if (requestedDir.includes("..")) {
-    return { valid: false, reason: "lock-dir must not contain .." };
-  }
-  
-  const resolved = path.resolve(repoRoot, requestedDir);
-  
-  const rel = path.relative(lockBase, resolved);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) {
-    return { valid: false, reason: "lock-dir must be inside " + LOCK_DEFAULT_DIR };
-  }
-  
-  if (fs.existsSync(resolved)) {
-    try {
-      const real = fs.realpathSync(resolved);
-      const realRel = path.relative(lockBase, real);
-      if (realRel.startsWith("..") || path.isAbsolute(realRel)) {
-        return { valid: false, reason: "lock-dir resolves outside " + LOCK_DEFAULT_DIR + " via symlink" };
-      }
-    } catch (e) {
-      return { valid: false, reason: "lock-dir realpath check failed: " + e.message };
-    }
-  }
-  
-  return { valid: true, resolved };
+  return validateStateDirPath(requestedDir, repoRoot, LOCK_DEFAULT_DIR, "lock-dir");
 }
 
 function validateHandoffDirPath(requestedDir, repoRoot) {
-  const handoffBase = path.resolve(repoRoot, HANDOFF_DEFAULT_DIR);
-
-  if (!requestedDir) return { valid: true, resolved: handoffBase };
-
-  // Must be relative
-  if (path.isAbsolute(requestedDir)) {
-    return { valid: false, reason: "handoff-dir must be a relative path" };
-  }
-
-  // Must not contain ..
-  if (requestedDir.includes("..")) {
-    return { valid: false, reason: "handoff-dir must not contain .." };
-  }
-
-  const resolved = path.resolve(repoRoot, requestedDir);
-
-  // Must be inside handoffBase
-  const rel = path.relative(handoffBase, resolved);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) {
-    return { valid: false, reason: "handoff-dir must be inside " + HANDOFF_DEFAULT_DIR };
-  }
-
-  // Symlink check: if path exists, realpath it and re-check
-  if (fs.existsSync(resolved)) {
-    try {
-      const real = fs.realpathSync(resolved);
-      const realRel = path.relative(handoffBase, real);
-      if (realRel.startsWith("..") || path.isAbsolute(realRel)) {
-        return { valid: false, reason: "handoff-dir resolves outside " + HANDOFF_DEFAULT_DIR + " via symlink" };
-      }
-    } catch (e) {
-      return { valid: false, reason: "handoff-dir realpath check failed: " + e.message };
-    }
-  }
-
-  return { valid: true, resolved };
+  return validateStateDirPath(requestedDir, repoRoot, HANDOFF_DEFAULT_DIR, "handoff-dir");
 }
 
 function validateLedgerDirPath(requestedDir, repoRoot) {
-  const ledgerBase = path.resolve(repoRoot, LEDGER_DEFAULT_DIR);
-
-  if (!requestedDir) return { valid: true, resolved: ledgerBase };
-
-  // Must be relative
-  if (path.isAbsolute(requestedDir)) {
-    return { valid: false, reason: "ledger-dir must be a relative path" };
-  }
-
-  // Must not contain ..
-  if (requestedDir.includes("..")) {
-    return { valid: false, reason: "ledger-dir must not contain .." };
-  }
-
-  const resolved = path.resolve(repoRoot, requestedDir);
-
-  // Must be inside ledgerBase
-  const rel = path.relative(ledgerBase, resolved);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) {
-    return { valid: false, reason: "ledger-dir must be inside " + LEDGER_DEFAULT_DIR };
-  }
-
-  // Symlink check: if path exists, realpath it and re-check
-  if (fs.existsSync(resolved)) {
-    try {
-      const real = fs.realpathSync(resolved);
-      const realRel = path.relative(ledgerBase, real);
-      if (realRel.startsWith("..") || path.isAbsolute(realRel)) {
-        return { valid: false, reason: "ledger-dir resolves outside " + LEDGER_DEFAULT_DIR + " via symlink" };
-      }
-    } catch (e) {
-      return { valid: false, reason: "ledger-dir realpath check failed: " + e.message };
-    }
-  }
-
-  return { valid: true, resolved };
+  return validateStateDirPath(requestedDir, repoRoot, LEDGER_DEFAULT_DIR, "ledger-dir");
 }
 
 function scanRecordContent(record) {
@@ -917,10 +861,10 @@ function buildLockRecord(runId, repoRoot, args) {
 function isStaleLock(lockData, thresholdMs) {
   const createdAt = new Date(lockData.createdAt).getTime();
   if (isNaN(createdAt)) return false;
-  
+
   const age = Date.now() - createdAt;
   if (age < thresholdMs) return false;
-  
+
   try {
     process.kill(lockData.pid, 0);
     return false;
@@ -937,14 +881,14 @@ function acquireLock(args, repoRoot, runId) {
     console.error("pnpd-orchestrator-dry-run: lock blocked: " + pathCheck.reason);
     process.exit(1);
   }
-  
+
   const lockDir = pathCheck.resolved;
   const lockPath = path.join(lockDir, "orchestrator.lock");
-  
+
   if (!fs.existsSync(lockDir)) {
     fs.mkdirSync(lockDir, { recursive: true });
   }
-  
+
   if (fs.existsSync(lockPath)) {
     let lockData = null;
     try {
@@ -953,15 +897,15 @@ function acquireLock(args, repoRoot, runId) {
       console.error("pnpd-orchestrator-dry-run: existing lock is unreadable at " + lockPath);
       process.exit(1);
     }
-    
+
     const STALE_THRESHOLD_MS = 5 * 60 * 1000;
     const stale = isStaleLock(lockData, STALE_THRESHOLD_MS);
-    
+
     const meta = "pid=" + lockData.pid +
       " createdAt=" + lockData.createdAt +
       " source=" + (lockData.source || "unknown") +
       " repoRoot=" + (lockData.repoRoot || "unknown");
-    
+
     if (stale) {
       console.error("pnpd-orchestrator-dry-run: stale lock detected at " + lockPath);
       console.error("  " + meta);
@@ -974,22 +918,22 @@ function acquireLock(args, repoRoot, runId) {
     }
     process.exit(1);
   }
-  
+
   const record = buildLockRecord(runId, repoRoot, args);
   fs.writeFileSync(lockPath, JSON.stringify(record, null, 2), { flag: "wx" });
-  
+
   process.stderr.write("pnpd-orchestrator-dry-run: lock acquired at " + lockPath + "\n");
-  
+
   return { lockPath, record };
 }
 
 function releaseLock(lockInfo, runId) {
   if (!lockInfo || !lockInfo.lockPath) return false;
-  
+
   const lockPath = lockInfo.lockPath;
-  
+
   if (!fs.existsSync(lockPath)) return false;
-  
+
   let lockData = null;
   try {
     lockData = JSON.parse(fs.readFileSync(lockPath, "utf8"));
@@ -997,22 +941,22 @@ function releaseLock(lockInfo, runId) {
     console.error("pnpd-orchestrator-dry-run: cannot release unreadable lock at " + lockPath);
     return false;
   }
-  
+
   if (lockData.runId !== runId) {
     console.error("pnpd-orchestrator-dry-run: lock runId mismatch; refusing to release");
     return false;
   }
-  
+
   if (lockData.source !== "pnpd-orchestrator-dry-run") {
     console.error("pnpd-orchestrator-dry-run: lock source mismatch; refusing to release");
     return false;
   }
-  
+
   if (lockData.pid !== process.pid) {
     console.error("pnpd-orchestrator-dry-run: lock pid mismatch; refusing to release");
     return false;
   }
-  
+
   try {
     fs.unlinkSync(lockPath);
     process.stderr.write("pnpd-orchestrator-dry-run: lock released at " + lockPath + "\n");
