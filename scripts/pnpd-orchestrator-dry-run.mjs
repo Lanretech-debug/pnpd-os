@@ -90,9 +90,9 @@ Usage:
 Phase 0 constraints:
   - reads local registry only
   - runs local git read commands only
-  - writes no files unless --write-ledger is explicitly provided
+  - writes no files unless --write-ledger or --write-handoff is explicitly provided
   - creates no agent threads
-  - performs no merge, deploy, push, or GitHub mutation\n\nWrite flags (opt-in, off by default):\n  --write-ledger         Append one JSONL ledger record per repo.\n  --no-write             Override all write flags; perform zero writes.\n  --ledger-dir <path>    Custom ledger directory under .pnpd/ledger.`);
+  - performs no merge, deploy, push, or GitHub mutation\n\nWrite flags (opt-in, off by default):\n  --write-ledger         Append one JSONL ledger record per repo.\n  --write-handoff        Create one local handoff JSON file per repo.\n  --no-write             Override all write flags; perform zero writes.\n  --ledger-dir <path>    Custom ledger directory under .pnpd/ledger.\n  --handoff-dir <path>   Custom handoff directory under .pnpd/handoffs.`);
 }
 
 function readRegistry(registryPath) {
@@ -428,27 +428,27 @@ function generateRunId() {
 
 function validateHandoffDirPath(requestedDir, repoRoot) {
   const handoffBase = path.resolve(repoRoot, HANDOFF_DEFAULT_DIR);
-  
+
   if (!requestedDir) return { valid: true, resolved: handoffBase };
-  
+
   // Must be relative
   if (path.isAbsolute(requestedDir)) {
     return { valid: false, reason: "handoff-dir must be a relative path" };
   }
-  
+
   // Must not contain ..
   if (requestedDir.includes("..")) {
     return { valid: false, reason: "handoff-dir must not contain .." };
   }
-  
+
   const resolved = path.resolve(repoRoot, requestedDir);
-  
+
   // Must be inside handoffBase
   const rel = path.relative(handoffBase, resolved);
   if (rel.startsWith("..") || path.isAbsolute(rel)) {
     return { valid: false, reason: "handoff-dir must be inside " + HANDOFF_DEFAULT_DIR };
   }
-  
+
   // Symlink check: if path exists, realpath it and re-check
   if (fs.existsSync(resolved)) {
     try {
@@ -461,7 +461,7 @@ function validateHandoffDirPath(requestedDir, repoRoot) {
       return { valid: false, reason: "handoff-dir realpath check failed: " + e.message };
     }
   }
-  
+
   return { valid: true, resolved };
 }
 
@@ -540,7 +540,7 @@ function validateHandoffRecordStruct(record) {
   if (!record.classification || typeof record.classification !== "string") return "classification must be non-empty string";
   if (!Array.isArray(record.gates)) return "gates must be an array";
   if (!Array.isArray(record.blockedReasons)) return "blockedReasons must be an array";
-  
+
   const af = record.authorityFlags;
   if (!af || typeof af !== "object") return "authorityFlags must be an object";
   if (af.approvalClaimed !== false) return "approvalClaimed must be false";
@@ -548,22 +548,22 @@ function validateHandoffRecordStruct(record) {
   if (af.dispatchRequested !== false) return "dispatchRequested must be false";
   if (af.auditClaimed !== false) return "auditClaimed must be false";
   if (af.productionReadinessClaimed !== false) return "productionReadinessClaimed must be false";
-  
+
   if (!record.redactions || typeof record.redactions !== "object") return "redactions must be an object";
-  
+
   const h = record.handoff;
   if (!h || typeof h !== "object") return "handoff block must exist";
   if (h.format !== "pnpd-handoff-v1") return "handoff.format must be pnpd-handoff-v1";
-  
+
   const routing = h.routing;
   if (!routing || typeof routing !== "object") return "handoff.routing must exist";
   const allowedRouting = ["owner", "hermes", "deepseek", "codex", "none"];
   if (!allowedRouting.includes(routing.to)) return "handoff.routing.to must be one of " + allowedRouting.join(", ");
   if (routing.to === "dispatch") return "handoff.routing.to must not be dispatch";
-  
+
   if (!record.integrity || typeof record.integrity !== "object") return "integrity must be an object";
   if (!record.integrity.contentHash) return "integrity.contentHash must be set";
-  
+
   return null;
 }
 
@@ -663,7 +663,7 @@ function buildLedgerRecord(repoResult, runId, previousHash) {
 
 function buildHandoffRecord(repoResult, runId) {
   const createdAt = new Date().toISOString();
-  
+
   const record = {
     recordType: "handoff",
     schemaVersion: 1,
@@ -714,10 +714,10 @@ function buildHandoffRecord(repoResult, runId) {
       canonicalization: "json-canonical"
     }
   };
-  
+
   // Compute content hash
   record.integrity.contentHash = computeContentHash(record);
-  
+
   return record;
 }
 
@@ -797,54 +797,54 @@ function writeHandoffRecords(summary, args, registryRoot, runId) {
     console.error("pnpd-orchestrator-dry-run: handoff write blocked: " + pathCheck.reason);
     process.exit(1);
   }
-  
+
   const handoffDir = pathCheck.resolved;
-  
+
   // Ensure handoff directory exists
   if (!fs.existsSync(handoffDir)) {
     fs.mkdirSync(handoffDir, { recursive: true });
   }
-  
+
 
   let writeCount = 0;
-  
+
   for (const repoResult of summary.repos) {
     try {
       const record = buildHandoffRecord(repoResult, runId);
-      
+
       // Structural validation
       const structErr = validateHandoffRecordStruct(record);
       if (structErr) {
         console.error("pnpd-orchestrator-dry-run: handoff structural validation failed for " + repoResult.id + ": " + structErr);
         continue;
       }
-      
+
       // Content safety scan
       const safetyCheck = scanRecordContent(record);
       if (!safetyCheck.safe) {
         console.error("pnpd-orchestrator-dry-run: handoff content safety failed for " + repoResult.id + ": " + safetyCheck.reason);
         continue;
       }
-      
+
       // Build target path
       const fileName = repoResult.id + "-" + runId + ".json";
       const filePath = path.join(handoffDir, fileName);
-      
+
       // Create-only: never overwrite existing files
       if (fs.existsSync(filePath)) {
         console.error("pnpd-orchestrator-dry-run: handoff file already exists, skipping: " + filePath);
         continue;
       }
-      
+
       // Write pretty-printed JSON
-      fs.writeFileSync(filePath, JSON.stringify(record, null, 2), "utf8");
+      fs.writeFileSync(filePath, JSON.stringify(record, null, 2), { encoding: "utf8", flag: "wx" });
       writeCount++;
-      
+
     } catch (e) {
       console.error("pnpd-orchestrator-dry-run: handoff write failed for " + repoResult.id + ": " + e.message);
     }
   }
-  
+
   if (writeCount > 0) {
     process.stderr.write("pnpd-orchestrator-dry-run: wrote " + writeCount + " handoff file(s) to " + handoffDir + "\n");
   }
