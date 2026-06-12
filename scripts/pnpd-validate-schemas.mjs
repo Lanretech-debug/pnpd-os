@@ -468,10 +468,16 @@ function scanExternalRefs(schema, currentPath, findings) {
 
 // ── Phase 1C instance validator ──────────────────────────────────────────────────
 
-function resolveRef(schema, ref) {
-  if (!ref.startsWith("#/$defs/")) return null;
+function resolveRef(schema, ref, refPath) {
+  if (typeof ref !== "string" || !ref.startsWith("#/$defs/")) {
+    throw new Error("Unsupported $ref at " + refPath + ": " + String(ref));
+  }
   const name = ref.slice("#/$defs/".length);
-  return schema.$defs?.[name] ?? null;
+  const resolved = schema.$defs?.[name] ?? null;
+  if (!resolved) {
+    throw new Error("Missing $ref target at " + refPath + ": " + ref);
+  }
+  return resolved;
 }
 
 function validateInstance(instance, schemaDef, fullSchema, path) {
@@ -525,8 +531,8 @@ function validateInstance(instance, schemaDef, fullSchema, path) {
         var propKey = entry[0];
         var propSchema = entry[1];
         if (propKey in instance) {
-          var resolved = propSchema.$ref ? resolveRef(fullSchema, propSchema.$ref) : propSchema;
-          var subFailures = validateInstance(instance[propKey], resolved || propSchema, fullSchema, path + "." + propKey);
+          var resolved = propSchema.$ref ? resolveRef(fullSchema, propSchema.$ref, path + "." + propKey + ".$ref") : propSchema;
+          var subFailures = validateInstance(instance[propKey], resolved, fullSchema, path + "." + propKey);
           for (var _m = 0; _m < subFailures.length; _m++) {
             failures.push(subFailures[_m]);
           }
@@ -588,9 +594,9 @@ function validateInstance(instance, schemaDef, fullSchema, path) {
       failures.push({ path: path, expected: "maxItems " + schemaDef.maxItems, actual: "length " + instance.length });
     }
     if (schemaDef.items) {
-      var itemSchema = schemaDef.items.$ref ? resolveRef(fullSchema, schemaDef.items.$ref) : schemaDef.items;
+      var itemSchema = schemaDef.items.$ref ? resolveRef(fullSchema, schemaDef.items.$ref, path + ".items.$ref") : schemaDef.items;
       for (var i = 0; i < instance.length; i++) {
-        var arrFails = validateInstance(instance[i], itemSchema || schemaDef.items, fullSchema, path + "[" + i + "]");
+        var arrFails = validateInstance(instance[i], itemSchema, fullSchema, path + "[" + i + "]");
         for (var _n = 0; _n < arrFails.length; _n++) {
           failures.push(arrFails[_n]);
         }
@@ -600,18 +606,17 @@ function validateInstance(instance, schemaDef, fullSchema, path) {
 
   // oneOf
   if (schemaDef.oneOf) {
-    var onePassed = false;
+    var matchCount = 0;
     for (var _o = 0; _o < schemaDef.oneOf.length; _o++) {
       var subSchema = schemaDef.oneOf[_o];
-      var subResolved = subSchema.$ref ? resolveRef(fullSchema, subSchema.$ref) : subSchema;
-      var subFailures = validateInstance(instance, subResolved || subSchema, fullSchema, path);
+      var subResolved = subSchema.$ref ? resolveRef(fullSchema, subSchema.$ref, path + ".oneOf[" + _o + "].$ref") : subSchema;
+      var subFailures = validateInstance(instance, subResolved, fullSchema, path);
       if (subFailures.length === 0) {
-        onePassed = true;
-        break;
+        matchCount += 1;
       }
     }
-    if (!onePassed) {
-      failures.push({ path: path, expected: "oneOf match", actual: "no alternative matched" });
+    if (matchCount !== 1) {
+      failures.push({ path: path, expected: "exactly one oneOf match", actual: String(matchCount) + " alternatives matched" });
     }
   }
 
