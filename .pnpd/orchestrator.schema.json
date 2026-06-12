@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pnpd-os.local/schemas/orchestrator.schema.json",
+  "title": "PNPD Orchestrator Dry Run Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "generatedAt", "registryPath", "dispatchEnabled", "repos"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "const": "dry-run"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "registryPath": {
+      "type": "string"
+    },
+    "dispatchEnabled": {
+      "type": "boolean",
+      "const": false
+    },
+    "repos": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/repoResult" }
+    }
+  },
+  "$defs": {
+    "repoResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "path", "enabled", "classification", "dispatchAllowed", "gates", "nextAction"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "path": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "branch": { "type": ["string", "null"] },
+        "dirty": { "type": ["boolean", "null"] },
+        "classification": {
+          "type": "string",
+          "enum": [
+            "DISCOVERED",
+            "NEEDS_TRIAGE",
+            "NEEDS_INFO",
+            "READY_FOR_AGENT",
+            "DISPATCHED",
+            "IN_PROGRESS",
+            "AGENT_DONE",
+            "AUTOREVIEW_REQUIRED",
+            "CODEX_REVIEW_REQUIRED",
+            "OWNER_REVIEW_REQUIRED",
+            "APPROVED_FOR_MERGE",
+            "DONE",
+            "BLOCKED",
+            "WONTFIX"
+          ]
+        },
+        "dispatchAllowed": {
+          "type": "boolean",
+          "const": false
+        },
+        "gates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "status", "reason"],
+            "properties": {
+              "name": { "type": "string" },
+              "status": { "type": "string", "enum": ["pass", "fail", "blocked", "not-run"] },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "nextAction": { "type": "string" },
+        "handoffPreview": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

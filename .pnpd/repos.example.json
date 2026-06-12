@@ -1,0 +1,133 @@
+{
+  "$schema": "./repos.schema.json",
+  "version": 1,
+  "orchestrator": {
+    "mode": "dry-run",
+    "dispatchEnabled": false,
+    "maxParallelThreads": 0,
+    "defaultProtectedBranches": ["main", "master"]
+  },
+  "repos": [
+    {
+      "id": "pnpd-os",
+      "name": "PNPD OS",
+      "path": ".",
+      "enabled": true,
+      "protectedBranches": ["main", "master"],
+      "owner": "Owner",
+      "phase": "governance-framework",
+      "governanceProfile": "standard",
+      "metadataSources": {
+        "github": {
+          "repository": "Lanretech-debug/pnpd-os",
+          "issues": "disabled",
+          "pullRequests": "disabled"
+        }
+      },
+      "availableGates": ["git-status", "branch", "codex-review", "owner-approval", "lockfile"],
+      "pendingItems": [
+        {
+          "id": "PHASE-0-ORCHESTRATOR",
+          "type": "task",
+          "title": "Review Phase 0 dry-run Orchestrator Loop scaffold",
+          "state": "CODEX_REVIEW_REQUIRED",
+          "requiresCodexReview": true,
+          "requiresOwnerApproval": true,
+          "risk": "medium",
+          "nextAction": "Codex formal review of the Phase 0 scaffold before any merge decision."
+        }
+      ]
+    },
+    {
+      "id": "briclab-kids",
+      "name": "BricLab Kids",
+      "path": "/Users/lanretech/Projects/BricLab-Kids",
+      "enabled": false,
+      "protectedBranches": ["main", "master"],
+      "owner": "Owner",
+      "phase": "future-registration",
+      "governanceProfile": "high-risk",
+      "metadataSources": {
+        "github": {
+          "issues": "disabled",
+          "pullRequests": "disabled"
+        }
+      },
+      "availableGates": ["git-status", "branch", "codex-review", "owner-approval", "lockfile"],
+      "pendingItems": []
+    },
+    {
+      "id": "pokedex",
+      "name": "Pokedex",
+      "path": "/Users/lanretech/pokedex-game",
+      "enabled": false,
+      "protectedBranches": ["main", "master"],
+      "owner": "Owner",
+      "phase": "future-registration",
+      "governanceProfile": "standard",
+      "metadataSources": {
+        "github": {
+          "issues": "disabled",
+          "pullRequests": "disabled"
+        }
+      },
+      "availableGates": ["git-status", "branch", "codex-review", "owner-approval", "lockfile"],
+      "pendingItems": []
+    },
+    {
+      "id": "jobtocash",
+      "name": "JobToCash",
+      "path": "/Users/lanretech/Jobtocash",
+      "enabled": false,
+      "protectedBranches": ["main", "master"],
+      "owner": "Owner",
+      "phase": "future-registration",
+      "governanceProfile": "high-risk",
+      "metadataSources": {
+        "github": {
+          "issues": "disabled",
+          "pullRequests": "disabled"
+        }
+      },
+      "availableGates": ["git-status", "branch", "codex-review", "owner-approval", "lockfile"],
+      "pendingItems": []
+    },
+    {
+      "id": "lernova",
+      "name": "LERNOVA",
+      "path": "/path/to/LERNOVA",
+      "enabled": false,
+      "protectedBranches": ["main", "master"],
+      "owner": "Owner",
+      "phase": "future-registration",
+      "governanceProfile": "high-risk",
+      "metadataSources": {
+        "github": {
+          "issues": "disabled",
+          "pullRequests": "disabled"
+        }
+      },
+      "availableGates": ["git-status", "branch", "codex-review", "owner-approval", "lockfile"],
+      "pendingItems": []
+    },
+    {
+      "id": "clawtrade",
+      "name": "Clawtrade",
+      "path": "/Users/lanretech/Downloads/Clawtrade",
+      "enabled": false,
+      "protectedBranches": ["main", "master"],
+      "owner": "Owner",
+      "phase": "future-registration",
+      "governanceProfile": "high-risk",
+      "metadataSources": {
+        "github": {
+          "issues": "disabled",
+          "pullRequests": "disabled"
+        }
+      },
+      "availableGates": ["git-status", "branch", "codex-review", "owner-approval", "lockfile"],
+      "pendingItems": []
+    }
+  ]
+}
+

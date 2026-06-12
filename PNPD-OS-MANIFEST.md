@@ -24,6 +24,8 @@ AgentBridge is not an authority layer. It does not approve, certify, merge, depl
 
 Use `docs/agent-bridge/README.md` as the entry point whenever a task requires multi-agent handoff, task-state tracking, audit routing, blocker logging, owner decision logging, or post-merge verification.
 
+The PNPD Orchestrator Loop may coordinate and recommend; it may not approve, merge, deploy, or bypass gates. Any scheduler, dispatch loop, external write integration, or agent-thread automation requires a separate owner-approved phase and must preserve the Review & Audit Layer authority chain.
+
 ---
 
 ## Agent Role Model
@@ -122,6 +124,7 @@ The owner is the final decision-maker. Agents may advise, verify, audit, or reco
 | Codex post-merge audit | Retrospective drift check | Verify merged main, detect integration drift, recommend rollback or follow-up | Silently roll back, override owner, erase pre-merge caveats |
 | Owner | Final decision-maker | Approve merge, accept or reject caveats, request more review, decide product/business priority | Be overridden by any agent or automated process |
 | PNPD AgentBridge | Communication/state layer for handoffs and workflow state | Record handoffs, task state, audit queue entries, blocker records, owner decisions, and post-merge verification queue entries | Approve, certify, merge, deploy, audit, override agents, or replace AGENTS.md |
+| PNPD Orchestrator Loop | Coordination/recommendation layer for repo inspection and handoff preparation | Inspect registered repo state, classify work, recommend next actions, and prepare dry-run handoff briefs | Approve, merge, deploy, bypass gates, grant authority, or satisfy owner/Codex review by itself |
 
 ---
 
