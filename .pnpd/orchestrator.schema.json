@@ -133,6 +133,464 @@
           "type": "string"
         }
       }
+    },
+    "classificationEnum": {
+      "type": "string",
+      "description": "Shared classification states. Duplicates repoResult.classification for future validator-aware refactor.",
+      "enum": [
+        "DISCOVERED",
+        "NEEDS_TRIAGE",
+        "NEEDS_INFO",
+        "READY_FOR_AGENT",
+        "DISPATCHED",
+        "IN_PROGRESS",
+        "AGENT_DONE",
+        "AUTOREVIEW_REQUIRED",
+        "CODEX_REVIEW_REQUIRED",
+        "OWNER_REVIEW_REQUIRED",
+        "APPROVED_FOR_MERGE",
+        "DONE",
+        "BLOCKED",
+        "WONTFIX"
+      ]
+    },
+    "gateStatusEnum": {
+      "type": "string",
+      "description": "Gate status values.",
+      "enum": ["pass", "fail", "blocked", "not-run"]
+    },
+    "reviewerEnum": {
+      "type": "string",
+      "description": "Allowed reviewer/recipient values for routing and required-reviewer fields.",
+      "enum": ["owner", "hermes", "deepseek", "codex", "none"]
+    },
+    "ledgerRepo": {
+      "type": "object",
+      "description": "Repo identification fields for ledger/handoff records.",
+      "additionalProperties": false,
+      "required": ["id", "name", "path"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ledgerGit": {
+      "type": "object",
+      "description": "Git state fields for ledger/handoff records.",
+      "additionalProperties": false,
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "detachedHead": {
+          "type": "boolean"
+        }
+      }
+    },
+    "gateResult": {
+      "type": "object",
+      "description": "Single gate evaluation result.",
+      "additionalProperties": false,
+      "required": ["name", "status", "reason"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "$ref": "#/$defs/gateStatusEnum"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "blockedReason": {
+      "type": "object",
+      "description": "A single reason a repo is blocked from advancement.",
+      "additionalProperties": false,
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "description": "Gate or system that identified the block (e.g., dirty-tree, dispatch, secrets)."
+        }
+      }
+    },
+    "riskAssessment": {
+      "type": "object",
+      "description": "Risk assessment for a repo inspection.",
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "unknown"]
+        },
+        "factors": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "authorityFlags": {
+      "type": "object",
+      "description": "Authority flags shared across ledger/handoff records. All must remain const false.",
+      "additionalProperties": false,
+      "required": ["approvalClaimed", "mergeClaimed", "dispatchRequested", "auditClaimed", "productionReadinessClaimed"],
+      "properties": {
+        "approvalClaimed": {
+          "type": "boolean",
+          "const": false,
+          "description": "The orchestrator never claims approval."
+        },
+        "mergeClaimed": {
+          "type": "boolean",
+          "const": false,
+          "description": "The orchestrator never claims merge readiness."
+        },
+        "dispatchRequested": {
+          "type": "boolean",
+          "const": false,
+          "description": "The orchestrator never requests dispatch."
+        },
+        "auditClaimed": {
+          "type": "boolean",
+          "const": false,
+          "description": "The orchestrator never claims audit completion."
+        },
+        "productionReadinessClaimed": {
+          "type": "boolean",
+          "const": false,
+          "description": "The orchestrator never claims production readiness."
+        }
+      }
+    },
+    "redactionSummary": {
+      "type": "object",
+      "description": "Summary of redactions performed on the record. Paths only — no values, no credentials, no raw secret fragments.",
+      "additionalProperties": false,
+      "required": ["count"],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of redactions applied to this record."
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "description": "JSON paths of redacted fields (e.g., $.recommendedAction)."
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["secret-pattern", "token-pattern", "key-pattern", "password-pattern", "forbidden-path", "env-path"]
+          },
+          "description": "Optional categorization of redaction kinds applied."
+        }
+      }
+    },
+    "integrityBlock": {
+      "type": "object",
+      "description": "Integrity metadata for a ledger/handoff record. No signatures, no blockchain, no external timestamp authority.",
+      "additionalProperties": false,
+      "required": ["contentHash", "canonicalization"],
+      "properties": {
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "SHA-256 hash of the canonical JSON record content (excluding integrity block)."
+        },
+        "previousLedgerHash": {
+          "oneOf": [
+            { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+            { "type": "null" }
+          ],
+          "description": "Hash of the previous ledger record. Null for the first record of a day."
+        },
+        "canonicalization": {
+          "type": "string",
+          "const": "json-canonical",
+          "description": "Canonicalization method used for content hash."
+        }
+      }
+    },
+    "handoffRouting": {
+      "type": "object",
+      "description": "Advisory routing metadata for a handoff. Not a dispatch instruction, not an RPC call, not a message queue, not an event trigger.",
+      "additionalProperties": false,
+      "required": ["to"],
+      "properties": {
+        "to": {
+          "$ref": "#/$defs/reviewerEnum",
+          "description": "Suggested recipient for this handoff. Advisory only."
+        },
+        "action": {
+          "type": "string",
+          "maxLength": 256,
+          "description": "Advisory recommended action. Not a command or dispatch."
+        },
+        "urgency": {
+          "type": "string",
+          "enum": ["low", "normal", "high", "blocked"],
+          "description": "Advisory urgency level."
+        }
+      }
+    },
+    "ledgerRecord": {
+      "type": "object",
+      "description": "Ledger record: a chronological, append-only, machine-readable audit trail entry. Captures one orchestrator inspection of one repo during one run. Records what was observed and when — never what was decided or dispatched.",
+      "additionalProperties": false,
+      "required": [
+        "recordType",
+        "schemaVersion",
+        "runId",
+        "createdAt",
+        "source",
+        "generatorVersion",
+        "repo",
+        "git",
+        "classification",
+        "gates",
+        "recommendedAction",
+        "requiredReviewer",
+        "codexAuditRequired",
+        "ownerActionRequired",
+        "authorityFlags",
+        "integrity"
+      ],
+      "properties": {
+        "recordType": {
+          "type": "string",
+          "const": "ledger",
+          "description": "Record type discriminator."
+        },
+        "schemaVersion": {
+          "type": "integer",
+          "const": 1,
+          "description": "Schema version for this record shape."
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^pnpd-orchestrator-[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}Z-[a-z0-9]{4}$",
+          "description": "Unique run identifier."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of record creation."
+        },
+        "source": {
+          "type": "string",
+          "const": "pnpd-orchestrator-dry-run",
+          "description": "Generator source identifier."
+        },
+        "generatorVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-z0-9.]+)?$",
+          "description": "Semver version of the generator."
+        },
+        "repo": {
+          "$ref": "#/$defs/ledgerRepo"
+        },
+        "git": {
+          "$ref": "#/$defs/ledgerGit"
+        },
+        "classification": {
+          "$ref": "#/$defs/classificationEnum",
+          "description": "Classification of the repo after gate evaluation."
+        },
+        "gates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/gateResult" }
+        },
+        "blockedReasons": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/blockedReason" }
+        },
+        "recommendedAction": {
+          "type": "string",
+          "maxLength": 1024,
+          "description": "Advisory next action. Not a command or dispatch."
+        },
+        "requiredReviewer": {
+          "$ref": "#/$defs/reviewerEnum",
+          "description": "Reviewer required before next advancement. Advisory only."
+        },
+        "codexAuditRequired": {
+          "type": "boolean",
+          "description": "Whether Codex formal audit is required."
+        },
+        "ownerActionRequired": {
+          "type": "boolean",
+          "description": "Whether owner action is required before advancement."
+        },
+        "riskAssessment": {
+          "$ref": "#/$defs/riskAssessment"
+        },
+        "authorityFlags": {
+          "$ref": "#/$defs/authorityFlags"
+        },
+        "redactions": {
+          "$ref": "#/$defs/redactionSummary"
+        },
+        "integrity": {
+          "$ref": "#/$defs/integrityBlock"
+        }
+      }
+    },
+    "handoffRecord": {
+      "type": "object",
+      "description": "Handoff record: a structured, actionable routing summary for one repo inspection. Extends ledger data with handoff metadata. Advisory only — never approves, dispatches, or claims readiness.",
+      "additionalProperties": false,
+      "required": [
+        "recordType",
+        "schemaVersion",
+        "runId",
+        "createdAt",
+        "source",
+        "generatorVersion",
+        "repo",
+        "git",
+        "classification",
+        "gates",
+        "recommendedAction",
+        "requiredReviewer",
+        "codexAuditRequired",
+        "ownerActionRequired",
+        "authorityFlags",
+        "handoff",
+        "integrity"
+      ],
+      "properties": {
+        "recordType": {
+          "type": "string",
+          "const": "handoff",
+          "description": "Record type discriminator."
+        },
+        "schemaVersion": {
+          "type": "integer",
+          "const": 1,
+          "description": "Schema version for this record shape."
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^pnpd-orchestrator-[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}Z-[a-z0-9]{4}$",
+          "description": "Unique run identifier."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of record creation."
+        },
+        "source": {
+          "type": "string",
+          "const": "pnpd-orchestrator-dry-run",
+          "description": "Generator source identifier."
+        },
+        "generatorVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-z0-9.]+)?$",
+          "description": "Semver version of the generator."
+        },
+        "repo": {
+          "$ref": "#/$defs/ledgerRepo"
+        },
+        "git": {
+          "$ref": "#/$defs/ledgerGit"
+        },
+        "classification": {
+          "$ref": "#/$defs/classificationEnum",
+          "description": "Classification of the repo after gate evaluation."
+        },
+        "gates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/gateResult" }
+        },
+        "blockedReasons": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/blockedReason" }
+        },
+        "recommendedAction": {
+          "type": "string",
+          "maxLength": 1024,
+          "description": "Advisory next action. Not a command or dispatch."
+        },
+        "requiredReviewer": {
+          "$ref": "#/$defs/reviewerEnum",
+          "description": "Reviewer required before next advancement. Advisory only."
+        },
+        "codexAuditRequired": {
+          "type": "boolean",
+          "description": "Whether Codex formal audit is required."
+        },
+        "ownerActionRequired": {
+          "type": "boolean",
+          "description": "Whether owner action is required before advancement."
+        },
+        "riskAssessment": {
+          "$ref": "#/$defs/riskAssessment"
+        },
+        "authorityFlags": {
+          "$ref": "#/$defs/authorityFlags"
+        },
+        "redactions": {
+          "$ref": "#/$defs/redactionSummary"
+        },
+        "handoff": {
+          "type": "object",
+          "description": "Handoff-specific metadata.",
+          "additionalProperties": false,
+          "required": ["format", "routing"],
+          "properties": {
+            "format": {
+              "type": "string",
+              "const": "pnpd-handoff-v1",
+              "description": "Handoff format identifier."
+            },
+            "summary": {
+              "type": "string",
+              "maxLength": 1024,
+              "description": "Human-readable summary of the handoff."
+            },
+            "context": {
+              "type": "string",
+              "maxLength": 4096,
+              "description": "Additional context for the recipient."
+            },
+            "routing": {
+              "$ref": "#/$defs/handoffRouting"
+            }
+          }
+        },
+        "integrity": {
+          "$ref": "#/$defs/integrityBlock"
+        }
+      }
     }
   }
 }
