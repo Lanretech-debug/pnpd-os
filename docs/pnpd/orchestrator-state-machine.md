@@ -67,4 +67,3 @@ Mapping guidance:
 | `WONTFIX` | `CLOSED` with rationale |
 
 The Orchestrator may recommend a mapping, but only the relevant authority layer can record the actual gate result.
-
