@@ -1,0 +1,51 @@
+{
+  "recordType": "ledger",
+  "schemaVersion": 1,
+  "runId": "pnpd-orchestrator-2026-01-01T00-00-00Z-0000",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "source": "pnpd-orchestrator-dry-run",
+  "generatorVersion": "1.0.0",
+  "repo": {
+    "id": "example-repo",
+    "name": "Example Repo",
+    "path": "/tmp/pnpd-fixtures/example-repo"
+  },
+  "git": {
+    "branch": "main",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "dirty": false
+  },
+  "classification": "READY_FOR_AGENT",
+  "gates": [
+    {
+      "name": "git-status",
+      "status": "pass",
+      "reason": "Git status is clean."
+    }
+  ],
+  "blockedReasons": [],
+  "recommendedAction": "Hermes verifies repo state and task scope before routing.",
+  "requiredReviewer": "hermes",
+  "codexAuditRequired": false,
+  "ownerActionRequired": false,
+  "riskAssessment": {
+    "level": "low",
+    "factors": ["fixture-only", "no-real-data"]
+  },
+  "authorityFlags": {
+    "approvalClaimed": true,
+    "mergeClaimed": false,
+    "dispatchRequested": false,
+    "auditClaimed": false,
+    "productionReadinessClaimed": false
+  },
+  "redactions": {
+    "count": 0,
+    "paths": []
+  },
+  "integrity": {
+    "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "previousLedgerHash": null,
+    "canonicalization": "json-canonical"
+  }
+}
