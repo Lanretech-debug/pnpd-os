@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -25,16 +26,33 @@ const STATES = new Set([
 const SECRET_KEY_PATTERN = /(token|secret|password|private[_-]?key|api[_-]?key|authorization|auth[_-]?header)/i;
 const SECRET_VALUE_PATTERN = /(sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9_]{12,}|xox[baprs]-[A-Za-z0-9-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)/;
 
+const FORBIDDEN_LEDGER_PATH = ["/Users/lanretech/Documents", "BricLab Kids"].join("/");
+const LEDGER_DEFAULT_DIR = ".pnpd/ledger";
+const GENERATOR_VERSION = "1.0.0";
+
 function parseArgs(argv) {
   const args = {
     registry: ".pnpd/repos.example.json",
-    json: false
+    json: false,
+    writeLedger: false,
+    noWrite: false,
+    ledgerDir: null
   };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--json") {
       args.json = true;
+    } else if (arg === "--write-ledger") {
+      args.writeLedger = true;
+    } else if (arg === "--no-write") {
+      args.noWrite = true;
+    } else if (arg === "--ledger-dir") {
+      if (!argv[i + 1] || argv[i + 1].startsWith("--")) {
+        throw new Error("--ledger-dir requires a path value.");
+      }
+      args.ledgerDir = argv[i + 1];
+      i += 1;
     } else if (arg === "--registry") {
       if (!argv[i + 1] || argv[i + 1].startsWith("--")) {
         throw new Error("--registry requires a path value.");
@@ -61,9 +79,9 @@ Usage:
 Phase 0 constraints:
   - reads local registry only
   - runs local git read commands only
-  - writes no files
+  - writes no files unless --write-ledger is explicitly provided
   - creates no agent threads
-  - performs no merge, deploy, push, or GitHub mutation`);
+  - performs no merge, deploy, push, or GitHub mutation\n\nWrite flags (opt-in, off by default):\n  --write-ledger         Append one JSONL ledger record per repo.\n  --no-write             Override all write flags; perform zero writes.\n  --ledger-dir <path>    Custom ledger directory under .pnpd/ledger.`);
 }
 
 function readRegistry(registryPath) {
@@ -370,6 +388,244 @@ function renderText(summary) {
   }
 }
 
+// ── Ledger writer helpers ────────────────────────────────────────────────────────
+
+function stableCanonicalize(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return "[" + value.map(stableCanonicalize).join(",") + "]";
+  const keys = Object.keys(value).sort();
+  return "{" + keys.map(function(key) { return JSON.stringify(key) + ":" + stableCanonicalize(value[key]); }).join(",") + "}";
+}
+
+function computeContentHash(record) {
+  const payload = {};
+  for (const key of Object.keys(record).sort()) {
+    if (key !== "integrity") payload[key] = record[key];
+  }
+  const canonical = stableCanonicalize(payload);
+  const hash = crypto.createHash("sha256").update(canonical).digest("hex");
+  return "sha256:" + hash;
+}
+
+function generateRunId() {
+  const now = new Date();
+  const ts = now.toISOString().replace(/[:.]/g, "-").slice(0, 19) + "Z";
+  const rand = Math.random().toString(36).slice(2, 6);
+  return "pnpd-orchestrator-" + ts + "-" + rand;
+}
+
+function validateLedgerDirPath(requestedDir, repoRoot) {
+  const ledgerBase = path.resolve(repoRoot, LEDGER_DEFAULT_DIR);
+
+  if (!requestedDir) return { valid: true, resolved: ledgerBase };
+
+  // Must be relative
+  if (path.isAbsolute(requestedDir)) {
+    return { valid: false, reason: "ledger-dir must be a relative path" };
+  }
+
+  // Must not contain ..
+  if (requestedDir.includes("..")) {
+    return { valid: false, reason: "ledger-dir must not contain .." };
+  }
+
+  const resolved = path.resolve(repoRoot, requestedDir);
+
+  // Must be inside ledgerBase
+  const rel = path.relative(ledgerBase, resolved);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    return { valid: false, reason: "ledger-dir must be inside " + LEDGER_DEFAULT_DIR };
+  }
+
+  // Symlink check: if path exists, realpath it and re-check
+  if (fs.existsSync(resolved)) {
+    try {
+      const real = fs.realpathSync(resolved);
+      const realRel = path.relative(ledgerBase, real);
+      if (realRel.startsWith("..") || path.isAbsolute(realRel)) {
+        return { valid: false, reason: "ledger-dir resolves outside " + LEDGER_DEFAULT_DIR + " via symlink" };
+      }
+    } catch (e) {
+      return { valid: false, reason: "ledger-dir realpath check failed: " + e.message };
+    }
+  }
+
+  return { valid: true, resolved };
+}
+
+function scanRecordContent(record) {
+  const serialized = JSON.stringify(record);
+
+  // Secret value scan
+  if (SECRET_VALUE_PATTERN.test(serialized)) {
+    return { safe: false, reason: "secret-like value detected in ledger record" };
+  }
+
+  // Forbidden path scan
+  if (serialized.includes(FORBIDDEN_LEDGER_PATH)) {
+    return { safe: false, reason: "forbidden path detected in ledger record" };
+  }
+
+  // .env scan
+  if (serialized.includes(".env")) {
+    // Check for .env as a path component (not just as substring in prohibition text)
+    if (serialized.includes("\".env\"") || serialized.includes("/.env")) {
+      return { safe: false, reason: ".env path detected in ledger record" };
+    }
+  }
+
+  return { safe: true };
+}
+
+function validateLedgerRecordStruct(record) {
+  if (record.recordType !== "ledger") return "recordType must be ledger";
+  if (record.schemaVersion !== 1) return "schemaVersion must be 1";
+  if (record.source !== "pnpd-orchestrator-dry-run") return "source must be pnpd-orchestrator-dry-run";
+  if (!record.runId || typeof record.runId !== "string") return "runId must be non-empty string";
+  if (!record.createdAt || typeof record.createdAt !== "string") return "createdAt must be non-empty string";
+  if (!record.repo || typeof record.repo !== "object") return "repo must be an object";
+  if (!record.git || typeof record.git !== "object") return "git must be an object";
+  if (!record.classification || typeof record.classification !== "string") return "classification must be non-empty string";
+  if (!Array.isArray(record.gates)) return "gates must be an array";
+  if (!Array.isArray(record.blockedReasons)) return "blockedReasons must be an array";
+
+  const af = record.authorityFlags;
+  if (!af || typeof af !== "object") return "authorityFlags must be an object";
+  if (af.approvalClaimed !== false) return "approvalClaimed must be false";
+  if (af.mergeClaimed !== false) return "mergeClaimed must be false";
+  if (af.dispatchRequested !== false) return "dispatchRequested must be false";
+  if (af.auditClaimed !== false) return "auditClaimed must be false";
+  if (af.productionReadinessClaimed !== false) return "productionReadinessClaimed must be false";
+
+  if (!record.redactions || typeof record.redactions !== "object") return "redactions must be an object";
+  if (!record.integrity || typeof record.integrity !== "object") return "integrity must be an object";
+  if (!record.integrity.contentHash) return "integrity.contentHash must be set";
+
+  return null;
+}
+
+function getPreviousLedgerHash(ledgerFile) {
+  if (!fs.existsSync(ledgerFile)) return null;
+  const raw = fs.readFileSync(ledgerFile, "utf8").trim();
+  if (!raw) return null;
+
+  const lines = raw.split("\n").filter(Boolean);
+  if (lines.length === 0) return null;
+
+  try {
+    const lastRecord = JSON.parse(lines[lines.length - 1]);
+    return lastRecord.integrity?.contentHash ?? null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildLedgerRecord(repoResult, runId, previousHash) {
+  const createdAt = new Date().toISOString();
+
+  const record = {
+    recordType: "ledger",
+    schemaVersion: 1,
+    runId: runId,
+    createdAt: createdAt,
+    source: "pnpd-orchestrator-dry-run",
+    generatorVersion: GENERATOR_VERSION,
+    repo: {
+      id: repoResult.id,
+      name: repoResult.name,
+      path: repoResult.path
+    },
+    git: {
+      branch: repoResult.branch ?? "not-read",
+      commit: repoResult.commit ?? "not-read",
+      dirty: repoResult.dirty ?? null,
+      detachedHead: false
+    },
+    classification: repoResult.classification,
+    gates: repoResult.gates || [],
+    blockedReasons: repoResult.blockedReasons || [],
+    recommendedAction: repoResult.nextAction || "",
+    requiredReviewer: repoResult.requiredReviewer || "none",
+    codexAuditRequired: repoResult.codexAuditRequired || false,
+    ownerActionRequired: repoResult.ownerActionRequired || false,
+    riskAssessment: repoResult.riskAssessment || { level: "unknown", factors: [] },
+    authorityFlags: {
+      approvalClaimed: false,
+      mergeClaimed: false,
+      dispatchRequested: false,
+      auditClaimed: false,
+      productionReadinessClaimed: false
+    },
+    redactions: { count: 0, paths: [] },
+    integrity: {
+      contentHash: "",
+      previousLedgerHash: previousHash,
+      canonicalization: "json-canonical"
+    }
+  };
+
+  // Compute content hash
+  record.integrity.contentHash = computeContentHash(record);
+
+  return record;
+}
+
+function writeLedgerRecords(summary, args, registryRoot) {
+  // Path validation
+  const pathCheck = validateLedgerDirPath(args.ledgerDir, registryRoot);
+  if (!pathCheck.valid) {
+    console.error("pnpd-orchestrator-dry-run: ledger write blocked: " + pathCheck.reason);
+    process.exit(1);
+  }
+
+  const ledgerDir = pathCheck.resolved;
+  const today = new Date().toISOString().slice(0, 10);
+  const ledgerFile = path.join(ledgerDir, today + ".jsonl");
+
+  // Ensure ledger directory exists
+  if (!fs.existsSync(ledgerDir)) {
+    fs.mkdirSync(ledgerDir, { recursive: true });
+  }
+
+  const runId = generateRunId();
+  let previousHash = getPreviousLedgerHash(ledgerFile);
+
+  let writeCount = 0;
+
+  for (const repoResult of summary.repos) {
+    try {
+      const record = buildLedgerRecord(repoResult, runId, previousHash);
+
+      // Structural validation
+      const structErr = validateLedgerRecordStruct(record);
+      if (structErr) {
+        console.error("pnpd-orchestrator-dry-run: ledger structural validation failed for " + repoResult.id + ": " + structErr);
+        continue;
+      }
+
+      // Content safety scan
+      const safetyCheck = scanRecordContent(record);
+      if (!safetyCheck.safe) {
+        console.error("pnpd-orchestrator-dry-run: ledger content safety failed for " + repoResult.id + ": " + safetyCheck.reason);
+        continue;
+      }
+
+      // Append
+      const line = JSON.stringify(record) + "\n";
+      fs.appendFileSync(ledgerFile, line, "utf8");
+      previousHash = record.integrity.contentHash;
+      writeCount++;
+
+    } catch (e) {
+      console.error("pnpd-orchestrator-dry-run: ledger write failed for " + repoResult.id + ": " + e.message);
+    }
+  }
+
+  if (writeCount > 0) {
+    process.stderr.write("pnpd-orchestrator-dry-run: wrote " + writeCount + " ledger record(s) to " + ledgerFile + "\n");
+  }
+}
+
 function main() {
   const args = parseArgs(process.argv);
   const { data, absolutePath } = readRegistry(args.registry);
@@ -385,6 +641,12 @@ function main() {
     dispatchEnabled: false,
     repos
   };
+
+  // Ledger write (opt-in, off by default)
+  const doWrite = args.writeLedger && !args.noWrite;
+  if (doWrite) {
+    writeLedgerRecords(summary, args, registryRoot);
+  }
 
   if (args.json) {
     console.log(JSON.stringify(summary, null, 2));
