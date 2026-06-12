@@ -76,6 +76,51 @@ const REQUIRED_PHASE_1C_DEFS = new Set([
   "handoffRouting",
   "gateStatusEnum"
 ]);
+const PHASE_1C_FIXTURES = [
+  {
+    file: "tests/fixtures/pnpd/ledger/valid-ledger-record.json",
+    def: "ledgerRecord",
+    expectValid: true,
+    expectedReason: "valid ledger record"
+  },
+  {
+    file: "tests/fixtures/pnpd/ledger/invalid-authority-flag.json",
+    def: "ledgerRecord",
+    expectValid: false,
+    expectedReason: "authority flag must be const false"
+  },
+  {
+    file: "tests/fixtures/pnpd/ledger/invalid-capability-field.json",
+    def: "ledgerRecord",
+    expectValid: false,
+    expectedReason: "extra deploy field blocked by additionalProperties false"
+  },
+  {
+    file: "tests/fixtures/pnpd/ledger/invalid-missing-required.json",
+    def: "ledgerRecord",
+    expectValid: false,
+    expectedReason: "missing required gates field"
+  },
+  {
+    file: "tests/fixtures/pnpd/handoff/valid-handoff-record.json",
+    def: "handoffRecord",
+    expectValid: true,
+    expectedReason: "valid handoff record"
+  },
+  {
+    file: "tests/fixtures/pnpd/handoff/invalid-routing-target.json",
+    def: "handoffRecord",
+    expectValid: false,
+    expectedReason: "routing target dispatch is not allowed"
+  },
+  {
+    file: "tests/fixtures/pnpd/handoff/invalid-approval-claim.json",
+    def: "handoffRecord",
+    expectValid: false,
+    expectedReason: "authority flags must be const false"
+  }
+];
+
 
 
 function parseArgs(argv) {
@@ -102,7 +147,7 @@ Usage:
 Options:
   --phase 0   Validate Phase 0 invariants only.
   --phase 1b  Validate Phase 0 + Phase 1B invariants.
-  --phase 1c  Validate Phase 0 + Phase 1B + Phase 1C invariants.
+  --phase 1c  Validate Phase 0 + Phase 1B + Phase 1C invariants + fixture instance validation.
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
     } else {
@@ -420,6 +465,222 @@ function scanExternalRefs(schema, currentPath, findings) {
 
 // ── Phase 1C schema validators ────────────────────────────────────────────────────
 
+
+// ── Phase 1C instance validator ──────────────────────────────────────────────────
+
+function resolveRef(schema, ref, refPath) {
+  if (typeof ref !== "string" || !ref.startsWith("#/$defs/")) {
+    throw new Error("Unsupported $ref at " + refPath + ": " + String(ref));
+  }
+  const name = ref.slice("#/$defs/".length);
+  const resolved = schema.$defs?.[name] ?? null;
+  if (!resolved) {
+    throw new Error("Missing $ref target at " + refPath + ": " + ref);
+  }
+  return resolved;
+}
+
+function validateInstance(instance, schemaDef, fullSchema, path) {
+  const failures = [];
+  if (!schemaDef) {
+    failures.push({ path, expected: "schema definition", actual: "missing" });
+    return failures;
+  }
+
+  // type check
+  if (schemaDef.type) {
+    const types = Array.isArray(schemaDef.type) ? schemaDef.type : [schemaDef.type];
+    const instType = instance === null ? "null" : Array.isArray(instance) ? "array" : typeof instance;
+    const typeMatches = types.some(function(t) {
+      if (t === "integer") return Number.isInteger(instance);
+      return t === instType;
+    });
+    if (!typeMatches) {
+      var extra = "";
+      if (typeof instance === "number" && !Number.isInteger(instance)) extra = " (float)";
+      failures.push({ path: path, expected: "type " + types.join("|"), actual: instType + extra });
+      return failures;
+    }
+  }
+
+  // object validations
+  if (schemaDef.type === "object" && instance && typeof instance === "object" && !Array.isArray(instance)) {
+    // additionalProperties
+    if (schemaDef.additionalProperties === false) {
+      var knownKeys = new Set(Object.keys(schemaDef.properties || {}));
+      for (var _i = 0, _keys = Object.keys(instance); _i < _keys.length; _i++) {
+        var key = _keys[_i];
+        if (!knownKeys.has(key)) {
+          failures.push({ path: path + "." + key, expected: "no extra properties", actual: "extra field: " + key });
+        }
+      }
+    }
+
+    // required
+    for (var _j = 0, _reqs = schemaDef.required || []; _j < _reqs.length; _j++) {
+      var req = _reqs[_j];
+      if (!(req in instance)) {
+        failures.push({ path: path, expected: "required field " + req, actual: "missing" });
+      }
+    }
+
+    // properties
+    if (schemaDef.properties) {
+      for (var _k = 0, _entries = Object.entries(schemaDef.properties); _k < _entries.length; _k++) {
+        var entry = _entries[_k];
+        var propKey = entry[0];
+        var propSchema = entry[1];
+        if (propKey in instance) {
+          var resolved = propSchema.$ref ? resolveRef(fullSchema, propSchema.$ref, path + "." + propKey + ".$ref") : propSchema;
+          var subFailures = validateInstance(instance[propKey], resolved, fullSchema, path + "." + propKey);
+          for (var _m = 0; _m < subFailures.length; _m++) {
+            failures.push(subFailures[_m]);
+          }
+        }
+      }
+    }
+  }
+
+  // const
+  if (schemaDef.const !== undefined && instance !== schemaDef.const) {
+    failures.push({ path: path, expected: String(schemaDef.const), actual: String(instance) });
+  }
+
+  // enum
+  if (schemaDef.enum && !schemaDef.enum.includes(instance)) {
+    failures.push({ path: path, expected: "one of [" + schemaDef.enum.join(", ") + "]", actual: String(instance) });
+  }
+
+  // string validations
+  if (typeof instance === "string") {
+    if (schemaDef.pattern) {
+      var re = new RegExp("^(?:" + schemaDef.pattern + ")$");
+      if (!re.test(instance)) {
+        failures.push({ path: path, expected: "pattern " + schemaDef.pattern, actual: instance });
+      }
+    }
+    if (schemaDef.maxLength !== undefined && instance.length > schemaDef.maxLength) {
+      failures.push({ path: path, expected: "maxLength " + schemaDef.maxLength, actual: "length " + instance.length });
+    }
+    if (schemaDef.minLength !== undefined && instance.length < schemaDef.minLength) {
+      failures.push({ path: path, expected: "minLength " + schemaDef.minLength, actual: "length " + instance.length });
+    }
+    if (schemaDef.format === "date-time") {
+      var dtRe = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+      if (!dtRe.test(instance)) {
+        failures.push({ path: path, expected: "date-time format", actual: instance });
+      }
+    }
+  }
+
+  // number validations
+  if (typeof instance === "number") {
+    if (schemaDef.minimum !== undefined && instance < schemaDef.minimum) {
+      failures.push({ path: path, expected: "minimum " + schemaDef.minimum, actual: String(instance) });
+    }
+    if (schemaDef.maximum !== undefined && instance > schemaDef.maximum) {
+      failures.push({ path: path, expected: "maximum " + schemaDef.maximum, actual: String(instance) });
+    }
+  }
+
+  // integer validation (via type)
+  if (schemaDef.type === "integer" && !Number.isInteger(instance)) {
+    failures.push({ path: path, expected: "integer", actual: String(instance) });
+  }
+
+  // array validations
+  if (Array.isArray(instance)) {
+    if (schemaDef.maxItems !== undefined && instance.length > schemaDef.maxItems) {
+      failures.push({ path: path, expected: "maxItems " + schemaDef.maxItems, actual: "length " + instance.length });
+    }
+    if (schemaDef.items) {
+      var itemSchema = schemaDef.items.$ref ? resolveRef(fullSchema, schemaDef.items.$ref, path + ".items.$ref") : schemaDef.items;
+      for (var i = 0; i < instance.length; i++) {
+        var arrFails = validateInstance(instance[i], itemSchema, fullSchema, path + "[" + i + "]");
+        for (var _n = 0; _n < arrFails.length; _n++) {
+          failures.push(arrFails[_n]);
+        }
+      }
+    }
+  }
+
+  // oneOf
+  if (schemaDef.oneOf) {
+    var matchCount = 0;
+    for (var _o = 0; _o < schemaDef.oneOf.length; _o++) {
+      var subSchema = schemaDef.oneOf[_o];
+      var subResolved = subSchema.$ref ? resolveRef(fullSchema, subSchema.$ref, path + ".oneOf[" + _o + "].$ref") : subSchema;
+      var subFailures = validateInstance(instance, subResolved, fullSchema, path);
+      if (subFailures.length === 0) {
+        matchCount += 1;
+      }
+    }
+    if (matchCount !== 1) {
+      failures.push({ path: path, expected: "exactly one oneOf match", actual: String(matchCount) + " alternatives matched" });
+    }
+  }
+
+  return failures;
+}
+
+function scanFixtureContent(fixture) {
+  var secretFindings = findSecretLikeFields(fixture);
+  var forbiddenPathFindings = findForbiddenPaths(fixture);
+  var envFindings = findEnvPaths(fixture);
+
+  var issues = [];
+  if (secretFindings.length > 0) {
+    issues.push("Secret-like fields: " + secretFindings.join(", "));
+  }
+  if (forbiddenPathFindings.length > 0) {
+    issues.push("Forbidden paths: " + JSON.stringify(forbiddenPathFindings));
+  }
+  if (envFindings.length > 0) {
+    issues.push(".env paths: " + JSON.stringify(envFindings));
+  }
+  return issues;
+}
+
+function validateFixturesPhase1C() {
+  var schema = readJson(".pnpd/orchestrator.schema.json");
+  var failures = [];
+
+  for (var _p = 0; _p < PHASE_1C_FIXTURES.length; _p++) {
+    var entry = PHASE_1C_FIXTURES[_p];
+
+    // Check fixture file exists
+    var fixture;
+    try {
+      fixture = readJson(entry.file);
+    } catch (e) {
+      failures.push(entry.file + ": MISSING or invalid JSON: " + e.message);
+      continue;
+    }
+
+    // Safety scan
+    var safetyIssues = scanFixtureContent(fixture);
+    if (safetyIssues.length > 0) {
+      failures.push(entry.file + ": SAFETY VIOLATION: " + safetyIssues.join("; "));
+      continue;
+    }
+
+    // Validate against the specified schema definition
+    var schemaDef = getDef(schema, entry.def);
+    var validationFailures = validateInstance(fixture, schemaDef, schema, "$");
+
+    if (entry.expectValid && validationFailures.length > 0) {
+      var detail = validationFailures.map(function(f) { return f.path + ": " + f.expected + " (got: " + f.actual + ")"; }).join("; ");
+      failures.push(entry.file + ": expected VALID but got " + validationFailures.length + " failure(s): " + detail);
+    } else if (!entry.expectValid && validationFailures.length === 0) {
+      failures.push(entry.file + ": expected INVALID (" + entry.expectedReason + ") but passed validation");
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error("Fixture validation failures:\\n  " + failures.join("\\n  "));
+  }
+}
+
 function validateOrchestratorSchemaPhase1C(schema) {
   const defs = schema.$defs;
   assert(defs, "Orchestrator schema must have $defs.");
@@ -441,6 +702,9 @@ function validateOrchestratorSchemaPhase1C(schema) {
   validateExternalRefScanPhase1C(schema);
   // -- Backward compatibility --
   validatePhase1CBackwardCompat(schema);
+
+  // Fixture instance validation
+  validateFixturesPhase1C();
 }
 
 function validateLedgerRecordPhase1C(schema) {
