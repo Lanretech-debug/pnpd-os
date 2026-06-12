@@ -196,7 +196,7 @@ risk:
 
 ### Preserved States (must not regress)
 
-- `APPROVED_FOR_MERGE` — cannot be reached by Orchestrator alone; requires owner or Codex
+- `APPROVED_FOR_MERGE` — cannot be reached by Orchestrator alone; requires owner approval after required Codex audit gates
 - `DONE` — cannot be reached from any unresolved active state
 - `CODEX_REVIEW_REQUIRED` — remains distinct from owner approval
 - Hermes planning is not Codex audit
@@ -282,7 +282,7 @@ Each handoff record should carry:
 | 9 | Accidental deploy trigger | Unauthorized production change | Dispatch disabled; no deploy command in allowlist; no remote mutation | Block all dispatch | `dispatch_disabled` |
 | 10 | Unauthorized merge | Bypass of review chain | Merge requires owner approval; Orchestrator cannot approve merge | Block merge recommendation | `merge_gate` |
 | 11 | Unauthorized GitHub mutation | Tampering with remote state | No GitHub write token provisioned; no write API calls in code path | Block all GitHub writes | `github_write_disabled` |
-| 12 | Hidden approval path | Authority bypass | All state transitions audited; no state can reach APPROVED_FOR_MERGE without owner or Codex | Reject invalid transition | `state_machine_validate` |
+| 12 | Hidden approval path | Authority bypass | All state transitions audited; no state can reach APPROVED_FOR_MERGE without owner approval after required Codex audit gates | Reject invalid transition | `state_machine_validate` |
 | 13 | Cross-repo contamination | Leakage between projects | Per-repo locks; no shared mutable state; separate ledger entries | Isolate per repo | `repo_isolation` |
 | 14 | Destructive filesystem action | Data loss | No `rm`, `chmod`, `chown`, `unlink`, `rmdir`, `mv`, `cp` in allowlist | Block destructive commands | `command_allowlist` |
 | 15 | Symlink / path traversal via repo path | Read outside worktree | Resolve real paths; reject symlinks outside worktree; validate canonical path | Skip repo; report | `path_validate` |
@@ -412,7 +412,7 @@ The following tests must be designed (and implemented in a future Phase 1 implem
 
 ### Gate Tests
 - Dirty tree blocks inspection
-- `APPROVED_FOR_MERGE` cannot be reached without owner/Codex
+- `APPROVED_FOR_MERGE` cannot be reached without owner approval after required Codex audit gates
 - Active state cannot collapse to `DONE`
 
 ### Security Tests
@@ -479,7 +479,7 @@ When Codex audits future Phase 1 implementation, it must verify:
 - [ ] No GitHub mutation code exists (no writes, no comments, no labels, no PR mutation)
 - [ ] No merge or deploy path exists
 - [ ] No secret handling, token inference, or `.env` parsing
-- [ ] State machine authority is preserved (`APPROVED_FOR_MERGE` unreachable without owner/Codex)
+- [ ] State machine authority is preserved (`APPROVED_FOR_MERGE` unreachable without owner approval after required Codex audit gates)
 - [ ] Lock/lease safety: atomic acquisition, stale detection, fail-closed
 - [ ] All tests/gates pass
 - [ ] Documentation is consistent with implementation
@@ -511,4 +511,4 @@ When Codex audits future Phase 1 implementation, it must verify:
 
 ---
 
-*This document is a design proposal. It is not implementation. It is not audited. It does not authorize merge.*
+*This document is a design proposal. It is not implementation. It does not self-certify audit status. It does not authorize merge.*
