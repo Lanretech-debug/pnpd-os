@@ -7,7 +7,7 @@
 | **Status** | `DEEPSEEK_PHASE_1C_LEDGER_HANDOFF_DESIGN_DOC_COMMITTED_AMBER_NOT_CODEX_AUDITED` |
 | **Source** | Hermes design/scoping output, captured by DeepSeek |
 | **Scope** | Docs-only design capture |
-| **Date** | 2025-06-12 |
+| **Date** | 2026-06-12 |
 | **Branch** | `deepseek/phase1c-ledger-handoff-design` |
 | **Baseline** | `2213221` — `merge: Phase 1B PNPD schema proposal into main` |
 
@@ -67,6 +67,21 @@ Phase 1C does **not** include:
 - Cross-repo writes
 - Hidden approval or merge-readiness claim path
 - Any change to Phase 0 or Phase 1B runtime behavior
+
+---
+
+## Governance Authority Boundaries
+
+Phase 1C does not change PNPD OS authority:
+
+- **Hermes** provides design, scoping, routing, and orchestration reasoning only.
+- **DeepSeek** captures or implements after explicit owner approval only; it is not a formal audit authority.
+- **Codex** performs formal audit and final review only; Codex audit cannot be bypassed by AgentBridge or the Orchestrator.
+- **Owner** remains the final authority for merge, patch, reject, and future implementation approval.
+- **AgentBridge / PNPD Orchestrator** remains a coordination, recommendation, state, and handoff layer only.
+- **Ledger records** are evidence, not approval, audit, merge readiness, production readiness, or deployment readiness.
+- **Handoff files** are routing context, not audit, dispatch, merge readiness, or agent-thread creation.
+- Neither ledger nor handoff output may approve, certify, merge, deploy, override Owner, override Codex, bypass gates, dispatch agents, write external state, touch secrets, or claim production readiness.
 
 ---
 
@@ -191,8 +206,8 @@ The handoff is an **actionable routing summary** — a structured, pretty-printe
 
 ```json
 {
-  "runId": "2025-06-12T09-00-00Z-abc123",
-  "timestamp": "2025-06-12T09:00:00.000Z",
+  "runId": "2026-06-12T09-00-00Z-abc123",
+  "timestamp": "2026-06-12T09:00:00.000Z",
   "repoId": "pnpd-os",
   "repoPath": "/Users/lanretech/Projects/pnpd-os",
   "branch": "main",
@@ -222,7 +237,7 @@ The handoff is an **actionable routing summary** — a structured, pretty-printe
     "schemaVersion": 1,
     "generator": "pnpd-orchestrator",
     "generatorVersion": "1.0.0",
-    "contentHash": "sha256-abc123..."
+    "contentHash": "sha256-example-ledger-content-hash"
   }
 }
 ```
@@ -234,7 +249,7 @@ The handoff is an **actionable routing summary** — a structured, pretty-printe
   "from": "pnpd-orchestrator",
   "to": "hermes",
   "repo_id": "pnpd-os",
-  "run_id": "2025-06-12T09-00-00Z-abc123",
+  "run_id": "2026-06-12T09-00-00Z-abc123",
   "status": "NEEDS_TRIAGE",
   "authority": "coordination/recommendation only",
   "dispatch_allowed": false,
@@ -262,7 +277,7 @@ The handoff is an **actionable routing summary** — a structured, pretty-printe
     "schemaVersion": 1,
     "generator": "pnpd-orchestrator",
     "generatorVersion": "1.0.0",
-    "contentHash": "sha256-def456..."
+    "contentHash": "sha256-example-handoff-content-hash"
   }
 }
 ```
@@ -378,9 +393,9 @@ Every failure is **fail-closed**: the operation aborts, no partial state is comm
 | Partial write (crash mid-write) | `BLOCKED` | Last ledger line may be incomplete; next run appends cleanly | Inspect last line; truncate if needed | Yes |
 | Disk full | `BLOCKED` | Abort with ENOSPC | Free disk space | Yes |
 | Invalid JSON in registry | `BLOCKED` | Abort before any write | Fix registry JSON | Yes |
-| Corrupted ledger line (read) | `BLOCKED` | Skip corrupted line; log warning | Inspect and repair ledger | Yes |
+| Corrupted ledger line (read) | `BLOCKED` | Abort read/write; report line number | Inspect and repair ledger | Yes |
 | Duplicate run id | `BLOCKED` | Abort (idempotency guard) | Use new run id | Yes (with new id) |
-| Dirty repo | `BLOCKED` | Abort unless `--allow-dirty` explicitly set | Commit or stash changes | Yes |
+| Dirty repo | `BLOCKED` | Abort; no write flags override dirty-tree gate in this design | Commit or stash changes | Yes |
 | Missing repo path | `BLOCKED` | Abort; skip repo | Verify repo path in registry | Yes |
 | Detached HEAD | `BLOCKED` | Abort; report state | Checkout a branch | Yes |
 | Forbidden path detected | `BLOCKED` | Abort with path details | Remove forbidden path from registry | No — fix registry |
@@ -480,10 +495,10 @@ For ledger:
 
 | Category | Handling |
 |----------|----------|
-| Credential values (`sk-...`, `ghp_...`, etc.) | Rejected by `SECRET_VALUE_PATTERN`; write aborted |
+| Credential values (`sk-<redacted>`, `ghp_<redacted>`, etc.) | Rejected by `SECRET_VALUE_PATTERN`; write aborted |
 | `.env` file contents | Never read; never written |
 | API keys, tokens, passwords | Rejected by pattern match |
-| Private keys (`-----BEGIN ... PRIVATE KEY-----`) | Rejected by pattern match |
+| Private keys (`-----BEGIN PRIVATE KEY-----`) | Rejected by pattern match |
 | Real user paths outside repo | Redacted to `<redacted-path>` |
 | Issue/PR body text | **Not ingested in Phase 1C** (no GitHub read) |
 | User-provided free text in registry | Minimized; sanitized; pattern-checked |
@@ -560,7 +575,7 @@ Tests are designed here but **not implemented** in this docs-only capture.
 | Handoff idempotent for same run id | Second write with same `runId` overwrites safely |
 | Path traversal rejected | `../` in path aborts write |
 | Symlink escape rejected | Symlink pointing outside repo aborts write |
-| Secret-like value rejected | `sk-abc123...` in output aborts write |
+| Secret-like value rejected | `sk-<redacted-example>` in output aborts write |
 | Authority flags always false | Validator rejects any `true` value |
 | Dry-run text output unchanged | Phase 0 text output identical with/without write flags |
 | Dry-run JSON parseable | `--json` output valid JSON regardless of write flags |
@@ -678,7 +693,7 @@ Before Phase 1C proceeds beyond this docs-only capture, Owner must decide:
 | # | Decision | Context |
 |---|----------|---------|
 | 1 | Approve the Phase 1C design direction | This document |
-| 2 | Allow docs-only design capture merge to `main` | Gate: Codex audit recommended |
+| 2 | Allow docs-only design capture merge to `main` | Gate: Codex audit required |
 | 3 | Allow future ledger writes behind explicit `--write-ledger` flag | Phase 1C-4 |
 | 4 | Allow future handoff writes behind explicit `--write-handoff` flag | Phase 1C-5 |
 | 5 | Whether `.pnpd/ledger/` and `.pnpd/handoffs/` should be gitignored | Currently not in `.gitignore` |
