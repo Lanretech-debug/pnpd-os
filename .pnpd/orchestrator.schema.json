@@ -21,6 +21,17 @@
       "type": "boolean",
       "const": false
     },
+    "runId": {
+      "type": "string"
+    },
+    "schedulerStatus": {
+      "type": "string",
+      "enum": ["disabled", "pending", "running", "error"]
+    },
+    "lockStatus": {
+      "type": "string",
+      "enum": ["unlocked", "locked", "unknown"]
+    },
     "repos": {
       "type": "array",
       "items": { "$ref": "#/$defs/repoResult" }
@@ -78,6 +89,48 @@
         "handoffPreview": {
           "type": "object",
           "additionalProperties": true
+        },
+        "lockStatus": {
+          "type": "string",
+          "enum": ["unlocked", "locked", "stale", "unknown"]
+        },
+        "ledgerStatus": {
+          "type": "string",
+          "enum": ["ok", "missing", "stale", "blocked", "unknown"]
+        },
+        "handoffStatus": {
+          "type": "string",
+          "enum": ["ok", "missing", "stale", "blocked", "unknown"]
+        },
+        "authorityFlags": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["approvalClaimed", "mergeClaimed", "dispatchRequested", "auditClaimed", "productionReadinessClaimed"],
+          "properties": {
+            "approvalClaimed": { "type": "boolean", "const": false },
+            "mergeClaimed": { "type": "boolean", "const": false },
+            "dispatchRequested": { "type": "boolean", "const": false },
+            "auditClaimed": { "type": "boolean", "const": false },
+            "productionReadinessClaimed": { "type": "boolean", "const": false }
+          }
+        },
+        "blockedReasons": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "riskAssessment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "level": { "type": "string", "enum": ["low", "medium", "high", "unknown"] },
+            "factors": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "requiredReviewer": {
+          "type": "string"
         }
       }
     }

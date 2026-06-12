@@ -104,6 +104,80 @@
         "pendingItems": {
           "type": "array",
           "items": { "$ref": "#/$defs/pendingItem" }
+        },
+        "scheduler": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled"],
+          "properties": {
+            "enabled": { "type": "boolean", "const": false }
+          }
+        },
+        "repoConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "description": { "type": "string" },
+            "tags": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "inspection": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "gitStatus": { "type": "boolean" },
+            "branchCheck": { "type": "boolean" },
+            "dirtyCheck": { "type": "boolean" },
+            "pendingItemScan": { "type": "boolean" }
+          }
+        },
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dispatchAllowed", "externalWritesAllowed"],
+          "properties": {
+            "dispatchAllowed": { "type": "boolean", "const": false },
+            "externalWritesAllowed": { "type": "boolean", "const": false }
+          }
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["policy"],
+          "properties": {
+            "policy": { "type": "string", "const": "deny-all" }
+          }
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tokenLimit": { "type": "integer", "minimum": 0 },
+            "maxCostUSD": { "type": "number", "minimum": 0 }
+          }
+        },
+        "risk": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "level": { "type": "string", "enum": ["low", "medium", "high", "unknown"] },
+            "notes": { "type": "string" }
+          }
+        },
+        "localWrites": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allowed"],
+          "properties": {
+            "allowed": { "type": "boolean", "const": false },
+            "paths": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
         }
       }
     },
