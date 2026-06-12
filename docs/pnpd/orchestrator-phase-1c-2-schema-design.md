@@ -756,15 +756,11 @@ All five authority flags are `const: false` in every context — ledger record, 
 - **Routing cannot dispatch.** A `routing.to` field names a recipient; it does not trigger an agent.
 - **Record cannot claim merge/deploy readiness.** Only the owner (or Codex with owner authorization) may claim readiness.
 
-### Future relaxations
+### Non-relaxation rule
 
-If and only if a future approved phase explicitly authorizes it, an authority flag may be relaxed from `const: false` to a runtime-determined boolean. Any such relaxation must:
+For PNPD Orchestrator ledger and handoff records, these authority flags are not a future extension point. They remain `const: false` because AgentBridge and the Orchestrator are not authority layers.
 
-1. Be in its own phase with its own threat model.
-2. Be owner-approved before implementation.
-3. Be Codex-audited before merge.
-4. Never relax more than one flag at a time.
-5. Never relax without a corresponding gate in the orchestrator loop.
+Any future proposal to change the authority model must be a separate governance ADR, owner-approved before implementation, and Codex-audited before merge. Such a proposal must not grant AgentBridge or the Orchestrator approval, audit, merge, deploy, dispatch, production-readiness, or gate-bypass authority.
 
 ---
 
@@ -782,8 +778,8 @@ If and only if a future approved phase explicitly authorizes it, an authority fl
 
 | What | Rule |
 |------|------|
-| API key patterns (`sk-...`, `ghp_...`, `xox*`) | Reject record; do not write |
-| Private key blocks (`-----BEGIN ... PRIVATE KEY-----`) | Reject record; do not write |
+| API key patterns (`sk-<redacted>`, `ghp_<redacted>`, `xox<redacted>`) | Reject record; do not write |
+| Private key blocks (`-----BEGIN PRIVATE KEY-----`) | Reject record; do not write |
 | `.env` file paths | Reject record; do not write |
 | Forbidden legacy BricLab path | Reject record; do not write |
 | Token-looking policy text | Allow with path redacted if ambiguous |
@@ -932,15 +928,15 @@ Each threat is assessed with its risk, impact, schema-level mitigation, and reco
 | **Schema constraint** | `maxLength` on `recommendedAction`, `handoff.summary`, `handoff.context`, `blockedReasons`, `riskAssessment.factors` |
 | **Validator check** | Scan all string fields for `SECRET_VALUE_PATTERN`; reject record if found |
 
-### Threat: Handoff summary becomes prompt-injection carrier
+### Threat: Handoff summary/context becomes prompt-injection carrier
 
 | Attribute | Value |
 |-----------|-------|
 | **Risk** | Medium |
-| **Impact** | Malicious text in handoff summary could influence agent behavior if ingested into an LLM prompt |
-| **Mitigation** | `handoff.summary` bounded to 1000 chars; `handoff.context` bounded to 2000 chars; routing is advisory-only; recipient decides whether to act |
+| **Impact** | Malicious text in handoff summary or context could influence agent behavior if ingested into an LLM prompt |
+| **Mitigation** | `handoff.summary` bounded to 1000 chars; `handoff.context` bounded to 2000 chars; context must not include secrets, `.env` content, credentials, PII, raw issue/PR bodies, production URLs, or untrusted prompt-like instructions; routing is advisory-only; recipient decides whether to act |
 | **Schema constraint** | `maxLength: 1000` on summary, `maxLength: 2000` on context |
-| **Validator check** | Warn (not block) on summary > 80% of maxLength; recommend sanitization |
+| **Validator check** | Reject secret-like values and forbidden content patterns; warn on summary/context > 80% of maxLength; require sanitization before future writes |
 
 ### Threat: Routing interpreted as dispatch
 
@@ -1058,13 +1054,13 @@ Future fixtures provide known-good and known-bad sample records for validator te
 |------|---------|
 | `tests/fixtures/ledger/valid-entry.json` | Minimal valid ledger record |
 | `tests/fixtures/ledger/invalid-authority-flag.json` | Ledger with `approvalClaimed: true` — must fail |
-| `tests/fixtures/ledger/invalid-secret.json` | Ledger containing `sk-abc123...` in recommendedAction — must fail |
+| `tests/fixtures/ledger/invalid-secret.json` | Ledger containing `sk-<redacted-example>` in recommendedAction — must fail |
 | `tests/fixtures/ledger/invalid-missing-required.json` | Ledger missing `gates` — must fail |
 | `tests/fixtures/ledger/invalid-extra-property.json` | Ledger with unknown field — must fail |
 | `tests/fixtures/handoff/valid-handoff.json` | Minimal valid handoff record |
 | `tests/fixtures/handoff/invalid-routing-dispatch.json` | Handoff with `dispatchRequested: true` — must fail |
 | `tests/fixtures/handoff/invalid-approval-claim.json` | Handoff with `approvalClaimed: true` — must fail |
-| `tests/fixtures/handoff/invalid-routing-url.json` | Handoff with `routing.to: "https://..."` — must fail |
+| `tests/fixtures/handoff/invalid-routing-url.json` | Handoff with `routing.to: "https://example.invalid/dispatch-target"` — must fail |
 
 ### Fixture rules
 
@@ -1186,7 +1182,7 @@ node scripts/pnpd-orchestrator-dry-run.mjs --json | node -e "let s='';process.st
 ```bash
 git diff --name-only | grep -v '^docs/pnpd/orchestrator-phase-1c-2-schema-design.md$' && echo "SCOPE_VIOLATION" || true
 
-grep -R "/Users/lanretech/Documents/BricLab Kids" . --exclude-dir=.git || true
+grep -R "/Users/lanretech/Documents/BricLab"" Kids" . --exclude-dir=.git || true
 
 grep -R -E "sk-|ghp_|github_pat_|xoxb-|AKIA|BEGIN PRIVATE KEY|SUPABASE_ACCESS_TOKEN|RESEND_API_KEY|OPENAI_API_KEY|DEEPSEEK_API_KEY|GITHUB_TOKEN" . \
   --exclude-dir=.git \
