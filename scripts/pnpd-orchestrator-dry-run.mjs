@@ -78,7 +78,7 @@ function parseArgs(argv) {
         throw new Error("--schedule-max-runs requires a value.");
       }
       args.scheduleMaxRuns = Number(argv[i + 1]);
-      if (isNaN(args.scheduleMaxRuns) || args.scheduleMaxRuns < 1 || args.scheduleMaxRuns > 100) {
+      if (isNaN(args.scheduleMaxRuns) || args.scheduleMaxRuns < 1 || args.scheduleMaxRuns > 100 || !Number.isInteger(args.scheduleMaxRuns)) {
         throw new Error("--schedule-max-runs must be between 1 and 100.");
       }
       i += 1;
@@ -1007,14 +1007,13 @@ function releaseLock(lockInfo, runId) {
 }
 
 function validateSchedulerArgs(args) {
-  const isScheduler = args.scheduleOnce || args.scheduleIntervalMs || args.scheduleMaxRuns;
   const isRepeated = args.scheduleIntervalMs && args.scheduleMaxRuns;
-  
+
   // Incompatible flags
   if (args.scheduleOnce && (args.scheduleIntervalMs || args.scheduleMaxRuns)) {
     throw new Error("--schedule-once cannot be combined with --schedule-interval-ms or --schedule-max-runs.");
   }
-  
+
   // Repeated mode requires both interval and max-runs
   if (args.scheduleIntervalMs && !args.scheduleMaxRuns) {
     throw new Error("--schedule-interval-ms requires --schedule-max-runs.");
@@ -1022,10 +1021,10 @@ function validateSchedulerArgs(args) {
   if (args.scheduleMaxRuns && !args.scheduleIntervalMs) {
     throw new Error("--schedule-max-runs requires --schedule-interval-ms.");
   }
-  
+
   // Plan mode - no further validation needed
   if (args.schedulerPlan) return { mode: "plan" };
-  
+
   // Schedule-once mode
   if (args.scheduleOnce) {
     if (!args.useLock) {
@@ -1036,7 +1035,7 @@ function validateSchedulerArgs(args) {
     }
     return { mode: "once" };
   }
-  
+
   // Repeated mode
   if (isRepeated) {
     if (!args.useLock) {
@@ -1047,7 +1046,7 @@ function validateSchedulerArgs(args) {
     }
     return { mode: "repeated", intervalMs: args.scheduleIntervalMs, maxRuns: args.scheduleMaxRuns };
   }
-  
+
   // Manual mode
   return { mode: "manual" };
 }
