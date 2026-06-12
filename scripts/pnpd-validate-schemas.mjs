@@ -40,6 +40,43 @@ const FORBIDDEN_REGISTRY_KEY_PATTERNS = [
   /auto[_-]?merge/i,
   /auto[_-]?approve/i
 ];
+const FORBIDDEN_CAPABILITY_NAMES = new Set([
+  "token",
+  "secret",
+  "password",
+  "apiKey",
+  "privateKey",
+  "githubToken",
+  "gitPush",
+  "remoteUrl",
+  "deploy",
+  "deployment",
+  "release",
+  "productionUrl",
+  "dispatchTarget",
+  "externalWrite",
+  "webhook",
+  "apiEndpoint",
+  "emailRecipient"
+]);
+
+const REQUIRED_PHASE_1C_DEFS = new Set([
+  "ledgerRecord",
+  "handoffRecord",
+  "ledgerRepo",
+  "ledgerGit",
+  "gateResult",
+  "blockedReason",
+  "riskAssessment",
+  "authorityFlags",
+  "redactionSummary",
+  "integrityBlock",
+  "reviewerEnum",
+  "classificationEnum",
+  "handoffRouting",
+  "gateStatusEnum"
+]);
+
 
 function parseArgs(argv) {
   const args = { phase: null };
@@ -48,11 +85,11 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--phase") {
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0 or 1b).");
+        throw new Error("--phase requires a value (0, 1b, or 1c).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b") {
-        throw new Error('--phase must be "0" or "1b".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c") {
+        throw new Error('--phase must be "0", "1b", or "1c".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -60,12 +97,13 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c]
 
 Options:
   --phase 0   Validate Phase 0 invariants only.
-  --phase 1b  Validate Phase 1B invariants only.
-  (default)   Validate all invariants.`);
+  --phase 1b  Validate Phase 0 + Phase 1B invariants.
+  --phase 1c  Validate Phase 0 + Phase 1B + Phase 1C invariants.
+  (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -321,12 +359,378 @@ function validateRegistryPhase1B(registry) {
   }
 }
 
+
+// ── Phase 1C helpers ─────────────────────────────────────────────────────────────
+
+function getDef(schema, name) {
+  const def = schema.$defs?.[name];
+  assert(def, "Missing required $def: " + name);
+  return def;
+}
+
+function resolveLocalRef(schema, ref) {
+  if (typeof ref !== "string" || !ref.startsWith("#/$defs/")) {
+    throw new Error("Only local #/$defs/ refs are supported; got: " + ref);
+  }
+  const name = ref.slice("#/$defs/".length);
+  return getDef(schema, name);
+}
+
+function scanForbiddenCapabilityNames(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+
+  if (Array.isArray(obj)) {
+    obj.forEach((item, i) => scanForbiddenCapabilityNames(item, currentPath + "[" + i + "]", findings));
+    return findings;
+  }
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (FORBIDDEN_CAPABILITY_NAMES.has(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanForbiddenCapabilityNames(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function scanExternalRefs(schema, currentPath, findings) {
+  if (typeof schema === "string") {
+    if (currentPath.endsWith(".$ref") && !schema.startsWith("#/$defs/")) {
+      findings.push(currentPath + " = " + schema);
+    }
+    return findings;
+  }
+
+  if (!schema || typeof schema !== "object") return findings;
+
+  if (Array.isArray(schema)) {
+    schema.forEach((item, i) => scanExternalRefs(item, currentPath + "[" + i + "]", findings));
+    return findings;
+  }
+
+  for (const [key, value] of Object.entries(schema)) {
+    scanExternalRefs(value, currentPath + "." + key, findings);
+  }
+  return findings;
+}
 // ── Main ────────────────────────────────────────────────────────────────────────
 
+
+// ── Phase 1C schema validators ────────────────────────────────────────────────────
+
+function validateOrchestratorSchemaPhase1C(schema) {
+  const defs = schema.$defs;
+  assert(defs, "Orchestrator schema must have $defs.");
+
+  // -- Required $defs existence --
+  for (const name of REQUIRED_PHASE_1C_DEFS) {
+    getDef(schema, name);
+  }
+
+  // -- Ledger record --
+  validateLedgerRecordPhase1C(schema);
+  // -- Handoff record --
+  validateHandoffRecordPhase1C(schema);
+  // -- Shared defs --
+  validateSharedDefsPhase1C(schema);
+  // -- Capability field scan --
+  validateCapabilityScanPhase1C(schema);
+  // -- External $ref scan --
+  validateExternalRefScanPhase1C(schema);
+  // -- Backward compatibility --
+  validatePhase1CBackwardCompat(schema);
+}
+
+function validateLedgerRecordPhase1C(schema) {
+  const lr = getDef(schema, "ledgerRecord");
+
+  assert(lr.type === "object", "ledgerRecord must be type object.");
+  assert(lr.additionalProperties === false, "ledgerRecord must have additionalProperties: false.");
+  assert(lr.properties?.recordType?.const === "ledger", "ledgerRecord recordType must be const ledger.");
+  assert(lr.properties?.schemaVersion?.const === 1, "ledgerRecord schemaVersion must be const 1.");
+
+  const source = lr.properties?.source;
+  assert(source, "ledgerRecord must have source property.");
+  assert(
+    source.const === "pnpd-orchestrator-dry-run" ||
+    (source.enum && source.enum.length === 1 && source.enum[0] === "pnpd-orchestrator-dry-run"),
+    "ledgerRecord.source must be const pnpd-orchestrator-dry-run."
+  );
+
+  const required = lr.required || [];
+  const coreLedgerFields = ["recordType", "runId", "createdAt", "source", "generatorVersion", "repo", "git", "classification", "gates", "authorityFlags", "integrity"];
+  for (const f of coreLedgerFields) {
+    assert(required.includes(f), "ledgerRecord required must include: " + f);
+  }
+
+  // Free-text field maxLength
+  assert(lr.properties?.recommendedAction?.maxLength > 0, "ledgerRecord recommendedAction must have maxLength.");
+
+  // $ref integrity
+  validateRef(schema, lr.properties?.repo?.$ref, "ledgerRepo", "ledgerRecord.repo");
+  validateRef(schema, lr.properties?.git?.$ref, "ledgerGit", "ledgerRecord.git");
+  validateRef(schema, lr.properties?.classification?.$ref, "classificationEnum", "ledgerRecord.classification");
+  validateRef(schema, lr.properties?.gates?.items?.$ref, "gateResult", "ledgerRecord.gates.items");
+  validateRef(schema, lr.properties?.authorityFlags?.$ref, "authorityFlags", "ledgerRecord.authorityFlags");
+  validateRef(schema, lr.properties?.integrity?.$ref, "integrityBlock", "ledgerRecord.integrity");
+}
+
+function validateHandoffRecordPhase1C(schema) {
+  const hr = getDef(schema, "handoffRecord");
+
+  assert(hr.type === "object", "handoffRecord must be type object.");
+  assert(hr.additionalProperties === false, "handoffRecord must have additionalProperties: false.");
+  assert(hr.properties?.recordType?.const === "handoff", "handoffRecord recordType must be const handoff.");
+  assert(hr.properties?.schemaVersion?.const === 1, "handoffRecord schemaVersion must be const 1.");
+
+  const source = hr.properties?.source;
+  assert(source, "handoffRecord must have source property.");
+  assert(
+    source.const === "pnpd-orchestrator-dry-run" ||
+    (source.enum && source.enum.length === 1 && source.enum[0] === "pnpd-orchestrator-dry-run"),
+    "handoffRecord.source must be const pnpd-orchestrator-dry-run."
+  );
+
+  const required = hr.required || [];
+  assert(required.includes("handoff"), "handoffRecord required must include handoff.");
+
+  const handoff = hr.properties?.handoff;
+  assert(handoff, "handoffRecord must have handoff property.");
+  assert(handoff.additionalProperties === false, "handoffRecord.handoff must have additionalProperties: false.");
+  assert(handoff.properties?.format?.const === "pnpd-handoff-v1", "handoff.format must be const pnpd-handoff-v1.");
+  assert(handoff.properties?.summary?.maxLength > 0, "handoff.summary must have maxLength.");
+  if (handoff.properties?.context) {
+    assert(handoff.properties.context.maxLength > 0, "handoff.context must have maxLength.");
+  }
+  assert(handoff.properties?.routing, "handoff must have routing property.");
+  validateRef(schema, handoff.properties?.routing?.$ref, "handoffRouting", "handoffRecord.handoff.routing");
+
+  // No forbidden capability fields at the handoff level
+  if (handoff.properties) {
+    const caps = [];
+    scanForbiddenCapabilityNames(handoff.properties, "handoffRecord.handoff.properties", caps);
+    assert(caps.length === 0, "handoff handoff object contains forbidden capability field(s): " + caps.join(", "));
+  }
+}
+
+function validateSharedDefsPhase1C(schema) {
+  // --- authorityFlags ---
+  const af = getDef(schema, "authorityFlags");
+  assert(af.type === "object", "authorityFlags must be type object.");
+  assert(af.additionalProperties === false, "authorityFlags must have additionalProperties: false.");
+  const afRequired = af.required || [];
+  const afFlags = ["approvalClaimed", "mergeClaimed", "dispatchRequested", "auditClaimed", "productionReadinessClaimed"];
+  for (const f of afFlags) {
+    assert(afRequired.includes(f), "authorityFlags required must include: " + f);
+    assert(af.properties?.[f]?.const === false, "authorityFlags." + f + " must be const: false.");
+  }
+
+  // --- handoffRouting ---
+  const routing = getDef(schema, "handoffRouting");
+  assert(routing.type === "object", "handoffRouting must be type object.");
+  assert(routing.additionalProperties === false, "handoffRouting must have additionalProperties: false.");
+
+  // Resolve routing.to (may be $ref to reviewerEnum)
+  const toDef = resolveIfRef(schema, routing.properties?.to);
+  assert(toDef, "handoffRouting.to must be defined.");
+  const toEnum = toDef.enum;
+  assert(toEnum, "handoffRouting.to must have enum (directly or via $ref).");
+  const expectedTo = ["owner", "hermes", "deepseek", "codex", "none"];
+  for (const v of expectedTo) {
+    assert(toEnum.includes(v), "handoffRouting.to enum missing: " + v);
+  }
+  assert(toEnum.length === expectedTo.length, "handoffRouting.to enum has unexpected extra values.");
+
+  // urgency enum
+  const urgencyEnum = routing.properties?.urgency?.enum;
+  if (urgencyEnum) {
+    const expectedUrgency = ["low", "normal", "high", "blocked"];
+    for (const v of expectedUrgency) {
+      assert(urgencyEnum.includes(v), "handoffRouting.urgency enum missing: " + v);
+    }
+    assert(urgencyEnum.length === expectedUrgency.length, "handoffRouting.urgency enum has unexpected extra values.");
+  }
+
+  // No forbidden capability fields in routing
+  const routingCaps = [];
+  scanForbiddenCapabilityNames(routing.properties, "handoffRouting.properties", routingCaps);
+  assert(routingCaps.length === 0, "handoffRouting contains forbidden capability field(s): " + routingCaps.join(", "));
+
+  // --- reviewerEnum ---
+  const rev = getDef(schema, "reviewerEnum");
+  const revExpected = ["owner", "hermes", "deepseek", "codex", "none"];
+  assert(rev.enum, "reviewerEnum must have enum.");
+  for (const v of revExpected) {
+    assert(rev.enum.includes(v), "reviewerEnum enum missing: " + v);
+  }
+  assert(rev.enum.length === revExpected.length, "reviewerEnum enum has unexpected extra values.");
+
+  // --- classificationEnum ---
+  const ce = getDef(schema, "classificationEnum");
+  assert(ce.enum, "classificationEnum must have enum.");
+  const expectedStates = [
+    "DISCOVERED", "NEEDS_TRIAGE", "NEEDS_INFO", "READY_FOR_AGENT",
+    "DISPATCHED", "IN_PROGRESS", "AGENT_DONE", "AUTOREVIEW_REQUIRED",
+    "CODEX_REVIEW_REQUIRED", "OWNER_REVIEW_REQUIRED", "APPROVED_FOR_MERGE",
+    "DONE", "BLOCKED", "WONTFIX"
+  ];
+  for (const s of expectedStates) {
+    assert(ce.enum.includes(s), "classificationEnum enum missing: " + s);
+  }
+  assert(ce.enum.length === expectedStates.length, "classificationEnum enum has unexpected extra values.");
+
+  // --- gateStatusEnum ---
+  const gs = getDef(schema, "gateStatusEnum");
+  const gsExpected = ["pass", "fail", "blocked", "not-run"];
+  assert(gs.enum, "gateStatusEnum must have enum.");
+  for (const v of gsExpected) {
+    assert(gs.enum.includes(v), "gateStatusEnum enum missing: " + v);
+  }
+  assert(gs.enum.length === gsExpected.length, "gateStatusEnum enum has unexpected extra values.");
+
+  // --- integrityBlock ---
+  const ib = getDef(schema, "integrityBlock");
+  assert(ib.type === "object", "integrityBlock must be type object.");
+  assert(ib.additionalProperties === false, "integrityBlock must have additionalProperties: false.");
+  assert(ib.properties?.contentHash?.pattern === "^sha256:[a-f0-9]{64}$", "integrityBlock.contentHash must have sha256 pattern.");
+
+  // previousLedgerHash allows null
+  const plh = ib.properties?.previousLedgerHash;
+  assert(plh, "integrityBlock must have previousLedgerHash.");
+  if (plh.oneOf) {
+    const hasNull = plh.oneOf.some(o => o.type === "null");
+    const hasStr  = plh.oneOf.some(o => o.type === "string" && o.pattern === "^sha256:[a-f0-9]{64}$");
+    assert(hasNull, "integrityBlock.previousLedgerHash oneOf must include null type.");
+    assert(hasStr, "integrityBlock.previousLedgerHash oneOf must include sha256 string type.");
+  } else if (Array.isArray(plh.type)) {
+    assert(plh.type.includes("null"), "integrityBlock.previousLedgerHash type must include null.");
+    assert(plh.pattern === "^sha256:[a-f0-9]{64}$", "integrityBlock.previousLedgerHash must have sha256 pattern.");
+  }
+
+  assert(ib.properties?.canonicalization?.const === "json-canonical", "integrityBlock.canonicalization must be const json-canonical.");
+
+  // No forbidden fields in integrityBlock
+  const ibCaps = [];
+  scanForbiddenCapabilityNames(ib.properties, "integrityBlock.properties", ibCaps);
+  assert(ibCaps.length === 0, "integrityBlock contains forbidden capability field(s): " + ibCaps.join(", "));
+
+  // --- redactionSummary ---
+  const rs = getDef(schema, "redactionSummary");
+  assert(rs.type === "object", "redactionSummary must be type object.");
+  assert(rs.additionalProperties === false, "redactionSummary must have additionalProperties: false.");
+  assert(rs.properties?.count?.type === "integer", "redactionSummary.count must be integer.");
+  assert(rs.properties?.count?.minimum >= 0, "redactionSummary.count minimum must be >= 0.");
+  assert(rs.properties?.paths, "redactionSummary must have paths property.");
+  assert(!rs.properties?.values, "redactionSummary must not have values property.");
+  assert(rs.properties?.paths?.items?.maxLength > 0, "redactionSummary.paths items must have maxLength.");
+
+  // --- Object shared defs: additionalProperties ---
+  const objectDefs = ["ledgerRepo", "ledgerGit", "gateResult", "blockedReason", "riskAssessment"];
+  for (const name of objectDefs) {
+    const def = getDef(schema, name);
+    assert(def.type === "object", name + " must be type object.");
+    assert(def.additionalProperties === false, name + " must have additionalProperties: false.");
+  }
+
+  // Free-text fields in these defs need maxLength
+  for (const name of ["gateResult", "blockedReason"]) {
+    const def = getDef(schema, name);
+    if (def.properties) {
+      for (const [k, v] of Object.entries(def.properties)) {
+        if (v.type === "string" && k !== "status") {
+          assert(v.maxLength > 0, name + "." + k + " must have maxLength.");
+        }
+      }
+    }
+  }
+}
+
+function validateCapabilityScanPhase1C(schema) {
+  const findings = [];
+  // Scan properties AND required arrays in Phase 1C defs
+  for (const name of REQUIRED_PHASE_1C_DEFS) {
+    const def = schema.$defs?.[name];
+    if (def && def.properties) {
+      scanForbiddenCapabilityNames(def.properties, "$defs." + name + ".properties", findings);
+    }
+  }
+  assert(findings.length === 0, "Phase 1C defs contain forbidden capability field(s): " + findings.join(", "));
+}
+
+function validateExternalRefScanPhase1C(schema) {
+  const findings = [];
+  scanExternalRefs(schema, "$", findings);
+  assert(findings.length === 0, "Orchestrator schema contains non-local $ref(s): " + findings.join(", "));
+}
+
+function validatePhase1CBackwardCompat(schema) {
+  // Top-level required unchanged
+  const topRequired = schema.required || [];
+  const expectedTopReq = ["mode", "generatedAt", "registryPath", "dispatchEnabled", "repos"];
+  for (const f of expectedTopReq) {
+    assert(topRequired.includes(f), "Top-level required must include: " + f);
+  }
+  assert(topRequired.length === expectedTopReq.length, "Top-level required has unexpected extra fields.");
+
+  // repoResult required unchanged
+  const rrReq = schema.$defs?.repoResult?.required || [];
+  const expectedRrReq = ["id", "name", "path", "enabled", "classification", "dispatchAllowed", "gates", "nextAction"];
+  for (const f of expectedRrReq) {
+    assert(rrReq.includes(f), "repoResult required must include: " + f);
+  }
+  assert(rrReq.length === expectedRrReq.length, "repoResult required has unexpected extra fields.");
+
+  // dispatchEnabled const false
+  assert(schema.properties?.dispatchEnabled?.const === false, "dispatchEnabled must remain const: false.");
+
+  // repoResult.dispatchAllowed const false
+  assert(schema.$defs?.repoResult?.properties?.dispatchAllowed?.const === false, "repoResult.dispatchAllowed must remain const: false.");
+
+  // repoResult.classification inline enum still has 14 states
+  const classificationEnum = schema.$defs?.repoResult?.properties?.classification?.enum || [];
+  for (const state of STATES) {
+    assert(classificationEnum.includes(state), "repoResult.classification enum missing state: " + state);
+  }
+  assert(classificationEnum.length === 14, "repoResult.classification enum has unexpected extra states.");
+
+  // repoResult.authorityFlags inline still has all five const false
+  const af = schema.$defs?.repoResult?.properties?.authorityFlags?.properties;
+  if (af) {
+    const flags = ["approvalClaimed", "mergeClaimed", "dispatchRequested", "auditClaimed", "productionReadinessClaimed"];
+    for (const f of flags) {
+      assert(af[f]?.const === false, "repoResult.authorityFlags." + f + " must remain const: false.");
+    }
+  }
+
+  // No top-level ledger/handoff required fields
+  assert(!topRequired.includes("ledgerRecords"), "Top-level must not require ledgerRecords.");
+  assert(!topRequired.includes("handoffRecords"), "Top-level must not require handoffRecords.");
+}
+
+// ── Phase 1C helpers (continued) ──────────────────────────────────────────────────
+
+function validateRef(schema, ref, expectedName, path) {
+  assert(ref, path + " must have a $ref.");
+  assert(ref.startsWith("#/$defs/"), path + " $ref must be local #/$defs/.");
+  const name = ref.slice("#/$defs/".length);
+  assert(name === expectedName, path + " $ref must point to " + expectedName + ", got: " + name);
+  getDef(schema, name); // ensure the target exists
+}
+
+function resolveIfRef(schema, prop) {
+  if (!prop) return null;
+  if (prop.$ref) {
+    return resolveLocalRef(schema, prop.$ref);
+  }
+  return prop;
+}
 try {
   const args = parseArgs(process.argv);
-  const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b";
-  const runPhase1b = args.phase === null || args.phase === "1b";
+  const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
+  const runPhase1b = args.phase === null || args.phase === "1b" || args.phase === "1c";
+  const runPhase1c = args.phase === null || args.phase === "1c";
 
   if (runPhase0) {
     validateRepoSchemaPhase0(readJson(".pnpd/repos.schema.json"));
@@ -338,6 +742,10 @@ try {
     validateRepoSchemaPhase1B(readJson(".pnpd/repos.schema.json"));
     validateOutputSchemaPhase1B(readJson(".pnpd/orchestrator.schema.json"));
     validateRegistryPhase1B(readJson(".pnpd/repos.example.json"));
+  }
+
+  if (runPhase1c) {
+    validateOrchestratorSchemaPhase1C(readJson(".pnpd/orchestrator.schema.json"));
   }
 
   console.log("pnpd schema validation ok");
