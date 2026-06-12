@@ -66,6 +66,7 @@ It was built and stress-tested on real multi-agent development workflows, then e
 - **Failed gates stay failed.** Skipped gates stay skipped — never silently passed.
 - **Owner is final authority.** Agents advise, verify, audit — they do not decide.
 - **Governance serves product progress.** Anti-cycle controls prevent governance spirals.
+- **Orchestrator is coordination only.** It may coordinate and recommend; it may not approve, merge, deploy, or bypass gates.
 
 ---
 

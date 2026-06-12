@@ -66,6 +66,8 @@ AgentBridge is the file protocol. The Review & Audit Layer is the authority fram
 
 **PNPD AgentBridge has zero decision authority.** It stores and routes structured state. It never certifies, approves, merges, or deploys.
 
+The PNPD Orchestrator Loop may coordinate and recommend; it may not approve, merge, deploy, or bypass gates. Any Orchestrator output is a handoff aid, not an authority decision.
+
 ---
 
 ## Storage Strategy
@@ -107,6 +109,10 @@ No runtime code. No servers. No live messaging. No automated actions.
 - **Phase 3** — GitHub PR/Issue comment sync for cross-repo visibility.
 - **Phase 4** — CLI helper for creating and validating bridge files.
 - **Phase 5** — MCP/A2A adapter, only after completing a formal threat model and receiving explicit owner approval.
+
+### Phase 0 Orchestrator Loop Scaffold
+
+The Orchestrator Loop Phase 0 scaffold lives in `docs/pnpd/`, `.pnpd/`, and `scripts/pnpd-orchestrator-dry-run.mjs`. It is dry-run only and does not create a daemon, schedule work, dispatch agents, write GitHub state, merge, deploy, or approve anything.
 
 ---
 

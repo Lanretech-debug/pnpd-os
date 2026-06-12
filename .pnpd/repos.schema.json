@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pnpd-os.local/schemas/repos.schema.json",
+  "title": "PNPD Orchestrator Repo Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "orchestrator", "repos"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "orchestrator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "dispatchEnabled", "maxParallelThreads"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["dry-run"]
+        },
+        "dispatchEnabled": {
+          "type": "boolean",
+          "const": false
+        },
+        "maxParallelThreads": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 0
+        },
+        "defaultProtectedBranches": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["main", "master"]
+        }
+      }
+    },
+    "repos": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/repo" },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "path", "enabled"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "protectedBranches": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "owner": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "governanceProfile": {
+          "type": "string",
+          "enum": ["standard", "high-risk", "read-only"]
+        },
+        "metadataSources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "github": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "repository": { "type": "string" },
+                "issues": { "type": "string", "enum": ["disabled", "read-only-later"] },
+                "pullRequests": { "type": "string", "enum": ["disabled", "read-only-later"] }
+              }
+            }
+          }
+        },
+        "availableGates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["git-status", "branch", "autoreview", "codex-review", "owner-approval", "lockfile"]
+          }
+        },
+        "pendingItems": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pendingItem" }
+        }
+      }
+    },
+    "pendingItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "title"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": ["issue", "pr", "task", "review"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "DISCOVERED",
+            "NEEDS_TRIAGE",
+            "NEEDS_INFO",
+            "READY_FOR_AGENT",
+            "DISPATCHED",
+            "IN_PROGRESS",
+            "AGENT_DONE",
+            "AUTOREVIEW_REQUIRED",
+            "CODEX_REVIEW_REQUIRED",
+            "OWNER_REVIEW_REQUIRED",
+            "APPROVED_FOR_MERGE",
+            "DONE",
+            "BLOCKED",
+            "WONTFIX"
+          ]
+        },
+        "requiresCodexReview": {
+          "type": "boolean"
+        },
+        "requiresOwnerApproval": {
+          "type": "boolean"
+        },
+        "risk": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "unknown"]
+        },
+        "nextAction": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
