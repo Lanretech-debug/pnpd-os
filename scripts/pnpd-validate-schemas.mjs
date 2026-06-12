@@ -378,7 +378,7 @@ function resolveLocalRef(schema, ref) {
 
 function scanForbiddenCapabilityNames(obj, currentPath, findings) {
   if (!obj || typeof obj !== "object") return findings;
-  
+
   if (Array.isArray(obj)) {
     obj.forEach((item, i) => scanForbiddenCapabilityNames(item, currentPath + "[" + i + "]", findings));
     return findings;
@@ -396,14 +396,14 @@ function scanForbiddenCapabilityNames(obj, currentPath, findings) {
 }
 
 function scanExternalRefs(schema, currentPath, findings) {
-  if (!schema || typeof schema !== "object") return findings;
-
-  if (typeof schema === "string" && currentPath.endsWith(".$ref")) {
-    if (!schema.startsWith("#/$defs/")) {
+  if (typeof schema === "string") {
+    if (currentPath.endsWith(".$ref") && !schema.startsWith("#/$defs/")) {
       findings.push(currentPath + " = " + schema);
     }
     return findings;
   }
+
+  if (!schema || typeof schema !== "object") return findings;
 
   if (Array.isArray(schema)) {
     schema.forEach((item, i) => scanExternalRefs(item, currentPath + "[" + i + "]", findings));
@@ -661,7 +661,7 @@ function validateCapabilityScanPhase1C(schema) {
 
 function validateExternalRefScanPhase1C(schema) {
   const findings = [];
-  scanExternalRefs(schema, "$");
+  scanExternalRefs(schema, "$", findings);
   assert(findings.length === 0, "Orchestrator schema contains non-local $ref(s): " + findings.join(", "));
 }
 
