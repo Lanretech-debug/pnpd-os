@@ -1,0 +1,61 @@
+{
+  "recordType": "handoff",
+  "schemaVersion": 1,
+  "runId": "pnpd-orchestrator-2026-01-01T00-00-00Z-0000",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "source": "pnpd-orchestrator-dry-run",
+  "generatorVersion": "1.0.0",
+  "repo": {
+    "id": "example-repo",
+    "name": "Example Repo",
+    "path": "/tmp/pnpd-fixtures/example-repo"
+  },
+  "git": {
+    "branch": "main",
+    "commit": "0000000000000000000000000000000000000000",
+    "dirty": false
+  },
+  "classification": "READY_FOR_AGENT",
+  "gates": [
+    {
+      "name": "git-status",
+      "status": "pass",
+      "reason": "Git status is clean."
+    }
+  ],
+  "blockedReasons": [],
+  "recommendedAction": "Hermes verifies repo state and task scope before routing.",
+  "requiredReviewer": "hermes",
+  "codexAuditRequired": false,
+  "ownerActionRequired": false,
+  "riskAssessment": {
+    "level": "low",
+    "factors": ["fixture-only", "no-real-data"]
+  },
+  "authorityFlags": {
+    "approvalClaimed": false,
+    "mergeClaimed": false,
+    "dispatchRequested": false,
+    "auditClaimed": false,
+    "productionReadinessClaimed": false
+  },
+  "redactions": {
+    "count": 0,
+    "paths": []
+  },
+  "handoff": {
+    "format": "pnpd-handoff-v1",
+    "summary": "Example handoff with invalid routing target.",
+    "context": "This fixture demonstrates an invalid routing.to value that is not in the allowed enum.",
+    "routing": {
+      "to": "dispatch",
+      "action": "This should be rejected because dispatch is not an allowed routing target.",
+      "urgency": "normal"
+    }
+  },
+  "integrity": {
+    "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "previousLedgerHash": null,
+    "canonicalization": "json-canonical"
+  }
+}

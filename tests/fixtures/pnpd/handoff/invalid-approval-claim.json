@@ -1,0 +1,61 @@
+{
+  "recordType": "handoff",
+  "schemaVersion": 1,
+  "runId": "pnpd-orchestrator-2026-01-01T00-00-00Z-0000",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "source": "pnpd-orchestrator-dry-run",
+  "generatorVersion": "1.0.0",
+  "repo": {
+    "id": "example-repo",
+    "name": "Example Repo",
+    "path": "/tmp/pnpd-fixtures/example-repo"
+  },
+  "git": {
+    "branch": "main",
+    "commit": "0000000000000000000000000000000000000000",
+    "dirty": false
+  },
+  "classification": "CODEX_REVIEW_REQUIRED",
+  "gates": [
+    {
+      "name": "git-status",
+      "status": "pass",
+      "reason": "Git status is clean."
+    }
+  ],
+  "blockedReasons": [],
+  "recommendedAction": "Codex must perform formal review before owner decision.",
+  "requiredReviewer": "codex",
+  "codexAuditRequired": true,
+  "ownerActionRequired": true,
+  "riskAssessment": {
+    "level": "medium",
+    "factors": ["fixture-only", "no-real-data"]
+  },
+  "authorityFlags": {
+    "approvalClaimed": true,
+    "mergeClaimed": true,
+    "dispatchRequested": false,
+    "auditClaimed": false,
+    "productionReadinessClaimed": false
+  },
+  "redactions": {
+    "count": 0,
+    "paths": []
+  },
+  "handoff": {
+    "format": "pnpd-handoff-v1",
+    "summary": "Example handoff with invalid approval and merge claims.",
+    "context": "This fixture demonstrates invalid authority flags where approvalClaimed and mergeClaimed are true. The orchestrator must never claim approval or merge readiness.",
+    "routing": {
+      "to": "owner",
+      "action": "Owner must review the Codex audit before any merge decision.",
+      "urgency": "high"
+    }
+  },
+  "integrity": {
+    "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "previousLedgerHash": null,
+    "canonicalization": "json-canonical"
+  }
+}
