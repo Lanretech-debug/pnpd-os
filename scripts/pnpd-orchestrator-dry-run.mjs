@@ -43,7 +43,11 @@ function parseArgs(argv) {
     ledgerDir: null,
     handoffDir: null,
     useLock: false,
-    lockDir: null
+    lockDir: null,
+    scheduleOnce: false,
+    scheduleIntervalMs: null,
+    scheduleMaxRuns: null,
+    schedulerPlan: false
   };
 
   for (let i = 2; i < argv.length; i += 1) {
@@ -58,6 +62,28 @@ function parseArgs(argv) {
       args.writeHandoff = true;
     } else if (arg === "--use-lock") {
       args.useLock = true;
+    } else if (arg === "--schedule-once") {
+      args.scheduleOnce = true;
+    } else if (arg === "--schedule-interval-ms") {
+      if (!argv[i + 1] || argv[i + 1].startsWith("--")) {
+        throw new Error("--schedule-interval-ms requires a value.");
+      }
+      args.scheduleIntervalMs = Number(argv[i + 1]);
+      if (isNaN(args.scheduleIntervalMs) || args.scheduleIntervalMs < 60000 || !Number.isInteger(args.scheduleIntervalMs)) {
+        throw new Error("--schedule-interval-ms minimum is 60000.");
+      }
+      i += 1;
+    } else if (arg === "--schedule-max-runs") {
+      if (!argv[i + 1] || argv[i + 1].startsWith("--")) {
+        throw new Error("--schedule-max-runs requires a value.");
+      }
+      args.scheduleMaxRuns = Number(argv[i + 1]);
+      if (isNaN(args.scheduleMaxRuns) || args.scheduleMaxRuns < 1 || args.scheduleMaxRuns > 100) {
+        throw new Error("--schedule-max-runs must be between 1 and 100.");
+      }
+      i += 1;
+    } else if (arg === "--scheduler-plan") {
+      args.schedulerPlan = true;
     } else if (arg === "--lock-dir") {
       if (!argv[i + 1] || argv[i + 1].startsWith("--")) {
         throw new Error("--lock-dir requires a path value.");
@@ -105,6 +131,19 @@ Phase 0 constraints:
   - writes no files unless --write-ledger, --write-handoff, or --use-lock is explicitly provided
   - creates no agent threads
   - performs no merge, deploy, push, or GitHub mutation\n\nWrite flags (opt-in, off by default):\n  --write-ledger         Append one JSONL ledger record per repo.\n  --write-handoff        Create one local handoff JSON file per repo.\n  --no-write             Override all write flags; perform zero writes.\n  --ledger-dir <path>    Custom ledger directory under .pnpd/ledger.\n  --use-lock            Acquire a lockfile before writes; release on exit.
+
+Scheduler flags (disabled by default; requires --use-lock for real execution):
+  --schedule-once        Run exactly one scheduler-managed cycle.
+  --schedule-interval-ms <ms>  Interval between repeated runs (min 60000).
+  --schedule-max-runs <n>      Max runs in repeated mode (1-100).
+  --scheduler-plan       Validate and print scheduler plan; no writes.
+
+Scheduler notes:
+  - Scheduler is disabled by default.
+  - Real scheduler execution requires --use-lock.
+  - --no-write prevents all writes; scheduler with --no-write is rejected.
+  - Repeated scheduling acquires/releases lock per cycle.
+  - Scheduler is bounded; no infinite scheduling or daemon mode.
   --lock-dir <path>      Custom lock directory under .pnpd/locks.
   --handoff-dir <path>   Custom handoff directory under .pnpd/handoffs.`);
 }
@@ -967,9 +1006,75 @@ function releaseLock(lockInfo, runId) {
   }
 }
 
-function main() {
-  const args = parseArgs(process.argv);
-  let acquiredLock = null;
+function validateSchedulerArgs(args) {
+  const isScheduler = args.scheduleOnce || args.scheduleIntervalMs || args.scheduleMaxRuns;
+  const isRepeated = args.scheduleIntervalMs && args.scheduleMaxRuns;
+  
+  // Incompatible flags
+  if (args.scheduleOnce && (args.scheduleIntervalMs || args.scheduleMaxRuns)) {
+    throw new Error("--schedule-once cannot be combined with --schedule-interval-ms or --schedule-max-runs.");
+  }
+  
+  // Repeated mode requires both interval and max-runs
+  if (args.scheduleIntervalMs && !args.scheduleMaxRuns) {
+    throw new Error("--schedule-interval-ms requires --schedule-max-runs.");
+  }
+  if (args.scheduleMaxRuns && !args.scheduleIntervalMs) {
+    throw new Error("--schedule-max-runs requires --schedule-interval-ms.");
+  }
+  
+  // Plan mode - no further validation needed
+  if (args.schedulerPlan) return { mode: "plan" };
+  
+  // Schedule-once mode
+  if (args.scheduleOnce) {
+    if (!args.useLock) {
+      throw new Error("--schedule-once requires --use-lock.");
+    }
+    if (args.noWrite) {
+      throw new Error("scheduler execution with --no-write is blocked because scheduler requires --use-lock and lock creation is a write.");
+    }
+    return { mode: "once" };
+  }
+  
+  // Repeated mode
+  if (isRepeated) {
+    if (!args.useLock) {
+      throw new Error("repeated scheduler requires --use-lock.");
+    }
+    if (args.noWrite) {
+      throw new Error("scheduler execution with --no-write is blocked because scheduler requires --use-lock and lock creation is a write.");
+    }
+    return { mode: "repeated", intervalMs: args.scheduleIntervalMs, maxRuns: args.scheduleMaxRuns };
+  }
+  
+  // Manual mode
+  return { mode: "manual" };
+}
+
+function printSchedulerPlan(args) {
+  const plan = {
+    schedulerMode: args.scheduleOnce ? "once" : (args.scheduleIntervalMs ? "repeated" : "manual"),
+    intervalMs: args.scheduleIntervalMs || null,
+    maxRuns: args.scheduleMaxRuns || null,
+    useLock: !!args.useLock,
+    writeLedger: !!args.writeLedger,
+    writeHandoff: !!args.writeHandoff,
+    noWrite: !!args.noWrite,
+    localOnly: true,
+    dispatchAllowed: false,
+    githubMutationAllowed: false,
+    deployAllowed: false,
+    daemon: false
+  };
+  process.stderr.write(JSON.stringify(plan, null, 2) + "\n");
+}
+
+function sleep(ms) {
+  return new Promise(function(resolve) { setTimeout(resolve, ms); });
+}
+
+function runOnce(args) {
   const { data, absolutePath } = readRegistry(args.registry);
   const registryRoot = process.cwd();
   const repos = [...data.repos]
@@ -984,27 +1089,20 @@ function main() {
     repos
   };
 
-  // Shared run ID for ledger + handoff + lock correlation
   const sharedRunId = (args.writeLedger || args.writeHandoff || args.useLock) && !args.noWrite ? generateRunId() : null;
+  let acquiredLock = null;
 
-  // Acquire lock (opt-in, off by default)
   if (args.useLock && !args.noWrite) {
     acquiredLock = acquireLock(args, registryRoot, sharedRunId);
   }
 
   try {
-    // Ledger write (opt-in, off by default)
-    const doLedgerWrite = args.writeLedger && !args.noWrite;
-    if (doLedgerWrite) {
+    if (args.writeLedger && !args.noWrite) {
       writeLedgerRecords(summary, args, registryRoot, sharedRunId);
     }
-
-    // Handoff write (opt-in, off by default)
-    const doHandoffWrite = args.writeHandoff && !args.noWrite;
-    if (doHandoffWrite) {
+    if (args.writeHandoff && !args.noWrite) {
       writeHandoffRecords(summary, args, registryRoot, sharedRunId);
     }
-
     if (args.json) {
       console.log(JSON.stringify(summary, null, 2));
     } else {
@@ -1014,6 +1112,55 @@ function main() {
     if (acquiredLock) {
       releaseLock(acquiredLock, sharedRunId);
     }
+  }
+
+  return summary;
+}
+
+function main() {
+  const args = parseArgs(process.argv);
+
+  // Scheduler plan mode
+  if (args.schedulerPlan) {
+    validateSchedulerArgs(args);
+    printSchedulerPlan(args);
+    return;
+  }
+
+  const sched = validateSchedulerArgs(args);
+
+  if (sched.mode === "manual") {
+    runOnce(args);
+    return;
+  }
+
+  if (sched.mode === "once") {
+    process.stderr.write("[scheduler] run 1/1\n");
+    runOnce(args);
+    process.stderr.write("[scheduler] complete: 1 run(s)\n");
+    return;
+  }
+
+  if (sched.mode === "repeated") {
+    (async function() {
+      for (let run = 1; run <= sched.maxRuns; run++) {
+        process.stderr.write("[scheduler] run " + run + "/" + sched.maxRuns + "\n");
+        try {
+          runOnce(args);
+        } catch (e) {
+          console.error("pnpd-orchestrator-dry-run: scheduler cycle " + run + " failed: " + e.message);
+        }
+        if (run < sched.maxRuns) {
+          process.stderr.write("[scheduler] sleeping " + sched.intervalMs + "ms\n");
+          await sleep(sched.intervalMs);
+        }
+      }
+      process.stderr.write("[scheduler] complete: " + sched.maxRuns + " run(s)\n");
+    })().catch(function(e) {
+      console.error("pnpd-orchestrator-dry-run: scheduler fatal: " + e.message);
+      process.exit(1);
+    });
+    return;
   }
 }
 
