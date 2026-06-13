@@ -26,8 +26,8 @@
   ],
   "properties": {
     "schemaVersion": {
-      "type": "string",
-      "const": "1.0.0"
+      "type": "integer",
+      "const": 1
     },
     "recordType": {
       "type": "string",
