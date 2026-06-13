@@ -1,0 +1,42 @@
+name: PNPD CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-dry-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Show repository status
+        run: git status --short --branch
+
+      - name: Verify schemas and fixtures
+        run: npm run validate
+
+      - name: Run local dry-run
+        run: npm run dry-run
+
+      - name: Verify no PNPD state directories
+        run: |
+          if [ -d .pnpd/ledger ] || [ -d .pnpd/handoffs ] || [ -d .pnpd/locks ]; then
+            echo "::error::Unexpected PNPD state directories present"
+            exit 1
+          fi
+
+      - name: Verify clean working tree
+        run: git diff --exit-code
