@@ -1030,6 +1030,7 @@ const FORBIDDEN_DISPATCH_FIELDS = new Set([
   "autoDispatch",
   "deployNow",
   "githubMutationToken",
+  "apiKey",
   "secret",
   "productionReady",
   "ownerBypassed",
@@ -1318,6 +1319,9 @@ function checkSemanticRules(fixture) {
     }
     if (codexStatus === "passed") {
       failures.push("non-GREEN classification '" + classification + "' with codexAuditStatus passed");
+    }
+    if (state === "dispatchEligibleForOwnerReview" || LATE_STAGE_READINESS_STATES.has(state)) {
+      failures.push("non-GREEN classification '" + classification + "' with late-stage eligibility state '" + state + "'");
     }
   }
 
