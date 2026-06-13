@@ -201,6 +201,14 @@ Proposed advisory readiness states for the `readiness.state` field:
 - **`dispatchReadyButNotExecuted` still requires explicit later owner command.** It is not permission to execute.
 - **Current Phase 1F-B1 does not implement these states in code.**
 
+### Non-authority rules
+
+- Dispatch readiness is advisory only.
+- Readiness is not approval.
+- Readiness is not dispatch.
+- Readiness is not production certification.
+- The scheduler must never auto-dispatch.
+
 ## 8. Classification Policy
 
 > Any AMBER or RED state blocks dispatch execution.
