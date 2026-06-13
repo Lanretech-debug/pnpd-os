@@ -130,11 +130,11 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--phase") {
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, or 1c).");
+        throw new Error("--phase requires a value (0, 1b, 1c, or 1f).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c") {
-        throw new Error('--phase must be "0", "1b", or "1c".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f") {
+        throw new Error('--phase must be "0", "1b", "1c", or "1f".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -142,12 +142,13 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f]
 
 Options:
   --phase 0   Validate Phase 0 invariants only.
   --phase 1b  Validate Phase 0 + Phase 1B invariants.
   --phase 1c  Validate Phase 0 + Phase 1B + Phase 1C invariants + fixture instance validation.
+  --phase 1f  Validate PNPD dispatch readiness fixtures (explicit-only, not included in default).
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
     } else {
@@ -990,8 +991,626 @@ function resolveIfRef(schema, prop) {
   }
   return prop;
 }
+
+// ── Phase 1F: Dispatch Readiness Validation ──────────────────────────────────────
+
+const DISPATCH_READINESS_SCHEMA_PATH = ".pnpd/dispatch-readiness.schema.json";
+const DISPATCH_READINESS_FIXTURES_DIR = "tests/fixtures/pnpd/dispatch-readiness";
+
+const READINESS_STATES = new Set([
+  "dispatchUnavailable",
+  "dispatchBlocked",
+  "dispatchEligibleForOwnerReview",
+  "dispatchOwnerApprovedPendingCodex",
+  "dispatchCodexAuditedPendingOwnerFinal",
+  "dispatchReadyButNotExecuted"
+]);
+
+const CLASSIFICATIONS = new Set([
+  "GREEN",
+  "AMBER",
+  "RED",
+  "AMBER_NOT_CODEX_AUDITED",
+  "CODEX_REVIEW_REQUIRED",
+  "OWNER_REVIEW_REQUIRED",
+  "BLOCKED",
+  "DONE"
+]);
+
+const LATE_STAGE_READINESS_STATES = new Set([
+  "dispatchOwnerApprovedPendingCodex",
+  "dispatchCodexAuditedPendingOwnerFinal",
+  "dispatchReadyButNotExecuted"
+]);
+
+const FORBIDDEN_DISPATCH_FIELDS = new Set([
+  "approvedForDispatch",
+  "dispatchNow",
+  "executeDispatch",
+  "autoDispatch",
+  "deployNow",
+  "githubMutationToken",
+  "apiKey",
+  "secret",
+  "productionReady",
+  "ownerBypassed",
+  "codexBypassed",
+  "mergeApproved",
+  "mergeNow",
+  "certProductionReady",
+  "bypassGate",
+  "bypassOwner",
+  "bypassCodex",
+  "agentBridgeApproves",
+  "agentBridgeApprovedByHermes",
+  "agentBridgeCertifies",
+  "orchestratorApproved"
+]);
+
+const EXPECTED_POSITIVE_FIXTURES = new Set([
+  "valid-minimal-dispatch-blocked.json",
+  "valid-eligible-for-owner-review.json",
+  "valid-codex-audited-pending-owner.json"
+]);
+
+const EXPECTED_NEGATIVE_FIXTURES = new Set([
+  "invalid-missing-advisory-safety-consts.json",
+  "invalid-agentbridge-authority-claim.json",
+  "invalid-github-api-mutation-allowed.json",
+  "invalid-scheduler-auto-dispatch.json",
+  "invalid-production-ready-claim.json",
+  "invalid-amber-executable.json",
+  "invalid-dispatch-execute-named-state.json",
+  "invalid-missing-ledger-ref.json",
+  "invalid-forbidden-field-name.json"
+]);
+
+const DISPATCH_SECRET_FRAGMENTS = [
+  "sk-",
+  "ghp_",
+  "github_pat_",
+  "xoxb-",
+  "AKIA",
+  "BEGIN PRIVATE KEY",
+  "SUPABASE_ACCESS_TOKEN",
+  "RESEND_API_KEY",
+  "OPENAI_API_KEY",
+  "DEEPSEEK_API_KEY",
+  "GITHUB_TOKEN"
+];
+
+const DISPATCH_FORBIDDEN_PATH_FRAGMENTS = [
+  "/Users/",
+  "/Users/lanretech/Documents/BricLab Kids",
+  ".env"
+];
+
+const DISPATCH_FORBIDDEN_URL_FRAGMENTS = [
+  "api.github.com",
+  "supabase.co",
+  "resend.com",
+  "vercel",
+  "netlify",
+  "railway",
+  "render",
+  "fly.io"
+];
+
+const DISPATCH_SECRET_KEY_NAMES = new Set([
+  "apiKey",
+  "api_key",
+  "authToken",
+  "auth_token",
+  "accessToken",
+  "access_token",
+  "secretKey",
+  "secret_key",
+  "password",
+  "privateKey",
+  "private_key",
+  "authorization",
+  "authHeader",
+  "auth_header"
+]);
+
+const EXPECTED_TOP_LEVEL_FIELDS = new Set([
+  "schemaVersion",
+  "recordType",
+  "recordId",
+  "runId",
+  "generatedAt",
+  "source",
+  "repo",
+  "classification",
+  "readiness",
+  "blockers",
+  "evidence",
+  "approvals",
+  "audit",
+  "scope",
+  "safety",
+  "scheduler",
+  "authority",
+  "integrity"
+]);
+
+const EXPECTED_DEFS = new Set([
+  "classificationEnum",
+  "readinessStateEnum",
+  "readiness",
+  "blockerCodeEnum",
+  "blockerObject",
+  "recordRepo",
+  "gateResult",
+  "scanSummary",
+  "schedulerModeEnum",
+  "evidence",
+  "approvals",
+  "audit",
+  "scope",
+  "safety",
+  "scheduler",
+  "authority",
+  "integrity"
+]);
+
+function scanForbiddenDispatchFields(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanForbiddenDispatchFields(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (FORBIDDEN_DISPATCH_FIELDS.has(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanForbiddenDispatchFields(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function scanDispatchFixtureSecrets(rawContent, filename) {
+  const findings = [];
+
+  for (const fragment of DISPATCH_SECRET_FRAGMENTS) {
+    if (rawContent.includes(fragment)) {
+      findings.push("secret fragment: " + fragment);
+    }
+  }
+
+  for (const fragment of DISPATCH_FORBIDDEN_PATH_FRAGMENTS) {
+    if (rawContent.includes(fragment)) {
+      findings.push("forbidden path fragment: " + fragment);
+    }
+  }
+
+  for (const fragment of DISPATCH_FORBIDDEN_URL_FRAGMENTS) {
+    if (rawContent.includes(fragment)) {
+      findings.push("forbidden URL fragment: " + fragment);
+    }
+  }
+
+  // Check for prod/production URLs
+  if (/https?:\/\/[^"\s]*(prod|production)[^"\s]*/i.test(rawContent)) {
+    findings.push("production URL detected");
+  }
+
+  return findings;
+}
+
+function scanDispatchFixtureSecretKeys(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanDispatchFixtureSecretKeys(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (DISPATCH_SECRET_KEY_NAMES.has(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanDispatchFixtureSecretKeys(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function checkPositiveConsts(fixture) {
+  const failures = [];
+
+  // Top-level required
+  if (fixture.schemaVersion !== 1) failures.push("schemaVersion must be 1");
+  if (fixture.recordType !== "dispatchReadiness") failures.push("recordType must be dispatchReadiness");
+
+  // Readiness safety
+  const r = fixture.readiness || {};
+  if (r.advisoryOnly !== true) failures.push("readiness.advisoryOnly must be true");
+  if (r.executesDispatch !== false) failures.push("readiness.executesDispatch must be false");
+  if (r.authorizesExecution !== false) failures.push("readiness.authorizesExecution must be false");
+  if (r.productionCertification !== false) failures.push("readiness.productionCertification must be false");
+
+  // Scheduler
+  const sch = fixture.scheduler || {};
+  if (sch.autoDispatchAllowed !== false) failures.push("scheduler.autoDispatchAllowed must be false");
+  if (sch.localOnly !== true) failures.push("scheduler.localOnly must be true");
+
+  // Safety
+  const s = fixture.safety || {};
+  if (s.githubMutationAllowed !== false) failures.push("safety.githubMutationAllowed must be false");
+  if (s.deployAllowed !== false) failures.push("safety.deployAllowed must be false");
+  if (s.externalMutationAllowed !== false) failures.push("safety.externalMutationAllowed must be false");
+  if (s.secretsAllowed !== false) failures.push("safety.secretsAllowed must be false");
+  if (s.productionCertificationAllowed !== false) failures.push("safety.productionCertificationAllowed must be false");
+
+  // Authority
+  const a = fixture.authority || {};
+  if (a.ownerFinalAuthority !== true) failures.push("authority.ownerFinalAuthority must be true");
+  if (a.agentBridgeMayApprove !== false) failures.push("authority.agentBridgeMayApprove must be false");
+  if (a.agentBridgeMayMerge !== false) failures.push("authority.agentBridgeMayMerge must be false");
+  if (a.agentBridgeMayDeploy !== false) failures.push("authority.agentBridgeMayDeploy must be false");
+  if (a.agentBridgeMayDispatch !== false) failures.push("authority.agentBridgeMayDispatch must be false");
+  if (a.agentBridgeMayCertify !== false) failures.push("authority.agentBridgeMayCertify must be false");
+
+  // Audit
+  const aud = fixture.audit || {};
+  if (aud.codexRequiredBeforeExecution !== true) failures.push("audit.codexRequiredBeforeExecution must be true");
+
+  // Enums
+  if (!READINESS_STATES.has(r.state)) failures.push("readiness.state '" + r.state + "' not in readinessStateEnum");
+  if (!CLASSIFICATIONS.has(fixture.classification)) failures.push("classification '" + fixture.classification + "' not in classificationEnum");
+
+  // Blockers: each code must be a valid blocker code (check non-empty string, schema-enforced)
+  const blockers = fixture.blockers || [];
+  for (let i = 0; i < blockers.length; i++) {
+    if (!blockers[i].code || typeof blockers[i].code !== "string") {
+      failures.push("blockers[" + i + "].code must be a non-empty string");
+    }
+  }
+
+  // Evidence
+  const ev = fixture.evidence || {};
+  if (!ev.ledgerRecordRef || typeof ev.ledgerRecordRef !== "string") failures.push("evidence.ledgerRecordRef must be a non-empty string");
+  if (!ev.handoffRecordRef || typeof ev.handoffRecordRef !== "string") failures.push("evidence.handoffRecordRef must be a non-empty string");
+  if (ev.registryValidated !== true) failures.push("evidence.registryValidated must be true");
+  if (ev.outputSchemaValidated !== true) failures.push("evidence.outputSchemaValidated must be true");
+  if (ev.dryRunTextPassed !== true) failures.push("evidence.dryRunTextPassed must be true");
+  if (ev.dryRunJsonParsed !== true) failures.push("evidence.dryRunJsonParsed must be true");
+  if (ev.lockCapability !== true) failures.push("evidence.lockCapability must be true");
+
+  return failures;
+}
+
+function checkSemanticRules(fixture) {
+  const failures = [];
+  const classification = fixture.classification;
+  const state = (fixture.readiness || {}).state;
+  const blockers = fixture.blockers || [];
+  const codexStatus = (fixture.audit || {}).codexAuditStatus;
+
+  // AMBER + late-stage state
+  if (classification === "AMBER" && LATE_STAGE_READINESS_STATES.has(state)) {
+    failures.push("classification AMBER with late-stage readiness state '" + state + "'");
+  }
+
+  // RED + non-blocked state
+  if (classification === "RED" && (state === "dispatchEligibleForOwnerReview" || LATE_STAGE_READINESS_STATES.has(state))) {
+    failures.push("classification RED with non-blocked readiness state '" + state + "'");
+  }
+
+  // AMBER_NOT_CODEX_AUDITED + late-stage state
+  if (classification === "AMBER_NOT_CODEX_AUDITED" && LATE_STAGE_READINESS_STATES.has(state)) {
+    failures.push("classification AMBER_NOT_CODEX_AUDITED with late-stage readiness state '" + state + "'");
+  }
+
+  // Non-GREEN classification with empty blockers, passed codex, or late-stage state
+  if (classification !== "GREEN") {
+    if (blockers.length === 0) {
+      failures.push("non-GREEN classification '" + classification + "' with empty blockers");
+    }
+    if (codexStatus === "passed") {
+      failures.push("non-GREEN classification '" + classification + "' with codexAuditStatus passed");
+    }
+    if (state === "dispatchEligibleForOwnerReview" || LATE_STAGE_READINESS_STATES.has(state)) {
+      failures.push("non-GREEN classification '" + classification + "' with late-stage eligibility state '" + state + "'");
+    }
+  }
+
+  return failures;
+}
+
+function detectNegativeFailure(fixture, filename) {
+  const reasons = [];
+
+  switch (filename) {
+    case "invalid-missing-advisory-safety-consts.json": {
+      const r = fixture.readiness || {};
+      if (r.advisoryOnly !== true || r.executesDispatch !== false ||
+          r.authorizesExecution !== false || r.productionCertification !== false) {
+        reasons.push("const safety failure: advisory/execution/authorization/production violation");
+      }
+      break;
+    }
+    case "invalid-agentbridge-authority-claim.json": {
+      const a = fixture.authority || {};
+      if (a.agentBridgeMayApprove !== false || a.agentBridgeMayMerge !== false ||
+          a.agentBridgeMayDeploy !== false || a.agentBridgeMayDispatch !== false ||
+          a.agentBridgeMayCertify !== false) {
+        reasons.push("AgentBridge authority escalation detected");
+      }
+      break;
+    }
+    case "invalid-github-api-mutation-allowed.json": {
+      const s = fixture.safety || {};
+      if (s.githubMutationAllowed !== false || s.externalMutationAllowed !== false ||
+          s.deployAllowed !== false || s.secretsAllowed !== false) {
+        reasons.push("mutation/deploy/secrets safety violation");
+      }
+      break;
+    }
+    case "invalid-scheduler-auto-dispatch.json": {
+      const sch = fixture.scheduler || {};
+      if (sch.autoDispatchAllowed !== false) {
+        reasons.push("scheduler auto-dispatch allowed");
+      }
+      break;
+    }
+    case "invalid-production-ready-claim.json": {
+      const r = fixture.readiness || {};
+      const s = fixture.safety || {};
+      if (r.productionCertification !== false || s.productionCertificationAllowed !== false) {
+        reasons.push("production certification claimed");
+      }
+      break;
+    }
+    case "invalid-amber-executable.json": {
+      const classification = fixture.classification;
+      const state = (fixture.readiness || {}).state;
+      const blockers = fixture.blockers || [];
+      const codexStatus = (fixture.audit || {}).codexAuditStatus;
+      if ((classification === "AMBER" || classification === "RED" || classification === "AMBER_NOT_CODEX_AUDITED") &&
+          LATE_STAGE_READINESS_STATES.has(state)) {
+        reasons.push("AMBER/RED/AMBER_NOT_CODEX_AUDITED classification with late-stage readiness state");
+      } else if (classification !== "GREEN" && (blockers.length === 0 || codexStatus === "passed")) {
+        reasons.push("non-GREEN classification with empty blockers or passed codex audit");
+      }
+      break;
+    }
+    case "invalid-dispatch-execute-named-state.json": {
+      const r = fixture.readiness || {};
+      if (!READINESS_STATES.has(r.state)) {
+        reasons.push("invalid readiness state enum: '" + r.state + "'");
+      }
+      break;
+    }
+    case "invalid-missing-ledger-ref.json": {
+      const ev = fixture.evidence || {};
+      if (!ev.ledgerRecordRef || ev.ledgerRecordRef === "") {
+        reasons.push("missing or empty evidence.ledgerRecordRef");
+      }
+      break;
+    }
+    case "invalid-forbidden-field-name.json": {
+      const forbiddenFindings = [];
+      scanForbiddenDispatchFields(fixture, "$", forbiddenFindings);
+      if (forbiddenFindings.length > 0) {
+        reasons.push("forbidden field(s) found: " + forbiddenFindings.join(", "));
+      }
+      break;
+    }
+    default:
+      reasons.push("unknown negative fixture, no expected failure route configured");
+      break;
+  }
+
+  return reasons;
+}
+
+function validateDispatchReadinessPhase1F() {
+  let exitCode = 0;
+  const results = [];
+  let positivePassed = 0;
+  let positiveFailed = 0;
+  let negativeInvalid = 0;
+  let negativeUnexpectedPass = 0;
+  let forbiddenFieldPass = true;
+  let securityPass = true;
+  let semanticPass = true;
+
+  // ── Schema load checks ──
+  let schema;
+  try {
+    const schemaRaw = fs.readFileSync(path.join(ROOT, DISPATCH_READINESS_SCHEMA_PATH), "utf8");
+    schema = JSON.parse(schemaRaw);
+  } catch (e) {
+    console.error("Schema load failed: " + e.message);
+    process.exit(2);
+  }
+
+  if (schema.$schema !== "https://json-schema.org/draft/2020-12/schema") {
+    console.error("Schema $schema must be https://json-schema.org/draft/2020-12/schema");
+    process.exit(2);
+  }
+  if (schema.$id !== "https://pnpd-os.local/schemas/dispatch-readiness.schema.json") {
+    console.error("Schema $id must be https://pnpd-os.local/schemas/dispatch-readiness.schema.json");
+    process.exit(2);
+  }
+  if (schema.title !== "PNPD Dispatch Readiness Record") {
+    console.error("Schema title must be 'PNPD Dispatch Readiness Record'");
+    process.exit(2);
+  }
+  if (schema.type !== "object") {
+    console.error("Schema top-level type must be object");
+    process.exit(2);
+  }
+  if (schema.additionalProperties !== false) {
+    console.error("Schema top-level additionalProperties must be false");
+    process.exit(2);
+  }
+
+  const topRequired = schema.required || [];
+  for (const f of EXPECTED_TOP_LEVEL_FIELDS) {
+    if (!topRequired.includes(f)) {
+      console.error("Schema missing top-level required field: " + f);
+      process.exit(2);
+    }
+  }
+
+  const defs = schema.$defs || {};
+  for (const d of EXPECTED_DEFS) {
+    if (!defs[d]) {
+      console.error("Schema missing $def: " + d);
+      process.exit(2);
+    }
+  }
+
+  // ── Fixture discovery ──
+  const fixturesDir = path.join(ROOT, DISPATCH_READINESS_FIXTURES_DIR);
+  let fixtureFiles;
+  try {
+    fixtureFiles = fs.readdirSync(fixturesDir).filter(f => f.endsWith(".json")).sort();
+  } catch (e) {
+    console.error("Fixture directory not readable: " + e.message);
+    process.exit(2);
+  }
+
+  if (fixtureFiles.length !== 12) {
+    console.error("Expected exactly 12 fixture files, found: " + fixtureFiles.length);
+    process.exit(1);
+  }
+
+  for (const f of EXPECTED_POSITIVE_FIXTURES) {
+    if (!fixtureFiles.includes(f)) {
+      console.error("Missing positive fixture: " + f);
+      process.exit(1);
+    }
+  }
+  for (const f of EXPECTED_NEGATIVE_FIXTURES) {
+    if (!fixtureFiles.includes(f)) {
+      console.error("Missing negative fixture: " + f);
+      process.exit(1);
+    }
+  }
+
+  // ── Process each fixture ──
+  console.log("PNPD Dispatch Readiness Validation");
+  console.log("Schema: " + DISPATCH_READINESS_SCHEMA_PATH);
+  console.log("Fixtures: " + DISPATCH_READINESS_FIXTURES_DIR);
+
+  for (const filename of fixtureFiles) {
+    const filePath = path.join(fixturesDir, filename);
+    let rawContent;
+    let fixture;
+
+    try {
+      rawContent = fs.readFileSync(filePath, "utf8");
+      fixture = JSON.parse(rawContent);
+    } catch (e) {
+      console.log("[FAIL] " + filename + " — JSON parse error: " + e.message);
+      if (filename.startsWith("valid-")) {
+        positiveFailed++;
+      }
+      exitCode = 1;
+      continue;
+    }
+
+    // ── Security scan (hard fail for all) ──
+    const secretFindings = scanDispatchFixtureSecrets(rawContent, filename);
+    const secretKeyFindings = scanDispatchFixtureSecretKeys(fixture, "$", []);
+    if (secretFindings.length > 0 || secretKeyFindings.length > 0) {
+      const allSecrets = [...secretFindings, ...secretKeyFindings.map(k => "secret-like key: " + k)];
+      console.log("[FAIL] " + filename + " — SECURITY VIOLATION: " + allSecrets.join("; "));
+      securityPass = false;
+      exitCode = 1;
+      continue;
+    }
+
+    if (filename.startsWith("valid-")) {
+      // ── Positive fixture validation ──
+      const constFails = checkPositiveConsts(fixture);
+      const semanticFails = checkSemanticRules(fixture);
+      const forbiddenFields = [];
+      scanForbiddenDispatchFields(fixture, "$", forbiddenFields);
+
+      const allFailures = [];
+      if (constFails.length > 0) allFailures.push(...constFails.map(f => "const: " + f));
+      if (semanticFails.length > 0) allFailures.push(...semanticFails.map(f => "semantic: " + f));
+      if (forbiddenFields.length > 0) allFailures.push("forbidden field(s): " + forbiddenFields.join(", "));
+
+      if (allFailures.length > 0) {
+        console.log("[FAIL] " + filename + " — " + allFailures.join("; "));
+        positiveFailed++;
+        if (semanticFails.length > 0) semanticPass = false;
+        if (forbiddenFields.length > 0) forbiddenFieldPass = false;
+        exitCode = 1;
+      } else {
+        console.log("[PASS] " + filename + " — valid fixture accepted");
+        positivePassed++;
+      }
+    } else if (filename.startsWith("invalid-")) {
+      // ── Negative fixture validation ──
+      const expectedReasons = detectNegativeFailure(fixture, filename);
+
+      if (expectedReasons.length > 0) {
+        console.log("[INVALID-as-expected] " + filename + " — " + expectedReasons.join("; "));
+        negativeInvalid++;
+      } else {
+        // Also check if the fixture accidentally passes all const checks
+        const constFails = checkPositiveConsts(fixture);
+        if (constFails.length === 0) {
+          console.log("[FAIL] " + filename + " — expected INVALID but passed all structural checks");
+          negativeUnexpectedPass++;
+          exitCode = 1;
+        } else {
+          // It fails structurally but not through the expected route
+          console.log("[INVALID-as-expected] " + filename + " — structural failure: " + constFails.join("; "));
+          negativeInvalid++;
+        }
+      }
+
+      // Run forbidden field scan on negatives too (except the one that's supposed to have them)
+      if (filename !== "invalid-forbidden-field-name.json") {
+        const forbiddenFields = [];
+        scanForbiddenDispatchFields(fixture, "$", forbiddenFields);
+        if (forbiddenFields.length > 0) {
+          console.log("[FAIL] " + filename + " — unexpected forbidden field(s): " + forbiddenFields.join(", "));
+          forbiddenFieldPass = false;
+          exitCode = 1;
+        }
+      }
+    }
+  }
+
+  // ── Summary ──
+  console.log("");
+  console.log("Positive fixtures: " + positivePassed + " passed, " + positiveFailed + " failed");
+  console.log("Negative fixtures: " + negativeInvalid + " invalid as expected, " + negativeUnexpectedPass + " unexpectedly passed");
+  console.log("Forbidden-field scan: " + (forbiddenFieldPass ? "pass" : "fail"));
+  console.log("Fake-data/security scan: " + (securityPass ? "pass" : "fail"));
+  console.log("Semantic checks: " + (semanticPass ? "pass" : "fail"));
+
+  process.exit(exitCode);
+}
+
+// ── Main ────────────────────────────────────────────────────────────────────────
+
 try {
   const args = parseArgs(process.argv);
+  const runPhase1f = args.phase === "1f";
+
+  if (runPhase1f) {
+    validateDispatchReadinessPhase1F();
+  }
+
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
   const runPhase1b = args.phase === null || args.phase === "1b" || args.phase === "1c";
   const runPhase1c = args.phase === null || args.phase === "1c";
