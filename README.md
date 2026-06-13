@@ -59,6 +59,22 @@ It was built and stress-tested on real multi-agent development workflows, then e
 
 ---
 
+## Quick local verification
+
+PNPD OS can be verified locally with the npm scripts in `package.json`:
+
+```bash
+npm run validate
+npm run dry-run
+npm test
+```
+
+See [`docs/quickstart-local.md`](docs/quickstart-local.md) for prerequisites, direct Node fallback commands, and safety notes.
+
+Dispatch remains blocked; these commands validate schemas/fixtures and run local dry-run checks only.
+
+---
+
 ## Philosophy
 
 - **No agent certifies its own work.** Every gate requires a different agent.
