@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "recordType": "dispatchReadiness",
+  "recordId": "dispatch_readiness_fixture_0012",
+  "runId": "run_fixture_0012",
+  "generatedAt": "2099-01-01T00:00:00.000Z",
+  "source": "pnpd-orchestrator-dry-run",
+  "repo": {
+    "repoId": "example-app",
+    "path": "/tmp/pnpd-fixtures/example-app",
+    "branch": "main",
+    "commit": "0123456789abcdef0123456789abcdef01234567",
+    "dirty": false,
+    "remoteAligned": true
+  },
+  "classification": "RED",
+  "readiness": {
+    "state": "dispatchBlocked",
+    "advisoryOnly": true,
+    "executesDispatch": false,
+    "authorizesExecution": false,
+    "productionCertification": false,
+    "reason": "Fixture: top-level approvedForDispatch field is forbidden — schema additionalProperties false must reject this"
+  },
+  "blockers": [
+    {
+      "code": "governance_violation",
+      "description": "Fixture: top-level approvedForDispatch field is not in the schema and violates additionalProperties false",
+      "source": "top-level"
+    }
+  ],
+  "evidence": {
+    "registryValidated": true,
+    "outputSchemaValidated": true,
+    "dryRunTextPassed": true,
+    "dryRunJsonParsed": true,
+    "ledgerRecordRef": ".pnpd/ledger/2099-01-01.jsonl#fixture",
+    "handoffRecordRef": ".pnpd/handoffs/example-app-run_fixture_0012.json",
+    "lockCapability": true,
+    "schedulerMode": "disabled",
+    "securityScan": {
+      "status": "pass",
+      "matches": 0,
+      "details": "Fixture: no secrets detected"
+    },
+    "forbiddenPathScan": {
+      "status": "pass",
+      "matches": 0,
+      "details": "Fixture: no forbidden paths detected"
+    },
+    "stateDirScan": {
+      "status": "pass",
+      "matches": 0,
+      "details": "Fixture: no state directories committed"
+    },
+    "sourceCommit": "0123456789abcdef0123456789abcdef01234567",
+    "branch": "main",
+    "repoId": "example-app",
+    "repoPath": "/tmp/pnpd-fixtures/example-app",
+    "staleness": "fresh",
+    "gateResults": []
+  },
+  "approvals": {
+    "ownerApprovalStatus": "none",
+    "ownerApprovalRecordRef": null,
+    "ownerApprovalTimestamp": null
+  },
+  "audit": {
+    "codexAuditStatus": "not-run",
+    "codexRequiredBeforeExecution": true,
+    "codexAuditReportRef": null,
+    "codexAuditTimestamp": null
+  },
+  "scope": {
+    "dispatchScope": "Fixture-only: no dispatch scope",
+    "dispatchTarget": "Fixture-only: no dispatch target",
+    "rollbackCondition": "Fixture-only: manual rollback only",
+    "stopCondition": "Fixture-only: owner decision required"
+  },
+  "safety": {
+    "githubMutationAllowed": false,
+    "deployAllowed": false,
+    "externalMutationAllowed": false,
+    "secretsAllowed": false,
+    "productionCertificationAllowed": false
+  },
+  "scheduler": {
+    "mode": "disabled",
+    "autoDispatchAllowed": false,
+    "localOnly": true
+  },
+  "authority": {
+    "ownerFinalAuthority": true,
+    "agentBridgeMayApprove": false,
+    "agentBridgeMayMerge": false,
+    "agentBridgeMayDeploy": false,
+    "agentBridgeMayDispatch": false,
+    "agentBridgeMayCertify": false
+  },
+  "integrity": {
+    "contentHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "canonicalization": "json-canonical",
+    "previousLedgerHash": null
+  },
+  "approvedForDispatch": true
+}
