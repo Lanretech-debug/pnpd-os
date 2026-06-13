@@ -1,0 +1,574 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pnpd-os.local/schemas/dispatch-readiness.schema.json",
+  "title": "PNPD Dispatch Readiness Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "recordId",
+    "runId",
+    "generatedAt",
+    "source",
+    "repo",
+    "classification",
+    "readiness",
+    "blockers",
+    "evidence",
+    "approvals",
+    "audit",
+    "scope",
+    "safety",
+    "scheduler",
+    "authority",
+    "integrity"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "recordType": {
+      "type": "string",
+      "const": "dispatchReadiness"
+    },
+    "recordId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "repo": {
+      "$ref": "#/$defs/recordRepo"
+    },
+    "classification": {
+      "$ref": "#/$defs/classificationEnum"
+    },
+    "readiness": {
+      "$ref": "#/$defs/readiness"
+    },
+    "blockers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/blockerObject" }
+    },
+    "evidence": {
+      "$ref": "#/$defs/evidence"
+    },
+    "approvals": {
+      "$ref": "#/$defs/approvals"
+    },
+    "audit": {
+      "$ref": "#/$defs/audit"
+    },
+    "scope": {
+      "$ref": "#/$defs/scope"
+    },
+    "safety": {
+      "$ref": "#/$defs/safety"
+    },
+    "scheduler": {
+      "$ref": "#/$defs/scheduler"
+    },
+    "authority": {
+      "$ref": "#/$defs/authority"
+    },
+    "integrity": {
+      "$ref": "#/$defs/integrity"
+    }
+  },
+  "$defs": {
+    "classificationEnum": {
+      "type": "string",
+      "enum": [
+        "GREEN",
+        "AMBER",
+        "RED",
+        "AMBER_NOT_CODEX_AUDITED",
+        "CODEX_REVIEW_REQUIRED",
+        "OWNER_REVIEW_REQUIRED",
+        "BLOCKED",
+        "DONE"
+      ]
+    },
+    "readinessStateEnum": {
+      "type": "string",
+      "enum": [
+        "dispatchUnavailable",
+        "dispatchBlocked",
+        "dispatchEligibleForOwnerReview",
+        "dispatchOwnerApprovedPendingCodex",
+        "dispatchCodexAuditedPendingOwnerFinal",
+        "dispatchReadyButNotExecuted"
+      ]
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "advisoryOnly",
+        "executesDispatch",
+        "authorizesExecution",
+        "productionCertification"
+      ],
+      "properties": {
+        "state": {
+          "$ref": "#/$defs/readinessStateEnum"
+        },
+        "advisoryOnly": {
+          "type": "boolean",
+          "const": true
+        },
+        "executesDispatch": {
+          "type": "boolean",
+          "const": false
+        },
+        "authorizesExecution": {
+          "type": "boolean",
+          "const": false
+        },
+        "productionCertification": {
+          "type": "boolean",
+          "const": false
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    },
+    "blockerCodeEnum": {
+      "type": "string",
+      "enum": [
+        "dirty_tree",
+        "unpushed_commits",
+        "schema_validation_failed",
+        "fixture_validation_failed",
+        "dry_run_failed",
+        "json_parse_failed",
+        "missing_ledger_evidence",
+        "missing_handoff_evidence",
+        "missing_lock_capability",
+        "active_lock_conflict",
+        "secret_scan_failed",
+        "forbidden_path_detected",
+        "state_dir_committed",
+        "owner_approval_missing",
+        "codex_audit_missing",
+        "classification_amber_or_red",
+        "classification_amber_not_codex_audited",
+        "stale_handoff",
+        "stale_ledger_chain",
+        "scheduler_unsafe",
+        "external_mutation_requested",
+        "deploy_requested",
+        "github_api_mutation_requested",
+        "production_claim_requested",
+        "daemon_requested",
+        "installer_packaging_requested",
+        "scheduler_auto_dispatch_requested",
+        "governance_violation"
+      ]
+    },
+    "blockerObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "description"],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/blockerCodeEnum"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    },
+    "recordRepo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repoId", "path", "branch", "commit", "dirty", "remoteAligned"],
+      "properties": {
+        "repoId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{7,40}$"
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "remoteAligned": {
+          "type": "boolean"
+        }
+      }
+    },
+    "gateResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "skip", "not_run"]
+        },
+        "details": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    },
+    "scanSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "matches"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "review", "not_run"]
+        },
+        "matches": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "details": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    },
+    "schedulerModeEnum": {
+      "type": "string",
+      "enum": ["disabled", "once", "interval"]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registryValidated",
+        "outputSchemaValidated",
+        "dryRunTextPassed",
+        "dryRunJsonParsed",
+        "ledgerRecordRef",
+        "handoffRecordRef",
+        "lockCapability",
+        "schedulerMode",
+        "securityScan",
+        "forbiddenPathScan",
+        "stateDirScan",
+        "sourceCommit",
+        "branch",
+        "repoId",
+        "repoPath",
+        "staleness"
+      ],
+      "properties": {
+        "registryValidated": {
+          "type": "boolean",
+          "const": true
+        },
+        "outputSchemaValidated": {
+          "type": "boolean",
+          "const": true
+        },
+        "dryRunTextPassed": {
+          "type": "boolean",
+          "const": true
+        },
+        "dryRunJsonParsed": {
+          "type": "boolean",
+          "const": true
+        },
+        "ledgerRecordRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "handoffRecordRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "lockCapability": {
+          "type": "boolean",
+          "const": true
+        },
+        "schedulerMode": {
+          "$ref": "#/$defs/schedulerModeEnum"
+        },
+        "securityScan": {
+          "$ref": "#/$defs/scanSummary"
+        },
+        "forbiddenPathScan": {
+          "$ref": "#/$defs/scanSummary"
+        },
+        "stateDirScan": {
+          "$ref": "#/$defs/scanSummary"
+        },
+        "sourceCommit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{7,40}$"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "repoId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "repoPath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "staleness": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "gateResults": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/gateResult" }
+        }
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownerApprovalStatus"],
+      "properties": {
+        "ownerApprovalStatus": {
+          "type": "string",
+          "enum": ["none", "requested", "under-review", "approved", "rejected"]
+        },
+        "ownerApprovalRecordRef": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "ownerApprovalTimestamp": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codexAuditStatus", "codexRequiredBeforeExecution"],
+      "properties": {
+        "codexAuditStatus": {
+          "type": "string",
+          "enum": ["not-run", "pending", "passed", "failed"]
+        },
+        "codexRequiredBeforeExecution": {
+          "type": "boolean",
+          "const": true
+        },
+        "codexAuditReportRef": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "codexAuditTimestamp": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dispatchScope",
+        "dispatchTarget",
+        "rollbackCondition",
+        "stopCondition"
+      ],
+      "properties": {
+        "dispatchScope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "dispatchTarget": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "rollbackCondition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "stopCondition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "githubMutationAllowed",
+        "deployAllowed",
+        "externalMutationAllowed",
+        "secretsAllowed",
+        "productionCertificationAllowed"
+      ],
+      "properties": {
+        "githubMutationAllowed": {
+          "type": "boolean",
+          "const": false
+        },
+        "deployAllowed": {
+          "type": "boolean",
+          "const": false
+        },
+        "externalMutationAllowed": {
+          "type": "boolean",
+          "const": false
+        },
+        "secretsAllowed": {
+          "type": "boolean",
+          "const": false
+        },
+        "productionCertificationAllowed": {
+          "type": "boolean",
+          "const": false
+        }
+      }
+    },
+    "scheduler": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "autoDispatchAllowed", "localOnly"],
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/schedulerModeEnum"
+        },
+        "autoDispatchAllowed": {
+          "type": "boolean",
+          "const": false
+        },
+        "localOnly": {
+          "type": "boolean",
+          "const": true
+        },
+        "maxRuns": {
+          "oneOf": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "null" }
+          ]
+        },
+        "runsThisCycle": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ownerFinalAuthority",
+        "agentBridgeMayApprove",
+        "agentBridgeMayMerge",
+        "agentBridgeMayDeploy",
+        "agentBridgeMayDispatch",
+        "agentBridgeMayCertify"
+      ],
+      "properties": {
+        "ownerFinalAuthority": {
+          "type": "boolean",
+          "const": true
+        },
+        "agentBridgeMayApprove": {
+          "type": "boolean",
+          "const": false
+        },
+        "agentBridgeMayMerge": {
+          "type": "boolean",
+          "const": false
+        },
+        "agentBridgeMayDeploy": {
+          "type": "boolean",
+          "const": false
+        },
+        "agentBridgeMayDispatch": {
+          "type": "boolean",
+          "const": false
+        },
+        "agentBridgeMayCertify": {
+          "type": "boolean",
+          "const": false
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contentHash", "canonicalization"],
+      "properties": {
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "previousLedgerHash": {
+          "oneOf": [
+            { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+            { "type": "null" }
+          ]
+        },
+        "canonicalization": {
+          "type": "string",
+          "const": "json-canonical"
+        }
+      }
+    }
+  }
+}
