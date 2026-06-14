@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.researchDiscovery",
+  "artifactId": "invalid-codex-bypass-0001",
+  "artifactType": "problem_discovery",
+  "phase": "draft",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "researcher-one",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "productionCertification": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": false,
+    "agentBridgeAuthority": false
+  },
+  "evidence": {
+    "evidenceExists": "Example evidence.",
+    "evidenceMissing": "Example missing evidence.",
+    "assumptions": ["Example assumption."],
+    "uncertainty": "Example uncertainty.",
+    "disproofCriteria": "Example disproof criteria.",
+    "sourceQuality": "primary"
+  },
+  "problemDiscovery": {
+    "problemName": "Example problem name",
+    "whoHasThisProblem": "Example audience",
+    "whyNow": "Example timing rationale",
+    "whyNotTrendy": "Example non-trendy explanation",
+    "painLevel": "moderate",
+    "problemClassification": "example-classification",
+    "currentSolutions": "Example current solutions",
+    "whyCurrentSolutionsFail": "Example failure explanation",
+    "smallestNextResearchAction": "Example next research action",
+    "ownerDecisionOptions": ["proceed"]
+  }
+}

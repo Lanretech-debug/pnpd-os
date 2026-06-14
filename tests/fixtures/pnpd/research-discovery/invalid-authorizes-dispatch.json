@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.researchDiscovery",
+  "artifactId": "invalid-dispatch-0001",
+  "artifactType": "source_review",
+  "phase": "under_review",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "researcher-two",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": true,
+    "authorizesDeployment": false,
+    "productionCertification": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "agentBridgeAuthority": false
+  },
+  "evidence": {
+    "evidenceExists": "Example evidence.",
+    "evidenceMissing": "Example missing evidence.",
+    "assumptions": ["Example assumption."],
+    "uncertainty": "Example uncertainty statement.",
+    "disproofCriteria": "Example disproof criteria.",
+    "sourceQuality": "primary"
+  },
+  "sourceReview": {
+    "sourceIdentifier": "https://example.com/research/source/example",
+    "sourceType": "primary",
+    "sourceAge": "2025-06",
+    "keyClaims": "Example key claims.",
+    "credibilityAssessment": "Example credibility assessment.",
+    "biasAssessment": "Example bias assessment.",
+    "overWeightedRisk": "Example over-weighted risk.",
+    "claimSupported": "Example claim support.",
+    "claimWeakened": "Example claim weakening.",
+    "uncertaintyRemaining": "Example remaining uncertainty."
+  }
+}

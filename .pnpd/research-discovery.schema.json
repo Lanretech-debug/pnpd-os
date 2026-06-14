@@ -1,0 +1,678 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pnpd-research-discovery.schema.json",
+  "title": "PNPD Research Discovery Artifact Schema",
+  "description": "Advisory-only schema for PNPD Research Discovery artifacts. Validates structure and evidence fields only. Does not validate truth, viability, or correctness. Does not authorize implementation, merge, dispatch, deployment, or production certification. Owner remains final authority. Codex audit remains required. AgentBridge has no authority to approve, merge, deploy, certify, or dispatch.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "artifactId",
+    "artifactType",
+    "phase",
+    "createdAt",
+    "createdBy",
+    "governance",
+    "evidence"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Schema version identifier."
+    },
+    "recordType": {
+      "type": "string",
+      "const": "pnpd.researchDiscovery",
+      "description": "Record type discriminator."
+    },
+    "artifactId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique artifact identifier."
+    },
+    "artifactType": {
+      "type": "string",
+      "description": "Discriminator that selects the type-specific research object.",
+      "enum": [
+        "problem_discovery",
+        "source_review",
+        "experiment_log",
+        "failure_mining",
+        "owner_decision"
+      ]
+    },
+    "phase": {
+      "type": "string",
+      "description": "Research phase or status.",
+      "enum": [
+        "draft",
+        "under_review",
+        "ready_for_owner_decision",
+        "owner_approved_for_implementation_design",
+        "parked",
+        "rejected"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+      "description": "ISO 8601 UTC timestamp with millisecond precision."
+    },
+    "createdBy": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Entity that created this artifact."
+    },
+    "governance": {
+      "$ref": "#/$defs/governance"
+    },
+    "evidence": {
+      "$ref": "#/$defs/evidence"
+    },
+    "problemDiscovery": {
+      "$ref": "#/$defs/problemDiscovery"
+    },
+    "sourceReview": {
+      "$ref": "#/$defs/sourceReview"
+    },
+    "experimentLog": {
+      "$ref": "#/$defs/experimentLog"
+    },
+    "failureMining": {
+      "$ref": "#/$defs/failureMining"
+    },
+    "ownerDecision": {
+      "$ref": "#/$defs/ownerDecision"
+    }
+  },
+  "oneOf": [
+    {
+      "description": "artifactType problem_discovery requires problemDiscovery; prohibits other type-specific objects.",
+      "properties": {
+        "artifactType": { "const": "problem_discovery" }
+      },
+      "required": ["problemDiscovery"],
+      "not": {
+        "anyOf": [
+          { "required": ["sourceReview"] },
+          { "required": ["experimentLog"] },
+          { "required": ["failureMining"] },
+          { "required": ["ownerDecision"] }
+        ]
+      }
+    },
+    {
+      "description": "artifactType source_review requires sourceReview; prohibits other type-specific objects.",
+      "properties": {
+        "artifactType": { "const": "source_review" }
+      },
+      "required": ["sourceReview"],
+      "not": {
+        "anyOf": [
+          { "required": ["problemDiscovery"] },
+          { "required": ["experimentLog"] },
+          { "required": ["failureMining"] },
+          { "required": ["ownerDecision"] }
+        ]
+      }
+    },
+    {
+      "description": "artifactType experiment_log requires experimentLog; prohibits other type-specific objects.",
+      "properties": {
+        "artifactType": { "const": "experiment_log" }
+      },
+      "required": ["experimentLog"],
+      "not": {
+        "anyOf": [
+          { "required": ["problemDiscovery"] },
+          { "required": ["sourceReview"] },
+          { "required": ["failureMining"] },
+          { "required": ["ownerDecision"] }
+        ]
+      }
+    },
+    {
+      "description": "artifactType failure_mining requires failureMining; prohibits other type-specific objects.",
+      "properties": {
+        "artifactType": { "const": "failure_mining" }
+      },
+      "required": ["failureMining"],
+      "not": {
+        "anyOf": [
+          { "required": ["problemDiscovery"] },
+          { "required": ["sourceReview"] },
+          { "required": ["experimentLog"] },
+          { "required": ["ownerDecision"] }
+        ]
+      }
+    },
+    {
+      "description": "artifactType owner_decision requires ownerDecision; prohibits other type-specific objects.",
+      "properties": {
+        "artifactType": { "const": "owner_decision" }
+      },
+      "required": ["ownerDecision"],
+      "not": {
+        "anyOf": [
+          { "required": ["problemDiscovery"] },
+          { "required": ["sourceReview"] },
+          { "required": ["experimentLog"] },
+          { "required": ["failureMining"] }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Governance constraints. All authority flags are locked false by schema const. Owner holds final decision authority. Codex audit is required before any merge.",
+      "required": [
+        "authorizesImplementation",
+        "authorizesMerge",
+        "authorizesDispatch",
+        "authorizesDeployment",
+        "productionCertification",
+        "ownerFinalAuthority",
+        "codexAuditRequiredBeforeMerge",
+        "agentBridgeAuthority"
+      ],
+      "properties": {
+        "authorizesImplementation": {
+          "type": "boolean",
+          "const": false,
+          "description": "Implementation must not be authorized by this artifact."
+        },
+        "authorizesMerge": {
+          "type": "boolean",
+          "const": false,
+          "description": "Merge must not be authorized by this artifact."
+        },
+        "authorizesDispatch": {
+          "type": "boolean",
+          "const": false,
+          "description": "Dispatch must not be authorized by this artifact."
+        },
+        "authorizesDeployment": {
+          "type": "boolean",
+          "const": false,
+          "description": "Deployment must not be authorized by this artifact."
+        },
+        "productionCertification": {
+          "type": "boolean",
+          "const": false,
+          "description": "Production certification must not be claimed by this artifact."
+        },
+        "ownerFinalAuthority": {
+          "type": "boolean",
+          "const": true,
+          "description": "The Owner holds final decision authority."
+        },
+        "codexAuditRequiredBeforeMerge": {
+          "type": "boolean",
+          "const": true,
+          "description": "A Codex formal audit is required before any merge."
+        },
+        "agentBridgeAuthority": {
+          "type": "boolean",
+          "const": false,
+          "description": "AgentBridge has no authority to approve, merge, deploy, certify, or dispatch."
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Evidence block. Requires explicit statements of what evidence exists, what is missing, assumptions, uncertainty, disproof criteria, and source quality.",
+      "required": [
+        "evidenceExists",
+        "evidenceMissing",
+        "assumptions",
+        "uncertainty",
+        "disproofCriteria",
+        "sourceQuality"
+      ],
+      "properties": {
+        "evidenceExists": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What evidence currently exists to support the claims."
+        },
+        "evidenceMissing": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What evidence is known to be missing or incomplete."
+        },
+        "assumptions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Explicit assumptions underpinning this research."
+        },
+        "uncertainty": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Explicit uncertainty in the current findings."
+        },
+        "disproofCriteria": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What would disprove or weaken these findings."
+        },
+        "sourceQuality": {
+          "$ref": "#/$defs/sourceQualityEnum",
+          "description": "Overall source quality classification."
+        }
+      }
+    },
+    "sourceQualityEnum": {
+      "type": "string",
+      "description": "Source quality classification.",
+      "enum": [
+        "primary",
+        "secondary",
+        "anecdotal",
+        "marketing",
+        "benchmark",
+        "academic",
+        "code",
+        "user_evidence",
+        "expert_opinion",
+        "unverified"
+      ]
+    },
+    "ownerDecisionEnum": {
+      "type": "string",
+      "description": "Owner decision enumeration.",
+      "enum": [
+        "approve_implementation_design",
+        "request_more_research",
+        "reject",
+        "park"
+      ]
+    },
+    "painLevelEnum": {
+      "type": "string",
+      "description": "Pain level classification.",
+      "enum": ["critical", "high", "moderate", "low"]
+    },
+    "confidenceBeforeTestEnum": {
+      "type": "string",
+      "description": "Confidence level before test.",
+      "enum": ["low", "medium", "high"]
+    },
+    "frequencyEnum": {
+      "type": "string",
+      "description": "Failure frequency.",
+      "enum": ["once", "occasional", "repeating"]
+    },
+    "impactEnum": {
+      "type": "string",
+      "description": "Failure impact.",
+      "enum": ["blocked", "degraded", "informative"]
+    },
+    "ownerDecisionOptionsEnum": {
+      "type": "string",
+      "description": "Owner decision option enumeration.",
+      "enum": ["proceed", "hold", "reject"]
+    },
+    "problemDiscovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Problem discovery artifact.",
+      "required": [
+        "problemName",
+        "whoHasThisProblem",
+        "whyNow",
+        "whyNotTrendy",
+        "painLevel",
+        "problemClassification",
+        "currentSolutions",
+        "whyCurrentSolutionsFail",
+        "smallestNextResearchAction",
+        "ownerDecisionOptions"
+      ],
+      "properties": {
+        "problemName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short name describing the problem."
+        },
+        "whoHasThisProblem": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Who experiences this problem."
+        },
+        "whyNow": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this problem matters now."
+        },
+        "whyNotTrendy": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this is not just a passing trend."
+        },
+        "painLevel": {
+          "$ref": "#/$defs/painLevelEnum",
+          "description": "Severity of the problem."
+        },
+        "problemClassification": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Classification or category of the problem."
+        },
+        "currentSolutions": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Current solutions available."
+        },
+        "whyCurrentSolutionsFail": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why existing solutions are insufficient."
+        },
+        "smallestNextResearchAction": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Smallest actionable next research step."
+        },
+        "ownerDecisionOptions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ownerDecisionOptionsEnum"
+          },
+          "description": "Decision options presented to the Owner."
+        }
+      }
+    },
+    "sourceReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Source review artifact.",
+      "required": [
+        "sourceIdentifier",
+        "sourceType",
+        "sourceAge",
+        "keyClaims",
+        "credibilityAssessment",
+        "biasAssessment",
+        "overWeightedRisk",
+        "claimSupported",
+        "claimWeakened",
+        "uncertaintyRemaining"
+      ],
+      "properties": {
+        "sourceIdentifier": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique identifier or URL for the source."
+        },
+        "sourceType": {
+          "$ref": "#/$defs/sourceQualityEnum",
+          "description": "Source type classification."
+        },
+        "sourceAge": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Age or recency of the source."
+        },
+        "keyClaims": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Key claims made by the source."
+        },
+        "credibilityAssessment": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Assessment of the source's credibility."
+        },
+        "biasAssessment": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Assessment of potential biases."
+        },
+        "overWeightedRisk": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Risk of over-weighting this source."
+        },
+        "claimSupported": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What the source supports or strengthens."
+        },
+        "claimWeakened": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What the source weakens or challenges."
+        },
+        "uncertaintyRemaining": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Remaining uncertainty after review."
+        }
+      }
+    },
+    "experimentLog": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Experiment log artifact.",
+      "required": [
+        "experimentName",
+        "hypothesis",
+        "whyMatters",
+        "expectedResult",
+        "confidenceBeforeTest",
+        "testPerformed",
+        "actualResult",
+        "expectedVsActualDelta",
+        "updatedBelief",
+        "nextAction",
+        "disposable"
+      ],
+      "properties": {
+        "experimentName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the experiment."
+        },
+        "hypothesis": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Hypothesis being tested."
+        },
+        "whyMatters": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this experiment matters."
+        },
+        "expectedResult": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What result was expected before the test."
+        },
+        "confidenceBeforeTest": {
+          "$ref": "#/$defs/confidenceBeforeTestEnum",
+          "description": "Confidence level before running the test."
+        },
+        "testPerformed": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Description of the test performed."
+        },
+        "actualResult": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Actual observed result."
+        },
+        "expectedVsActualDelta": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Delta between expected and actual results."
+        },
+        "updatedBelief": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Updated belief after the experiment."
+        },
+        "nextAction": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Next action based on the result."
+        },
+        "disposable": {
+          "type": "boolean",
+          "description": "Whether this experiment log is disposable."
+        }
+      }
+    },
+    "failureMining": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Failure mining artifact.",
+      "required": [
+        "failureObserved",
+        "whereAppeared",
+        "frequency",
+        "impact",
+        "likelyCause",
+        "competingExplanations",
+        "biggestFailurePile",
+        "smallestNextFixOrTest",
+        "whatNotToChangeYet",
+        "patternRecognition"
+      ],
+      "properties": {
+        "failureObserved": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Description of the observed failure."
+        },
+        "whereAppeared": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where the failure appeared."
+        },
+        "frequency": {
+          "$ref": "#/$defs/frequencyEnum",
+          "description": "How often the failure occurs."
+        },
+        "impact": {
+          "$ref": "#/$defs/impactEnum",
+          "description": "Impact of the failure."
+        },
+        "likelyCause": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Most likely cause of the failure."
+        },
+        "competingExplanations": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Competing explanations for the failure."
+        },
+        "biggestFailurePile": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Largest cluster or pile of related failures."
+        },
+        "smallestNextFixOrTest": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Smallest next fix or test to try."
+        },
+        "whatNotToChangeYet": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What should not be changed yet."
+        },
+        "patternRecognition": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Recognized failure patterns."
+        }
+      }
+    },
+    "ownerDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Owner decision artifact. Even when the decision is approve_implementation_design, all governance authority flags remain non-authorizing.",
+      "required": [
+        "decisionTitle",
+        "researchEvidenceReviewed",
+        "mainFinding",
+        "risks",
+        "openQuestions",
+        "recommendedNextPhase",
+        "decision",
+        "rationale",
+        "constraints",
+        "nextActions",
+        "ownerSignature"
+      ],
+      "properties": {
+        "decisionTitle": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Title for this owner decision."
+        },
+        "researchEvidenceReviewed": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Research evidence reviewed before the decision."
+        },
+        "mainFinding": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Main finding from the research evidence."
+        },
+        "risks": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Risks considered."
+        },
+        "openQuestions": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Open questions remaining."
+        },
+        "recommendedNextPhase": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Recommended next phase after this decision."
+        },
+        "decision": {
+          "$ref": "#/$defs/ownerDecisionEnum",
+          "description": "The owner's decision."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Rationale for the decision."
+        },
+        "constraints": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Constraints placed on next steps."
+        },
+        "nextActions": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Next actions to be taken."
+        },
+        "ownerSignature": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Owner's signature or identifier."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.researchDiscovery",
+  "artifactId": "owner-dec-approve-design-0001",
+  "artifactType": "owner_decision",
+  "phase": "owner_approved_for_implementation_design",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "owner-jane",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "productionCertification": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "agentBridgeAuthority": false
+  },
+  "evidence": {
+    "evidenceExists": "Problem discovery prob-disc-0001, experiment log exp-log-0001, failure mining fail-mine-0001, and source review src-review-0001 were reviewed.",
+    "evidenceMissing": "We lack a competitive analysis of how three major alternatives solve equivalent save-latency problems.",
+    "assumptions": [
+      "The super-linear scaling root cause identified in exp-log-0001 is the correct target for optimization.",
+      "The implementation design phase will produce a concrete plan before any code changes are made."
+    ],
+    "uncertainty": "We do not yet know whether the optimization can be implemented without breaking the public API contract.",
+    "disproofCriteria": "If the implementation design phase discovers that the fix requires a breaking API change, return to research for alternative approaches.",
+    "sourceQuality": "primary"
+  },
+  "ownerDecision": {
+    "decisionTitle": "Approve implementation design phase for save-latency optimization",
+    "researchEvidenceReviewed": "Full research suite: prob-disc-0001, exp-log-0001, fail-mine-0001, src-review-0001.",
+    "mainFinding": "Save latency is confirmed, measured, and understood well enough to design a solution approach.",
+    "risks": "Implementation design may reveal that the optimization requires more refactoring than estimated; collaboration rewrite may conflict.",
+    "openQuestions": "What is the minimum viable optimization that delivers measurable user benefit? Can we deliver incremental improvements?",
+    "recommendedNextPhase": "Begin implementation design phase. No code changes to the save path until design is reviewed.",
+    "decision": "approve_implementation_design",
+    "rationale": "The research is thorough and the problem is real. Designing a solution is the correct next step. This approves design work only, not implementation, not merge, not dispatch, not deployment.",
+    "constraints": "Design phase only. No save-path code changes. No merge. No dispatch. No deployment. No production certification claim. Codex audit required before any merge.",
+    "nextActions": "Create an implementation design document. Identify the specific serialization hot path. Estimate effort and risk. Present design for owner review.",
+    "ownerSignature": "owner-jane"
+  }
+}

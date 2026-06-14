@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.researchDiscovery",
+  "artifactId": "prob-disc-0001",
+  "artifactType": "problem_discovery",
+  "phase": "draft",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "researcher-one",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "productionCertification": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "agentBridgeAuthority": false
+  },
+  "evidence": {
+    "evidenceExists": "Three users in a pilot program reported the same friction point within 48 hours of starting.",
+    "evidenceMissing": "We do not yet have telemetry data on error rates or time-to-recovery for the reported friction.",
+    "assumptions": [
+      "Users are not misreporting the friction; their reports are accurate.",
+      "The friction is not caused by a misconfiguration specific to the pilot environment."
+    ],
+    "uncertainty": "We have not confirmed whether the observed friction persists across all operating systems.",
+    "disproofCriteria": "If telemetry shows fewer than 5% of sessions hit this code path, the problem may be less widespread than reported.",
+    "sourceQuality": "user_evidence"
+  },
+  "problemDiscovery": {
+    "problemName": "Save operation takes longer than 2 seconds on large documents",
+    "whoHasThisProblem": "Users editing documents with more than 500 paragraphs.",
+    "whyNow": "Recently increased document size limits from 200 to 1000 paragraphs, exposing a latent performance bottleneck.",
+    "whyNotTrendy": "Performance engineering is often neglected in favor of feature velocity; this problem is under-measured.",
+    "painLevel": "high",
+    "problemClassification": "performance-regression-latent",
+    "currentSolutions": "Users manually split documents or disable real-time collaboration.",
+    "whyCurrentSolutionsFail": "Manual splitting breaks collaboration workflows; disabling real-time sync undermines the product value proposition.",
+    "smallestNextResearchAction": "Profile save-path for documents with 500-1000 paragraphs and collect latency histograms.",
+    "ownerDecisionOptions": ["proceed", "hold"]
+  }
+}
