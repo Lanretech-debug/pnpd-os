@@ -1,0 +1,398 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pnpd-runtime-readiness.schema.json",
+  "title": "PNPD Runtime Readiness Record Schema",
+  "description": "Advisory-only runtime readiness record schema for PNPD OS. This schema validates evidence snapshots for Owner and Codex review. It does not authorize dispatch, deployment, merge, production certification, GitHub mutation, or authority escalation. Owner remains final authority. Codex audit remains required. AgentBridge coordinates only and must not approve, merge, deploy, certify, or dispatch.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "recordId",
+    "generatedAt",
+    "repo",
+    "source",
+    "validation",
+    "dryRun",
+    "authority",
+    "safety",
+    "readiness",
+    "integrity",
+    "audit"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "recordType": { "const": "pnpd.runtimeReadiness" },
+    "recordId": { "$ref": "#/$defs/nonEmptyString" },
+    "generatedAt": { "$ref": "#/$defs/isoDateTime" },
+    "repo": { "$ref": "#/$defs/repo" },
+    "source": { "$ref": "#/$defs/source" },
+    "validation": { "$ref": "#/$defs/validation" },
+    "dryRun": { "$ref": "#/$defs/dryRun" },
+    "authority": { "$ref": "#/$defs/authority" },
+    "safety": { "$ref": "#/$defs/safety" },
+    "readiness": { "$ref": "#/$defs/readiness" },
+    "integrity": { "$ref": "#/$defs/integrity" },
+    "audit": { "$ref": "#/$defs/audit" }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "isoDateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sha256Hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "DONE",
+        "CODEX_REVIEW_REQUIRED",
+        "AMBER_NOT_CODEX_AUDITED",
+        "BLOCKED_DIRTY_TREE",
+        "BLOCKED_PROTECTED_BRANCH",
+        "BLOCKED_SCOPE",
+        "BLOCKED_SECURITY",
+        "BLOCKED_GOVERNANCE",
+        "RED"
+      ]
+    },
+    "readinessStatus": {
+      "type": "string",
+      "enum": [
+        "reviewUnavailable",
+        "reviewBlocked",
+        "eligibleForOwnerReview",
+        "ownerApprovedPendingCodex",
+        "codexAuditedPendingOwnerFinal",
+        "readyForManualOwnerDecisionButNotExecuted"
+      ]
+    },
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "path",
+        "branch",
+        "commit",
+        "dirty",
+        "protectedBranch"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "path": { "$ref": "#/$defs/nonEmptyString" },
+        "branch": { "$ref": "#/$defs/nonEmptyString" },
+        "commit": { "$ref": "#/$defs/nonEmptyString" },
+        "dirty": { "type": "boolean" },
+        "protectedBranch": { "type": "boolean" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "localOnly",
+        "remoteCiObserved",
+        "remoteCiProvider",
+        "remoteCiRunId",
+        "remoteCiStatus",
+        "remoteCiConclusion",
+        "remoteCiUrl",
+        "externalApiUsed",
+        "manualEvidenceOnly"
+      ],
+      "properties": {
+        "localOnly": { "const": true },
+        "remoteCiObserved": { "type": "boolean" },
+        "remoteCiProvider": {
+          "oneOf": [
+            { "$ref": "#/$defs/nonEmptyString" },
+            { "type": "null" }
+          ]
+        },
+        "remoteCiRunId": {
+          "oneOf": [
+            { "$ref": "#/$defs/nonEmptyString" },
+            { "type": "null" }
+          ]
+        },
+        "remoteCiStatus": {
+          "oneOf": [
+            { "$ref": "#/$defs/nonEmptyString" },
+            { "type": "null" }
+          ]
+        },
+        "remoteCiConclusion": {
+          "oneOf": [
+            { "$ref": "#/$defs/nonEmptyString" },
+            { "type": "null" }
+          ]
+        },
+        "remoteCiUrl": {
+          "oneOf": [
+            { "$ref": "#/$defs/nonEmptyString" },
+            { "type": "null" }
+          ]
+        },
+        "externalApiUsed": { "const": false },
+        "manualEvidenceOnly": { "const": true }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "remoteCiObserved": { "const": true }
+            },
+            "required": ["remoteCiObserved"]
+          },
+          "then": {
+            "properties": {
+              "remoteCiProvider": { "$ref": "#/$defs/nonEmptyString" },
+              "remoteCiRunId": { "$ref": "#/$defs/nonEmptyString" },
+              "remoteCiStatus": { "$ref": "#/$defs/nonEmptyString" },
+              "remoteCiConclusion": { "const": "success" },
+              "remoteCiUrl": { "$ref": "#/$defs/nonEmptyString" }
+            },
+            "required": [
+              "remoteCiProvider",
+              "remoteCiRunId",
+              "remoteCiStatus",
+              "remoteCiConclusion",
+              "remoteCiUrl"
+            ]
+          },
+          "else": {
+            "properties": {
+              "remoteCiProvider": { "type": "null" },
+              "remoteCiRunId": { "type": "null" },
+              "remoteCiStatus": { "type": "null" },
+              "remoteCiConclusion": { "type": "null" },
+              "remoteCiUrl": { "type": "null" }
+            }
+          }
+        }
+      ]
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "npmValidatePassed",
+        "npmDryRunPassed",
+        "npmTestPassed",
+        "validatorPhasesPassed",
+        "dispatchReadinessFixturesPassed",
+        "runtimeReadinessSchemaValidated",
+        "runtimeReadinessFixturesValidated"
+      ],
+      "properties": {
+        "npmValidatePassed": { "type": "boolean" },
+        "npmDryRunPassed": { "type": "boolean" },
+        "npmTestPassed": { "type": "boolean" },
+        "validatorPhasesPassed": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "dispatchReadinessFixturesPassed": { "type": "boolean" },
+        "runtimeReadinessSchemaValidated": { "const": false },
+        "runtimeReadinessFixturesValidated": { "const": false }
+      }
+    },
+    "dryRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "dispatchEnabled",
+        "dispatchAllowed",
+        "dispatchBlockedReason",
+        "externalWritesImplemented",
+        "maxParallelDispatch",
+        "protectedBranchBlocked"
+      ],
+      "properties": {
+        "classification": { "$ref": "#/$defs/classification" },
+        "dispatchEnabled": { "const": false },
+        "dispatchAllowed": { "const": false },
+        "dispatchBlockedReason": { "$ref": "#/$defs/nonEmptyString" },
+        "externalWritesImplemented": { "const": false },
+        "maxParallelDispatch": { "const": 0 },
+        "protectedBranchBlocked": { "type": "boolean" }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ownerApproved",
+        "codexAudited",
+        "agentBridgeMayApprove",
+        "agentBridgeMayMerge",
+        "agentBridgeMayDeploy",
+        "agentBridgeMayDispatch",
+        "agentBridgeMayCertifyProduction",
+        "ownerFinalAuthority",
+        "codexAuditRequired"
+      ],
+      "properties": {
+        "ownerApproved": {
+          "type": "boolean",
+          "description": "Whether Owner has approved. Does not authorize execution."
+        },
+        "codexAudited": {
+          "type": "boolean",
+          "description": "Whether Codex has audited. Does not authorize execution."
+        },
+        "agentBridgeMayApprove": { "const": false },
+        "agentBridgeMayMerge": { "const": false },
+        "agentBridgeMayDeploy": { "const": false },
+        "agentBridgeMayDispatch": { "const": false },
+        "agentBridgeMayCertifyProduction": { "const": false },
+        "ownerFinalAuthority": { "const": true },
+        "codexAuditRequired": { "const": true }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "advisoryOnly",
+        "authorizesDispatch",
+        "authorizesDeployment",
+        "authorizesMerge",
+        "certifiesProductionReadiness",
+        "executesDispatch",
+        "mutatesGitHub",
+        "usesSecrets",
+        "externalWritesAllowed",
+        "secretsPresent",
+        "stateDirsPresent",
+        "deploymentConfigured",
+        "daemonConfigured",
+        "installerConfigured",
+        "githubMutationAllowed"
+      ],
+      "properties": {
+        "advisoryOnly": {
+          "const": true,
+          "description": "This record is advisory only and does not authorize any action."
+        },
+        "authorizesDispatch": { "const": false },
+        "authorizesDeployment": { "const": false },
+        "authorizesMerge": { "const": false },
+        "certifiesProductionReadiness": { "const": false },
+        "executesDispatch": { "const": false },
+        "mutatesGitHub": { "const": false },
+        "usesSecrets": { "const": false },
+        "externalWritesAllowed": { "const": false },
+        "secretsPresent": { "type": "boolean" },
+        "stateDirsPresent": { "type": "boolean" },
+        "deploymentConfigured": { "const": false },
+        "daemonConfigured": { "const": false },
+        "installerConfigured": { "const": false },
+        "githubMutationAllowed": { "const": false }
+      }
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "blockers",
+        "remainingRisks",
+        "nextSafestStep"
+      ],
+      "properties": {
+        "status": { "$ref": "#/$defs/readinessStatus" },
+        "blockers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/blocker" }
+        },
+        "remainingRisks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "nextSafestStep": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "description",
+        "severity"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "severity": {
+          "type": "string",
+          "enum": ["blocking", "advisory"]
+        },
+        "resolvedBy": {
+          "oneOf": [
+            { "$ref": "#/$defs/nonEmptyString" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ledgerRecordRef",
+        "source",
+        "description"
+      ],
+      "properties": {
+        "ledgerRecordRef": { "$ref": "#/$defs/nonEmptyString" },
+        "source": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contentHash",
+        "hashAlgorithm",
+        "canonicalization"
+      ],
+      "properties": {
+        "contentHash": { "$ref": "#/$defs/sha256Hash" },
+        "hashAlgorithm": { "const": "sha256" },
+        "canonicalization": { "const": "stable-json" }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hermesDesigned",
+        "deepseekImplemented",
+        "codexAudited",
+        "ownerDecisionRequired",
+        "mergeAllowed",
+        "pushAllowed"
+      ],
+      "properties": {
+        "hermesDesigned": { "type": "boolean" },
+        "deepseekImplemented": { "type": "boolean" },
+        "codexAudited": { "type": "boolean" },
+        "ownerDecisionRequired": { "type": "boolean" },
+        "mergeAllowed": { "const": false },
+        "pushAllowed": { "const": false }
+      }
+    }
+  }
+}
