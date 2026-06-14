@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.runtimeReadiness",
+  "recordId": "fixture-runtime-readiness-invalid-agentbridge-authority",
+  "generatedAt": "2099-01-01T00:00:00.000Z",
+  "repo": {
+    "id": "example-app",
+    "name": "Example App",
+    "path": "/tmp/pnpd-fixtures/example-app",
+    "branch": "main",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "dirty": false,
+    "protectedBranch": true
+  },
+  "source": {
+    "localOnly": true,
+    "remoteCiObserved": false,
+    "remoteCiProvider": null,
+    "remoteCiRunId": null,
+    "remoteCiStatus": null,
+    "remoteCiConclusion": null,
+    "remoteCiUrl": null,
+    "externalApiUsed": false,
+    "manualEvidenceOnly": true
+  },
+  "validation": {
+    "npmValidatePassed": true,
+    "npmDryRunPassed": true,
+    "npmTestPassed": true,
+    "validatorPhasesPassed": [
+      "default",
+      "phase0",
+      "phase1b",
+      "phase1c",
+      "phase1f"
+    ],
+    "dispatchReadinessFixturesPassed": true,
+    "runtimeReadinessSchemaValidated": false,
+    "runtimeReadinessFixturesValidated": false
+  },
+  "dryRun": {
+    "classification": "CODEX_REVIEW_REQUIRED",
+    "dispatchEnabled": false,
+    "dispatchAllowed": false,
+    "dispatchBlockedReason": "Dispatch is disabled in Phase 0 dry-run mode.",
+    "externalWritesImplemented": false,
+    "maxParallelDispatch": 0,
+    "protectedBranchBlocked": true
+  },
+  "authority": {
+    "ownerApproved": false,
+    "codexAudited": false,
+    "agentBridgeMayApprove": false,
+    "agentBridgeMayMerge": false,
+    "agentBridgeMayDeploy": false,
+    "agentBridgeMayDispatch": true,
+    "agentBridgeMayCertifyProduction": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequired": true
+  },
+  "safety": {
+    "advisoryOnly": true,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesMerge": false,
+    "certifiesProductionReadiness": false,
+    "executesDispatch": false,
+    "mutatesGitHub": false,
+    "usesSecrets": false,
+    "externalWritesAllowed": false,
+    "secretsPresent": false,
+    "stateDirsPresent": false,
+    "deploymentConfigured": false,
+    "daemonConfigured": false,
+    "installerConfigured": false,
+    "githubMutationAllowed": false
+  },
+  "readiness": {
+    "status": "reviewBlocked",
+    "blockers": [
+      {
+        "id": "protected-branch-main-blocked",
+        "description": "Branch main is protected and blocks dispatch.",
+        "severity": "blocking",
+        "resolvedBy": null
+      }
+    ],
+    "remainingRisks": [
+      "No remaining risks identified at this stage."
+    ],
+    "nextSafestStep": "Codex audit, then owner review and decision."
+  },
+  "integrity": {
+    "contentHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "hashAlgorithm": "sha256",
+    "canonicalization": "stable-json"
+  },
+  "audit": {
+    "hermesDesigned": true,
+    "deepseekImplemented": true,
+    "codexAudited": false,
+    "ownerDecisionRequired": true,
+    "mergeAllowed": false,
+    "pushAllowed": false
+  }
+}
