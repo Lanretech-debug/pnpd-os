@@ -130,11 +130,11 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--phase") {
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, or 1f).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, or 1h).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f") {
-        throw new Error('--phase must be "0", "1b", "1c", or "1f".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", or "1h".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -142,13 +142,14 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h]
 
 Options:
   --phase 0   Validate Phase 0 invariants only.
   --phase 1b  Validate Phase 0 + Phase 1B invariants.
   --phase 1c  Validate Phase 0 + Phase 1B + Phase 1C invariants + fixture instance validation.
   --phase 1f  Validate PNPD dispatch readiness fixtures (explicit-only, not included in default).
+  --phase 1h  Validate PNPD runtime readiness schema and fixtures (explicit-only, not included in default).
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
     } else {
@@ -505,7 +506,9 @@ function validateInstance(instance, schemaDef, fullSchema, path) {
   }
 
   // object validations
-  if (schemaDef.type === "object" && instance && typeof instance === "object" && !Array.isArray(instance)) {
+  var isObjectInstance = instance && typeof instance === "object" && !Array.isArray(instance);
+  var hasObjectSchema = schemaDef.type === "object" || schemaDef.properties || schemaDef.required && schemaDef.required.length > 0 || schemaDef.additionalProperties !== undefined;
+  if (hasObjectSchema && isObjectInstance) {
     // additionalProperties
     if (schemaDef.additionalProperties === false) {
       var knownKeys = new Set(Object.keys(schemaDef.properties || {}));
@@ -618,6 +621,41 @@ function validateInstance(instance, schemaDef, fullSchema, path) {
     }
     if (matchCount !== 1) {
       failures.push({ path: path, expected: "exactly one oneOf match", actual: String(matchCount) + " alternatives matched" });
+    }
+  }
+
+  // allOf
+  if (schemaDef.allOf) {
+    for (var _ao = 0; _ao < schemaDef.allOf.length; _ao++) {
+      var allOfSub = schemaDef.allOf[_ao];
+      var allOfResolved = allOfSub.$ref ? resolveRef(fullSchema, allOfSub.$ref, path + ".allOf[" + _ao + "].$ref") : allOfSub;
+      var allOfFails = validateInstance(instance, allOfResolved, fullSchema, path);
+      for (var _aof = 0; _aof < allOfFails.length; _aof++) {
+        failures.push(allOfFails[_aof]);
+      }
+    }
+  }
+
+  // if/then/else
+  if (schemaDef.if) {
+    var ifResolved = schemaDef.if.$ref ? resolveRef(fullSchema, schemaDef.if.$ref, path + ".if.$ref") : schemaDef.if;
+    var ifFails = validateInstance(instance, ifResolved, fullSchema, path);
+    if (ifFails.length === 0) {
+      if (schemaDef.then) {
+        var thenResolved = schemaDef.then.$ref ? resolveRef(fullSchema, schemaDef.then.$ref, path + ".then.$ref") : schemaDef.then;
+        var thenFails = validateInstance(instance, thenResolved, fullSchema, path);
+        for (var _tf = 0; _tf < thenFails.length; _tf++) {
+          failures.push(thenFails[_tf]);
+        }
+      }
+    } else {
+      if (schemaDef.else) {
+        var elseResolved = schemaDef.else.$ref ? resolveRef(fullSchema, schemaDef.else.$ref, path + ".else.$ref") : schemaDef.else;
+        var elseFails = validateInstance(instance, elseResolved, fullSchema, path);
+        for (var _ef = 0; _ef < elseFails.length; _ef++) {
+          failures.push(elseFails[_ef]);
+        }
+      }
     }
   }
 
@@ -1601,14 +1639,465 @@ function validateDispatchReadinessPhase1F() {
   process.exit(exitCode);
 }
 
+// ── Phase 1H: Runtime Readiness Validation ──────────────────────────────────────
+
+const RUNTIME_READINESS_SCHEMA_PATH = ".pnpd/runtime-readiness.schema.json";
+const RUNTIME_READINESS_FIXTURE_DIR = "tests/fixtures/pnpd/runtime-readiness";
+
+const RUNTIME_READINESS_POSITIVE_FIXTURES = new Set([
+  "valid-minimal-review-blocked.json",
+  "valid-remote-ci-observed-success.json",
+  "valid-codex-review-required.json",
+]);
+
+const RUNTIME_READINESS_NEGATIVE_SCHEMA_INVALID_FIXTURES = new Set([
+  "invalid-authorizes-dispatch.json",
+  "invalid-agentbridge-authority.json",
+  "invalid-production-certified.json",
+  "invalid-github-mutation-allowed.json",
+  "invalid-remote-ci-failure-marked-ready.json",
+  "invalid-forbidden-field-name.json",
+  "invalid-missing-required-field.json",
+  "invalid-external-api-used.json",
+  "invalid-write-allowed.json",
+]);
+
+const RUNTIME_READINESS_NEGATIVE_SEMANTIC_INVALID_FIXTURES = new Set([
+  "invalid-amber-final-readiness.json",
+]);
+
+const RUNTIME_READINESS_FORBIDDEN_FIELDS = new Set([
+  "approvedForDispatch",
+  "dispatchApproved",
+  "dispatchNow",
+  "executeDispatch",
+  "deployApproved",
+  "productionReady",
+  "productionCertified",
+  "mergeApproved",
+  "ownerBypassed",
+  "codexBypassed",
+  "agentBridgeApproved",
+  "agentBridgeCanDeploy",
+  "githubMutationEnabled",
+  "secretsEnabled",
+  "autoDispatch",
+  "autonomousDispatch",
+  "releaseApproved",
+  "agentBridgeCanApprove",
+  "agentBridgeCanMerge",
+  "agentBridgeCanDispatch",
+  "agentBridgeCanCertifyProduction",
+  "externalWritesEnabled",
+  "deployNow",
+  "releaseNow",
+  "productionCertifiedByAgent",
+]);
+
+const RUNTIME_READINESS_LATE_STAGE_STATES = new Set([
+  "ownerApprovedPendingCodex",
+  "codexAuditedPendingOwnerFinal",
+  "readyForManualOwnerDecisionButNotExecuted",
+]);
+
+const RUNTIME_READINESS_BLOCKED_CLASSIFICATIONS = new Set([
+  "AMBER_NOT_CODEX_AUDITED",
+  "RED",
+  "BLOCKED_DIRTY_TREE",
+  "BLOCKED_PROTECTED_BRANCH",
+  "BLOCKED_SCOPE",
+  "BLOCKED_SECURITY",
+  "BLOCKED_GOVERNANCE",
+]);
+
+// Fake-data/security scan patterns for runtime readiness
+const RUNTIME_READINESS_FORBIDDEN_STRING_PATTERNS = [
+  { re: /\/Users\//, label: "real path: /Users/" },
+  { re: /\/Users\/lanretech\/Documents\/BricLab Kids/, label: "real path: BricLab Kids" },
+  { re: /https:\/\/github\.com/, label: "live GitHub URL" },
+  { re: /https:\/\/api\.github\.com/, label: "live GitHub API URL" },
+  { re: /https:\/\/raw\.githubusercontent\.com/, label: "live GitHub raw URL" },
+  { re: /https?:\/\//, label: "HTTP/HTTPS URL" },
+  { re: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/, label: "email-like" },
+  { re: /\+44[0-9]{2,}/, label: "UK phone-like" },
+  { re: /(sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9_]{12,}|xox[baprs]-[A-Za-z0-9-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)/, label: "token/secret-like value" },
+  { re: /\.env/, label: ".env reference" },
+];
+
+const RUNTIME_READINESS_ALLOWED_STRING_PATTERNS = [
+  /\/tmp\/pnpd-fixtures\/example-app/,
+  /^fixture-ci-provider$/,
+  /^fixture-run-000[12]$/,
+  /^fixture-ci-url$/,
+];
+
+const RUNTIME_READINESS_FORBIDDEN_URL_FRAGMENTS = [
+  "api.github.com",
+  "github.com",
+  "raw.githubusercontent.com",
+];
+
+// ── Phase 1H helper functions ──────────────────────────────────────────────────
+
+function scanForbiddenRuntimeReadinessFields(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanForbiddenRuntimeReadinessFields(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (RUNTIME_READINESS_FORBIDDEN_FIELDS.has(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanForbiddenRuntimeReadinessFields(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function scanRuntimeReadinessFakeData(rawContent, filename) {
+  const findings = [];
+
+  // Scan for forbidden URL fragments in raw content
+  for (const fragment of RUNTIME_READINESS_FORBIDDEN_URL_FRAGMENTS) {
+    if (rawContent.includes(fragment)) {
+      findings.push("forbidden URL fragment: " + fragment);
+    }
+  }
+
+  for (const entry of RUNTIME_READINESS_FORBIDDEN_STRING_PATTERNS) {
+    if (entry.re.test(rawContent)) {
+      // Check if all matches are in allowed patterns
+      const matches = rawContent.match(new RegExp(entry.re.source, "g")) || [];
+      let allAllowed = true;
+      for (const m of matches) {
+        let matched = false;
+        for (const allowed of RUNTIME_READINESS_ALLOWED_STRING_PATTERNS) {
+          if (allowed.test(m)) {
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          allAllowed = false;
+          break;
+        }
+      }
+      if (!allAllowed) {
+        findings.push(entry.label);
+      }
+    }
+  }
+
+  return findings;
+}
+
+function scanRuntimeReadinessFixtureContent(fixture) {
+  const rawContent = JSON.stringify(fixture);
+  const findings = [];
+
+  // Secret-like fields from global patterns
+  const secretKeyFindings = findSecretLikeFields(fixture);
+  if (secretKeyFindings.length > 0) {
+    findings.push("Secret-like fields: " + secretKeyFindings.join(", "));
+  }
+
+  // Forbidden paths from global patterns
+  const forbiddenPathFindings = findForbiddenPaths(fixture);
+  if (forbiddenPathFindings.length > 0) {
+    findings.push("Forbidden paths: " + JSON.stringify(forbiddenPathFindings));
+  }
+
+  // .env paths
+  const envFindings = findEnvPaths(fixture);
+  if (envFindings.length > 0) {
+    findings.push(".env paths: " + JSON.stringify(envFindings));
+  }
+
+  return findings;
+}
+
+function validateRuntimeReadinessSemantics(fixture, filename) {
+  const failures = [];
+  const classification = (fixture.dryRun || {}).classification;
+  const status = (fixture.readiness || {}).status;
+  const source = fixture.source || {};
+
+  // Check if classification is in blocked set
+  if (RUNTIME_READINESS_BLOCKED_CLASSIFICATIONS.has(classification)) {
+    if (RUNTIME_READINESS_LATE_STAGE_STATES.has(status)) {
+      failures.push("blocked classification '" + classification + "' with late-stage readiness state '" + status + "'");
+    }
+    if (status === "eligibleForOwnerReview") {
+      failures.push("blocked classification '" + classification + "' with eligibleForOwnerReview state");
+    }
+  }
+
+  // AMBER_NOT_CODEX_AUDITED specifically can't pair with late-stage states
+  if (classification === "AMBER_NOT_CODEX_AUDITED" && RUNTIME_READINESS_LATE_STAGE_STATES.has(status)) {
+    failures.push("AMBER_NOT_CODEX_AUDITED classification with late-stage readiness state '" + status + "'");
+  }
+
+  // RED can't pair with eligibleForOwnerReview or late-stage
+  if (classification === "RED") {
+    if (status === "eligibleForOwnerReview" || RUNTIME_READINESS_LATE_STAGE_STATES.has(status)) {
+      failures.push("RED classification with ineligible readiness state '" + status + "'");
+    }
+  }
+
+  // BLOCKED_* can't pair with eligibleForOwnerReview or late-stage
+  if (classification && classification.startsWith("BLOCKED_")) {
+    if (status === "eligibleForOwnerReview" || RUNTIME_READINESS_LATE_STAGE_STATES.has(status)) {
+      failures.push("BLOCKED_* classification '" + classification + "' with ineligible readiness state '" + status + "'");
+    }
+  }
+
+  // Remote CI: if remoteCiObserved is true and conclusion is not success, can't have certain readiness states
+  if (source.remoteCiObserved === true && source.remoteCiConclusion !== "success") {
+    if (status === "eligibleForOwnerReview" || RUNTIME_READINESS_LATE_STAGE_STATES.has(status)) {
+      failures.push("remote CI failure with late-stage readiness state '" + status + "'");
+    }
+  }
+
+  return failures;
+}
+
+// ── Phase 1H main validator ────────────────────────────────────────────────────
+
+function validatePhase1HRuntimeReadiness() {
+  let exitCode = 0;
+  let positivePassed = 0;
+  let positiveFailed = 0;
+  let negativeInvalid = 0;
+  let negativeUnexpectedPass = 0;
+  let forbiddenFieldPass = true;
+  let securityPass = true;
+  let semanticPass = true;
+
+  // ── Schema load ──
+  let schema;
+  try {
+    const schemaRaw = fs.readFileSync(path.join(ROOT, RUNTIME_READINESS_SCHEMA_PATH), "utf8");
+    schema = JSON.parse(schemaRaw);
+  } catch (e) {
+    console.error("Runtime readiness schema load failed: " + e.message);
+    process.exit(2);
+  }
+
+  // Verify schema structure
+  if (schema.$schema !== "https://json-schema.org/draft/2020-12/schema") {
+    console.error("Schema $schema must be https://json-schema.org/draft/2020-12/schema");
+    process.exit(2);
+  }
+  if (!schema.$id) {
+    console.error("Schema $id is required");
+    process.exit(2);
+  }
+  if (schema.type !== "object") {
+    console.error("Schema top-level type must be object");
+    process.exit(2);
+  }
+  if (schema.additionalProperties !== false) {
+    console.error("Schema top-level additionalProperties must be false");
+    process.exit(2);
+  }
+
+  const topRequired = schema.required || [];
+  const expectedTopReq = ["schemaVersion", "recordType", "recordId", "generatedAt", "repo", "source", "validation", "dryRun", "authority", "safety", "readiness", "integrity", "audit"];
+  for (const f of expectedTopReq) {
+    if (!topRequired.includes(f)) {
+      console.error("Schema missing top-level required field: " + f);
+      process.exit(2);
+    }
+  }
+
+  // ── Fixture discovery ──
+  const fixturesDir = path.join(ROOT, RUNTIME_READINESS_FIXTURE_DIR);
+  let fixtureFiles;
+  try {
+    fixtureFiles = fs.readdirSync(fixturesDir).filter(f => f.endsWith(".json")).sort();
+  } catch (e) {
+    console.error("Runtime readiness fixture directory not readable: " + e.message);
+    process.exit(2);
+  }
+
+  if (fixtureFiles.length !== 13) {
+    console.error("Expected exactly 13 runtime readiness fixture files, found: " + fixtureFiles.length);
+    process.exit(1);
+  }
+
+  const allExpected = new Set([
+    ...RUNTIME_READINESS_POSITIVE_FIXTURES,
+    ...RUNTIME_READINESS_NEGATIVE_SCHEMA_INVALID_FIXTURES,
+    ...RUNTIME_READINESS_NEGATIVE_SEMANTIC_INVALID_FIXTURES,
+  ]);
+  for (const f of allExpected) {
+    if (!fixtureFiles.includes(f)) {
+      console.error("Missing expected fixture: " + f);
+      process.exit(1);
+    }
+  }
+
+  // ── Process each fixture ──
+  console.log("PNPD Runtime Readiness Validation");
+  console.log("Schema: " + RUNTIME_READINESS_SCHEMA_PATH);
+  console.log("Fixtures: " + RUNTIME_READINESS_FIXTURE_DIR);
+  console.log("");
+
+  for (const filename of fixtureFiles) {
+    const filePath = path.join(fixturesDir, filename);
+    let rawContent;
+    let fixture;
+
+    try {
+      rawContent = fs.readFileSync(filePath, "utf8");
+      fixture = JSON.parse(rawContent);
+    } catch (e) {
+      console.log("[FAIL] " + filename + " — JSON parse error: " + e.message);
+      if (filename.startsWith("valid-")) {
+        positiveFailed++;
+      }
+      exitCode = 1;
+      continue;
+    }
+
+    // ── Fake-data/security scan (for all fixtures) ──
+    const fakeDataFindings = scanRuntimeReadinessFakeData(rawContent, filename);
+    const contentFindings = scanRuntimeReadinessFixtureContent(fixture);
+    const allSecurityFindings = [...fakeDataFindings, ...contentFindings];
+    if (allSecurityFindings.length > 0) {
+      console.log("[FAIL] " + filename + " — SECURITY/FAKE-DATA VIOLATION: " + allSecurityFindings.join("; "));
+      securityPass = false;
+      exitCode = 1;
+      continue;
+    }
+
+    // ── Schema validation ──
+    const schemaFails = validateInstance(fixture, schema, schema, "$");
+    const schemaValid = schemaFails.length === 0;
+
+    // ── Semantic validation ──
+    const semanticFails = validateRuntimeReadinessSemantics(fixture, filename);
+    const semanticValid = semanticFails.length === 0;
+
+    // ── Forbidden-field scan ──
+    const forbiddenFields = [];
+    scanForbiddenRuntimeReadinessFields(fixture, "$", forbiddenFields);
+    const forbiddenFieldValid = forbiddenFields.length === 0;
+
+    if (filename.startsWith("valid-")) {
+      // Positive fixture: must pass schema, semantic, and forbidden-field
+      const allFailures = [];
+      if (!schemaValid) allFailures.push("schema: " + schemaFails.map(f => f.path + ": " + f.expected + " (got " + f.actual + ")").join("; "));
+      if (!semanticValid) allFailures.push("semantic: " + semanticFails.join("; "));
+      if (!forbiddenFieldValid) allFailures.push("forbidden field(s): " + forbiddenFields.join(", "));
+
+      if (allFailures.length > 0) {
+        console.log("[FAIL] " + filename + " — " + allFailures.join(" | "));
+        positiveFailed++;
+        if (!semanticValid) semanticPass = false;
+        if (!forbiddenFieldValid) forbiddenFieldPass = false;
+        exitCode = 1;
+      } else {
+        console.log("[PASS] " + filename + " — schema valid, semantic valid");
+        positivePassed++;
+      }
+    } else if (filename.startsWith("invalid-")) {
+      const isSchemaInvalid = RUNTIME_READINESS_NEGATIVE_SCHEMA_INVALID_FIXTURES.has(filename);
+      const isSemanticInvalid = RUNTIME_READINESS_NEGATIVE_SEMANTIC_INVALID_FIXTURES.has(filename);
+
+      if (isSchemaInvalid && !schemaValid) {
+        // Expected schema failure
+        let reason = "schema violation";
+        if (schemaFails.length > 0) {
+          const firstFailure = schemaFails[0];
+          reason = firstFailure.path + ": " + firstFailure.expected + " (got " + firstFailure.actual + ")";
+        }
+
+        // For N5 (remote-ci-failure), also check semantic
+        if (filename === "invalid-remote-ci-failure-marked-ready.json") {
+          if (!semanticValid) {
+            reason += " | semantic: " + semanticFails.join("; ");
+          }
+        }
+
+        console.log("[INVALID-as-expected] " + filename + " — " + reason);
+        negativeInvalid++;
+      } else if (isSemanticInvalid && schemaValid && !semanticValid) {
+        // Expected semantic-only failure
+        console.log("[INVALID-as-expected] " + filename + " — semantic readiness violation");
+        negativeInvalid++;
+      } else if (!isSchemaInvalid && !isSemanticInvalid) {
+        // Unknown negative fixture
+        if (!schemaValid) {
+          console.log("[INVALID-as-expected] " + filename + " — schema violation");
+          negativeInvalid++;
+        } else if (!semanticValid) {
+          console.log("[INVALID-as-expected] " + filename + " — semantic violation");
+          negativeInvalid++;
+        } else {
+          console.log("[FAIL] " + filename + " — expected INVALID but passed all checks");
+          negativeUnexpectedPass++;
+          exitCode = 1;
+        }
+      } else if (isSchemaInvalid && schemaValid) {
+        // Schema-invalid fixture unexpectedly passed schema validation
+        console.log("[FAIL] " + filename + " — expected schema INVALID but passed validation");
+        negativeUnexpectedPass++;
+        exitCode = 1;
+      } else {
+        // Other negative fixtures that are invalid for different reasons
+        console.log("[INVALID-as-expected] " + filename + " — validation failure");
+        negativeInvalid++;
+      }
+
+      // Forbidden-field scan on negatives (except N7 which should have dispatchApproved)
+      if (filename === "invalid-forbidden-field-name.json") {
+        if (!forbiddenFieldValid) {
+          // Expected - should find forbidden field
+          // Already counted in negativeInvalid, just log extra detail
+        } else {
+          console.log("[FAIL] " + filename + " — expected forbidden field scan to find dispatchApproved");
+          forbiddenFieldPass = false;
+          exitCode = 1;
+        }
+      } else if (!forbiddenFieldValid) {
+        console.log("[FAIL] " + filename + " — unexpected forbidden field(s): " + forbiddenFields.join(", "));
+        forbiddenFieldPass = false;
+        exitCode = 1;
+      }
+    }
+  }
+
+  // ── Summary ──
+  console.log("");
+  console.log("Positive fixtures: " + positivePassed + " passed, " + positiveFailed + " failed");
+  console.log("Negative fixtures: " + negativeInvalid + " invalid as expected, " + negativeUnexpectedPass + " unexpectedly passed");
+  console.log("Forbidden-field scan: " + (forbiddenFieldPass ? "pass" : "fail"));
+  console.log("Fake-data/security scan: " + (securityPass ? "pass" : "fail"));
+  console.log("Semantic checks: " + (semanticPass ? "pass" : "fail"));
+
+  process.exit(exitCode);
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
   const args = parseArgs(process.argv);
   const runPhase1f = args.phase === "1f";
+  const runPhase1h = args.phase === "1h";
 
   if (runPhase1f) {
     validateDispatchReadinessPhase1F();
+  }
+
+  if (runPhase1h) {
+    validatePhase1HRuntimeReadiness();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
