@@ -17,7 +17,7 @@ node scripts/pnpd-orchestrator-dry-run.mjs --runtime-readiness
 ```
 
 - Prints JSON to stdout.
-- Writes **no files**.
+- Writes **no files**; no files written.
 - Does **not** create `.pnpd/runtime-readiness/`.
 
 ### Local write report (`--write-runtime-readiness`)
@@ -39,7 +39,7 @@ node scripts/pnpd-validate-schemas.mjs --phase 1h
 ```
 
 - Validates the runtime readiness schema (`.pnpd/runtime-readiness.schema.json`) and all 13 fixture files under `tests/fixtures/pnpd/runtime-readiness/`.
-- This is an **explicit-only** validator invocation. It is **not** part of `npm run validate` (which runs phases 0, 1b, 1c, and 1f).
+- This is an **explicit-only** validator invocation. It is not part of `npm run validate` (which runs phases 0, 1b, 1c, and 1f).
 - It is run explicitly in CI as an independent step.
 
 ## Report contents
@@ -96,7 +96,7 @@ Runtime readiness commands **do not**:
 
 - Authorize or trigger dispatch
 - Authorize or trigger deployment
-- Mutate GitHub repositories or call GitHub APIs
+- Mutate GitHub repositories or call GitHub APIs; no GitHub/API mutation
 - Authorize merges or pushes
 - Certify production readiness
 - Handle or expose secrets

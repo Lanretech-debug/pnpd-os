@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1I — governance usability and evidence docs sprint |
-| **Latest stable commit** | `e37b686` |
+| **Phase** | Phase 1I docs/design sprint under audit |
+| **Latest stable commit before this docs sprint** | `e37b686` |
 | **Branch** | `main` |
 | **Node version** | `20` |
 | **Remote CI run** | `27503401073` |
@@ -41,13 +41,13 @@ The following capabilities are **explicitly blocked** and not implemented:
 
 | Blocked capability | Status |
 |--------------------|--------|
-| Dispatch execution | Blocked — no runtime dispatch |
+| dispatch execution | Blocked — no runtime dispatch |
 | GitHub/API mutation | Blocked — no GitHub API calls |
-| Deployment | Blocked — no deploy behavior |
+| deployment | Blocked — no deploy behavior |
 | Daemon/watcher | Blocked — no persistent process |
 | Installer | Blocked — no installation package |
 | Packaging | Blocked — no release packaging |
-| Production-readiness certification | Blocked — no production certification |
+| production-readiness certification | Blocked — no production certification |
 | Authority escalation | Blocked — AgentBridge cannot escalate |
 | AgentBridge approval authority | Blocked — AgentBridge coordinates only |
 | Owner/Codex bypass | Blocked — no gate bypass possible |
@@ -94,7 +94,7 @@ All remote CI runs on `main` branch, all concluded `success`:
 | 1H-A | `27470339994` | `8bfe1cb23951605c9fc469865982797569494904` | — |
 | 1H-B | `27491242272` | `165d02651da46ef928b1a70617793e881ddef661` | — |
 | 1H-C | `27492801181` | `65fcf98c095c4fa9cd2fd7846be58359ef3ec8f4` | — |
-| 1H-D | `27498248995` | `6805e39f2055a593bcbbfe075164c403527323eb` | — |
+| 1H-D | `27498248995` | `6805e39f2055a593bcbbfe075164403c527323eb` | — |
 | 1H-E | `27499358254` | `e834ede24ee97d1220212f22bb53bbdcd815a5a6` | — |
 | 1H-F | `27500805917` | `cc19251a766aea617e0c594f8c86f2207a59fce8` | — |
 | 1H-G | `27502151932` | `91d4ddd854fc0a8101e20fca0b4a2d002b2ffc56` | 19s |

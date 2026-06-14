@@ -2,9 +2,11 @@
 
 ## Purpose
 
-This document is a **design-only** artifact. It describes possible future consumption models for runtime readiness reports. It grants no authority and describes no current implementation.
+This document is a **Design-only** artifact. It describes possible future consumption models for runtime readiness reports. It grants no authority and describes no current implementation.
 
 **No implementation is included in this phase.** The described models are not implemented and are design speculation only.
+
+**No authority granted.** This design does not approve dispatch, merge, deployment, production readiness, GitHub/API mutation, or any AgentBridge authority expansion.
 
 ## Current relationship to existing artifacts
 
@@ -58,11 +60,11 @@ A future dispatch-readiness validator may consider runtime readiness reports as 
 
 Runtime readiness reports **do not** and **must never**:
 
-- Approve dispatch (reports do not approve dispatch)
-- Approve merge (reports do not approve merge)
-- Approve deployment (reports do not approve deployment)
-- Certify production readiness
-- Authorize GitHub/API mutation
+- Approve dispatch; reports do not approve dispatch
+- Approve merge; reports do not approve merge
+- Approve deployment; reports do not approve deployment
+- Certify production readiness; reports do not certify production readiness
+- Authorize GitHub/API mutation; reports do not authorize GitHub/API mutation
 - Bypass Owner gate authority
 - Bypass Codex audit requirement
 
