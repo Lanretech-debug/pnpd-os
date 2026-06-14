@@ -48,7 +48,8 @@ function parseArgs(argv) {
     scheduleIntervalMs: null,
     scheduleMaxRuns: null,
     schedulerPlan: false,
-    runtimeReadiness: false
+    runtimeReadiness: false,
+    writeRuntimeReadiness: false
   };
 
   for (let i = 2; i < argv.length; i += 1) {
@@ -109,6 +110,8 @@ function parseArgs(argv) {
       }
       args.registry = argv[i + 1];
       i += 1;
+    } else if (arg === "--write-runtime-readiness") {
+      args.writeRuntimeReadiness = true;
     } else if (arg === "--runtime-readiness") {
       args.runtimeReadiness = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -140,6 +143,11 @@ Runtime readiness (console-only, advisory only):
                          in JSON format. No writes. Advisory only. Not for
                          production certification. Mutually exclusive with
                          write, scheduler, lock, directory, and --json flags.
+  --write-runtime-readiness
+                         Write a local copy of the PNPD runtime readiness
+                         report under .pnpd/runtime-readiness/ and print the
+                         same JSON report to stdout. Explicit local write only.
+                         Advisory only. No dispatch, deployment, or GitHub/API.
 
 Write flags (opt-in, off by default):\n  --write-ledger         Append one JSONL ledger record per repo.\n  --write-handoff        Create one local handoff JSON file per repo.\n  --no-write             Override all write flags; perform zero writes.\n  --ledger-dir <path>    Custom ledger directory under .pnpd/ledger.\n  --use-lock            Acquire a lockfile before writes; release on exit.
 
@@ -1310,8 +1318,122 @@ function runRuntimeReadiness(args) {
   console.log(JSON.stringify(report, null, 2));
 }
 
+const RUNTIME_READINESS_OUTPUT_DIR = ".pnpd/runtime-readiness";
+
+function sanitizeForFilename(isoString) {
+  return isoString.replace(/:/g, "-").replace(/\.(?=\d)/g, "-");
+}
+
+function validateWriteRuntimeReadinessArgs(args) {
+  const incompatibleFlags = [];
+  if (args.json) incompatibleFlags.push("--json");
+  if (args.writeLedger) incompatibleFlags.push("--write-ledger");
+  if (args.writeHandoff) incompatibleFlags.push("--write-handoff");
+  if (args.useLock) incompatibleFlags.push("--use-lock");
+  if (args.noWrite) incompatibleFlags.push("--no-write");
+  if (args.scheduleOnce) incompatibleFlags.push("--schedule-once");
+  if (args.scheduleIntervalMs) incompatibleFlags.push("--schedule-interval-ms");
+  if (args.scheduleMaxRuns) incompatibleFlags.push("--schedule-max-runs");
+  if (args.schedulerPlan) incompatibleFlags.push("--scheduler-plan");
+  if (args.ledgerDir) incompatibleFlags.push("--ledger-dir");
+  if (args.handoffDir) incompatibleFlags.push("--handoff-dir");
+  if (args.lockDir) incompatibleFlags.push("--lock-dir");
+
+  if (incompatibleFlags.length > 0) {
+    console.error("--write-runtime-readiness cannot be combined with write, scheduler, lock, directory, --no-write, or --json flags.");
+    process.exit(1);
+  }
+}
+
+function writeRuntimeReadinessReport(report) {
+  const repoRoot = process.cwd();
+  const outputBase = path.resolve(repoRoot, RUNTIME_READINESS_OUTPUT_DIR);
+
+  // Symlink containment: ensure resolved base is inside repo root
+  const realRepoRoot = fs.realpathSync(repoRoot);
+  try {
+    // Stat the output path to check for existing symlink
+    const stat = fs.lstatSync(outputBase);
+    if (stat.isSymbolicLink()) {
+      const realOutput = fs.realpathSync(outputBase);
+      if (!realOutput.startsWith(realRepoRoot + path.sep) && realOutput !== realRepoRoot) {
+        console.error("pnpd-orchestrator-dry-run: runtime readiness write blocked: output directory escapes repo root via symlink");
+        process.exit(1);
+      }
+    }
+  } catch (e) {
+    if (e.code !== "ENOENT") {
+      console.error("pnpd-orchestrator-dry-run: runtime readiness write blocked: " + e.message);
+      process.exit(1);
+    }
+  }
+
+  // Create directory
+  try {
+    fs.mkdirSync(outputBase, { recursive: true });
+  } catch (e) {
+    console.error("pnpd-orchestrator-dry-run: runtime readiness write blocked: cannot create output directory: " + e.message);
+    process.exit(1);
+  }
+
+  // Re-check containment after creation
+  const realOutputBase = fs.realpathSync(outputBase);
+  if (!realOutputBase.startsWith(realRepoRoot + path.sep) && realOutputBase !== realRepoRoot) {
+    console.error("pnpd-orchestrator-dry-run: runtime readiness write blocked: output directory " + realOutputBase + " escapes repo root " + realRepoRoot);
+    process.exit(1);
+  }
+
+  // Build filename
+  const sanitizedTs = sanitizeForFilename(report.generatedAt);
+  const hashPrefix = report.integrity.contentHash.slice(0, 8);
+  const filename = sanitizedTs + "-" + hashPrefix + ".json";
+  const finalPath = path.join(realOutputBase, filename);
+
+  // Ensure final path is inside the real output directory
+  const realFinal = path.resolve(finalPath);
+  if (!realFinal.startsWith(realOutputBase + path.sep)) {
+    console.error("pnpd-orchestrator-dry-run: runtime readiness write blocked: output path escapes directory");
+    process.exit(1);
+  }
+
+  // Create-only: fail if file exists
+  if (fs.existsSync(realFinal)) {
+    console.error("pnpd-orchestrator-dry-run: runtime readiness write blocked: file already exists: " + filename);
+    process.exit(1);
+  }
+
+  // Atomic write via temp file
+  const tmpPath = realFinal + ".tmp." + process.pid;
+  try {
+    fs.writeFileSync(tmpPath, JSON.stringify(report, null, 2) + "\n", { encoding: "utf8", flag: "wx" });
+    fs.renameSync(tmpPath, realFinal);
+  } catch (e) {
+    // Clean up temp on failure
+    try { fs.unlinkSync(tmpPath); } catch (_) {}
+    console.error("pnpd-orchestrator-dry-run: runtime readiness write failed: " + e.message);
+    process.exit(1);
+  }
+
+  process.stderr.write("runtime readiness report written: " + realFinal + "\n");
+}
+
+function runWriteRuntimeReadiness(args) {
+  validateWriteRuntimeReadinessArgs(args);
+  const repoRoot = process.cwd();
+  const report = buildRuntimeReadinessReport(repoRoot);
+  console.log(JSON.stringify(report, null, 2));
+  writeRuntimeReadinessReport(report);
+}
+
 function main() {
+
   const args = parseArgs(process.argv);
+
+  // Runtime readiness write mode (console + local file)
+  if (args.writeRuntimeReadiness) {
+    runWriteRuntimeReadiness(args);
+    return;
+  }
 
   // Runtime readiness mode (console-only, advisory)
   if (args.runtimeReadiness) {
