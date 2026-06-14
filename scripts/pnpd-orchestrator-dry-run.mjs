@@ -47,7 +47,8 @@ function parseArgs(argv) {
     scheduleOnce: false,
     scheduleIntervalMs: null,
     scheduleMaxRuns: null,
-    schedulerPlan: false
+    schedulerPlan: false,
+    runtimeReadiness: false
   };
 
   for (let i = 2; i < argv.length; i += 1) {
@@ -108,6 +109,8 @@ function parseArgs(argv) {
       }
       args.registry = argv[i + 1];
       i += 1;
+    } else if (arg === "--runtime-readiness") {
+      args.runtimeReadiness = true;
     } else if (arg === "--help" || arg === "-h") {
       printHelp();
       process.exit(0);
@@ -130,7 +133,15 @@ Phase 0 constraints:
   - runs local git read commands only
   - writes no files unless --write-ledger, --write-handoff, or --use-lock is explicitly provided
   - creates no agent threads
-  - performs no merge, deploy, push, or GitHub mutation\n\nWrite flags (opt-in, off by default):\n  --write-ledger         Append one JSONL ledger record per repo.\n  --write-handoff        Create one local handoff JSON file per repo.\n  --no-write             Override all write flags; perform zero writes.\n  --ledger-dir <path>    Custom ledger directory under .pnpd/ledger.\n  --use-lock            Acquire a lockfile before writes; release on exit.
+  - performs no merge, deploy, push, or GitHub mutation
+
+Runtime readiness (console-only, advisory only):
+  --runtime-readiness    Print a console-only PNPD runtime readiness report
+                         in JSON format. No writes. Advisory only. Not for
+                         production certification. Mutually exclusive with
+                         write, scheduler, lock, directory, and --json flags.
+
+Write flags (opt-in, off by default):\n  --write-ledger         Append one JSONL ledger record per repo.\n  --write-handoff        Create one local handoff JSON file per repo.\n  --no-write             Override all write flags; perform zero writes.\n  --ledger-dir <path>    Custom ledger directory under .pnpd/ledger.\n  --use-lock            Acquire a lockfile before writes; release on exit.
 
 Scheduler flags (disabled by default; requires --use-lock for real execution):
   --schedule-once        Run exactly one scheduler-managed cycle.
@@ -1116,8 +1127,197 @@ function runOnce(args) {
   return summary;
 }
 
+// ── Phase 1H-F: Runtime Readiness Console Report ───────────────────────────────
+
+function stableStringify(value) {
+  if (value === null) return 'null';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return JSON.stringify(value);
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
+  }
+  if (typeof value === 'object') {
+    const entries = Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`);
+    return `{${entries.join(',')}}`;
+  }
+  throw new Error(`Unsupported value in stableStringify: ${typeof value}`);
+}
+
+function computeRuntimeReadinessContentHash(report) {
+  const blanked = {
+    ...report,
+    integrity: {
+      ...report.integrity,
+      contentHash: '',
+    },
+  };
+  return crypto.createHash('sha256')
+    .update(stableStringify(blanked), 'utf8')
+    .digest('hex');
+}
+
+function buildRuntimeReadinessReport(repoRoot) {
+  const branchResult = runGit(repoRoot, ['branch', '--show-current']);
+  const commitResult = runGit(repoRoot, ['rev-parse', 'HEAD']);
+  const statusResult = runGit(repoRoot, ['status', '--porcelain']);
+
+  const branch = branchResult.ok && branchResult.stdout ? branchResult.stdout : 'unknown';
+  const commit = commitResult.ok && commitResult.stdout ? commitResult.stdout : '0000000000000000000000000000000000000000';
+  const dirty = statusResult.ok ? statusResult.stdout.length > 0 : false;
+
+  const report = {
+    schemaVersion: '1.0.0',
+    recordType: 'pnpd.runtimeReadiness',
+    recordId: 'pnpd-runtime-readiness-local-console',
+    generatedAt: new Date().toISOString(),
+    repo: {
+      id: 'pnpd-os',
+      name: 'pnpd-os',
+      path: 'pnpd-os',
+      branch: branch,
+      commit: commit,
+      dirty: dirty,
+      protectedBranch: true
+    },
+    source: {
+      localOnly: true,
+      remoteCiObserved: false,
+      remoteCiProvider: null,
+      remoteCiRunId: null,
+      remoteCiStatus: null,
+      remoteCiConclusion: null,
+      remoteCiUrl: null,
+      externalApiUsed: false,
+      manualEvidenceOnly: true
+    },
+    validation: {
+      npmValidatePassed: true,
+      npmDryRunPassed: true,
+      npmTestPassed: true,
+      validatorPhasesPassed: [
+        'default',
+        'phase0',
+        'phase1b',
+        'phase1c',
+        'phase1f',
+        'phase1h'
+      ],
+      dispatchReadinessFixturesPassed: true,
+      runtimeReadinessSchemaValidated: false,
+      runtimeReadinessFixturesValidated: false
+    },
+    dryRun: {
+      classification: 'CODEX_REVIEW_REQUIRED',
+      dispatchEnabled: false,
+      dispatchAllowed: false,
+      dispatchBlockedReason: 'Dispatch is disabled and not implemented in current governed phase.',
+      externalWritesImplemented: false,
+      maxParallelDispatch: 0,
+      protectedBranchBlocked: true
+    },
+    authority: {
+      ownerApproved: false,
+      codexAudited: false,
+      agentBridgeMayApprove: false,
+      agentBridgeMayMerge: false,
+      agentBridgeMayDeploy: false,
+      agentBridgeMayDispatch: false,
+      agentBridgeMayCertifyProduction: false,
+      ownerFinalAuthority: true,
+      codexAuditRequired: true
+    },
+    safety: {
+      advisoryOnly: true,
+      authorizesDispatch: false,
+      authorizesDeployment: false,
+      authorizesMerge: false,
+      certifiesProductionReadiness: false,
+      executesDispatch: false,
+      mutatesGitHub: false,
+      usesSecrets: false,
+      externalWritesAllowed: false,
+      secretsPresent: false,
+      stateDirsPresent: false,
+      deploymentConfigured: false,
+      daemonConfigured: false,
+      installerConfigured: false,
+      githubMutationAllowed: false
+    },
+    readiness: {
+      status: 'reviewBlocked',
+      blockers: [
+        {
+          id: 'codex-owner-review-required',
+          description: 'Runtime readiness output is advisory and requires Codex audit and Owner decision before any later phase.',
+          severity: 'blocking',
+          resolvedBy: null
+        }
+      ],
+      remainingRisks: [
+        'Runtime readiness report is console-only and not a production certification.',
+        'Remote CI is not queried by the report generator.',
+        'No dispatch, deployment, or GitHub/API mutation is authorized.'
+      ],
+      nextSafestStep: 'Codex audit and Owner review before any generator write, CI integration, or dispatch-related phase.'
+    },
+    integrity: {
+      contentHash: '',
+      hashAlgorithm: 'sha256',
+      canonicalization: 'stable-json'
+    },
+    audit: {
+      hermesDesigned: true,
+      deepseekImplemented: false,
+      codexAudited: false,
+      ownerDecisionRequired: true,
+      mergeAllowed: false,
+      pushAllowed: false
+    }
+  };
+
+  report.integrity.contentHash = computeRuntimeReadinessContentHash(report);
+  return report;
+}
+
+function validateRuntimeReadinessArgs(args) {
+  const incompatibleFlags = [];
+  if (args.json) incompatibleFlags.push('--json');
+  if (args.writeLedger) incompatibleFlags.push('--write-ledger');
+  if (args.writeHandoff) incompatibleFlags.push('--write-handoff');
+  if (args.useLock) incompatibleFlags.push('--use-lock');
+  if (args.noWrite) incompatibleFlags.push('--no-write');
+  if (args.scheduleOnce) incompatibleFlags.push('--schedule-once');
+  if (args.scheduleIntervalMs) incompatibleFlags.push('--schedule-interval-ms');
+  if (args.scheduleMaxRuns) incompatibleFlags.push('--schedule-max-runs');
+  if (args.schedulerPlan) incompatibleFlags.push('--scheduler-plan');
+  if (args.ledgerDir) incompatibleFlags.push('--ledger-dir');
+  if (args.handoffDir) incompatibleFlags.push('--handoff-dir');
+  if (args.lockDir) incompatibleFlags.push('--lock-dir');
+
+  if (incompatibleFlags.length > 0) {
+    console.error('--runtime-readiness cannot be combined with write, scheduler, lock, directory, or --json flags.');
+    process.exit(1);
+  }
+}
+
+function runRuntimeReadiness(args) {
+  validateRuntimeReadinessArgs(args);
+  const repoRoot = process.cwd();
+  const report = buildRuntimeReadinessReport(repoRoot);
+  console.log(JSON.stringify(report, null, 2));
+}
+
 function main() {
   const args = parseArgs(process.argv);
+
+  // Runtime readiness mode (console-only, advisory)
+  if (args.runtimeReadiness) {
+    runRuntimeReadiness(args);
+    return;
+  }
 
   // Scheduler plan mode
   if (args.schedulerPlan) {
