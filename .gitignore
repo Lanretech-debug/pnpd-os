@@ -2,3 +2,4 @@
 .pnpd/ledger/
 .pnpd/handoffs/
 .pnpd/locks/
+.pnpd/runtime-readiness/
