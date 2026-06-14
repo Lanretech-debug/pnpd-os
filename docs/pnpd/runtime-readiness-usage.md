@@ -42,6 +42,30 @@ node scripts/pnpd-validate-schemas.mjs --phase 1h
 - This is an **explicit-only** validator invocation. It is not part of `npm run validate` (which runs phases 0, 1b, 1c, and 1f).
 - It is run explicitly in CI as an independent step.
 
+### Report file validation (`--runtime-readiness-report`)
+
+```bash
+node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
+```
+
+- Validates a generated runtime readiness JSON report file.
+- The file must be under `.pnpd/runtime-readiness/` within the repo root.
+- **Read-only.** Creates no files, creates no directories.
+- Performs no GitHub/API/network mutation.
+- Performs no dispatch, deploy, or merge action.
+- Checks:
+  - JSON parse
+  - schema structure
+  - safety constants
+  - authority flags
+  - readiness status
+  - forbidden fields
+  - fake-data/security scan
+  - filename hash prefix against stored `integrity.contentHash`
+- Does **not** recompute the full contentHash in Phase 1J.
+- Exits 0 if valid.
+- Exits non-zero with a specific violation message if invalid.
+
 ## Report contents
 
 Each runtime readiness report is a JSON object with the following top-level fields:

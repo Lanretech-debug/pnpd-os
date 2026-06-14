@@ -1,67 +1,55 @@
 # PNPD-OS
 
-> **Project Normalisation & Product Delivery Operating System**
-> **Version:** v0.1.0 — early-stage governance and orchestration documentation framework
+A local-first governance and delivery-evidence framework for AI-assisted software work.
 
-A reusable governance, agent orchestration, review/audit, and product strategy framework for AI-assisted software projects.
+## Status
 
----
+PNPD OS is **v0.1.0, early-stage**. It is a governance and evidence framework, not a runtime product.
 
-## Version Status
+- **Latest stable commit:** `f7eb3c1`
+- **Remote CI:** run `27508672848`, success, 16s
+- **Branch:** `main`
+- **Node:** `20`
 
-PNPD OS is currently **v0.1.0**. It is an **early-stage governance and orchestration documentation framework**. It does not guarantee correctness, security, compliance, or zero drift. It does not replace human review or owner judgment.
+It does not guarantee correctness, security, or zero drift. It does not replace human review or Owner judgment.
 
-## Public Release Gate
+## What PNPD OS is
 
-Public release or visibility changes require:
+PNPD OS currently provides:
 
-1. clean verification,
-2. Codex pre-publication audit,
-3. final owner approval.
+- local validation scripts
+- dry-run orchestration checks
+- runtime readiness reports (advisory-only)
+- runtime readiness local write
+- runtime readiness report file validation
+- schema and fixture validation
+- governance boundaries
+- file/Git-based evidence trails
+- role separation between Owner, Hermes, DeepSeek, Codex, and AgentBridge
 
-Do not publish or change visibility based only on implementation or self-review.
+## What PNPD OS is not
 
-## What PNPD-OS Is
+- Not a runtime server.
+- Not a deployment tool.
+- Not an autonomous agent system.
+- Not a CI/CD platform.
+- Not production certification.
+- Not a package installer.
+- Not a replacement for human review.
 
-PNPD-OS is a **framework**, not a runtime. It provides the rules, protocols, state machines, and strategy layers that keep AI-assisted software projects on track — from idea capture through production delivery.
+## Why it exists
 
-It was built and stress-tested on real multi-agent development workflows, then extracted and generalised for any project.
+PNPD OS was built from real multi-agent / AI-assisted development pain. It prevents governance spirals, self-certification, false progress, and mixed-scope changes. It keeps evidence, review, and owner decisions separated so that AI agents can collaborate without crossing authority boundaries.
 
----
+## Who it is for
 
-## Four Pillars
-
-| Pillar | Purpose | Location |
-|--------|---------|----------|
-| **PNPD OS Core** | Governance manifest, operating principles, phase model, repo rules | `PNPD-OS-MANIFEST.md`, `docs/governance/` |
-| **AgentBridge** | File-based agent handoff, task state, audit queue, blocker log | `docs/agent-bridge/` |
-| **Review & Audit Layer** | Five-layer review/audit authority model with escalation paths | `docs/review-audit-layer/` |
-| **VertiForge** | Product strategy advisory — validation, scoring, roadmap, risk | `docs/vertiforge/` |
-
----
-
-## Who This Is For
-
-- Solo developers building with AI coding assistants who need project discipline
-- Small teams adopting agent-assisted workflows
-- Open-source maintainers who want clear agent governance
-- Founders validating vertical SaaS or industry-specific software ideas
-
----
-
-## Quick Start
-
-1. Copy `PNPD-OS-MANIFEST.md` into your project as `AGENTS.md`
-2. Set your current product phase in `docs/PRODUCT_PHASE.md` using the phase model
-3. Wire the Review & Audit Layer roles to your actual agents (or keep the defaults)
-4. Create a task using the AgentBridge handoff protocol
-5. Run your first gate: Hermes verification → Codex audit → owner decision
-
----
+- solo builders using AI coding agents
+- small teams using AI-assisted workflows
+- maintainers who need disciplined phase gates
+- projects where AI agents must not certify their own work
+- contributors who need clear local verification
 
 ## Quick local verification
-
-PNPD OS can be verified locally with the npm scripts in `package.json`:
 
 ```bash
 npm run validate
@@ -69,29 +57,132 @@ npm run dry-run
 npm test
 ```
 
+These commands validate schemas, fixtures, and dry-run output. They do not dispatch, deploy, or mutate any external system.
+
 See [`docs/quickstart-local.md`](docs/quickstart-local.md) for prerequisites, direct Node fallback commands, and safety notes.
 
-Dispatch remains blocked; these commands validate schemas/fixtures and run local dry-run checks only.
+## Core commands
 
-For current PNPD capabilities and runtime readiness usage, see [`docs/pnpd/current-capability-map.md`](docs/pnpd/current-capability-map.md) and [`docs/pnpd/runtime-readiness-usage.md`](docs/pnpd/runtime-readiness-usage.md).
+| Command | What it does | What it does not authorize |
+|---------|-------------|---------------------------|
+| `npm run validate` | Validates all schemas and fixtures (phases 0, 1b, 1c, 1f) | Does not authorize dispatch, merge, or deployment |
+| `npm run dry-run` | Runs orchestrator dry-run in text and JSON mode | Does not execute any external action |
+| `npm test` | Runs validate + dry-run | Does not authorize any gate bypass |
+| `node scripts/pnpd-validate-schemas.mjs --phase 1f` | Validates dispatch readiness schema and 12 fixtures | Does not authorize dispatch |
+| `node scripts/pnpd-validate-schemas.mjs --phase 1h` | Validates runtime readiness schema and 13 fixtures | Does not authorize runtime readiness report generation |
+| `node scripts/pnpd-orchestrator-dry-run.mjs --runtime-readiness` | Prints runtime readiness JSON to stdout | Writes no files |
+| `node scripts/pnpd-orchestrator-dry-run.mjs --write-runtime-readiness` | Writes one runtime readiness report file under `.pnpd/runtime-readiness/` | Does not update, delete, or modify existing files |
+| `node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>` | Validates a generated runtime readiness report file | Read-only; creates no files |
 
----
+## Runtime readiness evidence loop
 
-## Philosophy
+Runtime readiness reports provide advisory-only evidence for Owner and Codex review.
 
-- **No agent certifies its own work.** Every gate requires a different agent.
-- **Filesystem is truth.** Git state overrides agent claims.
-- **Failed gates stay failed.** Skipped gates stay skipped — never silently passed.
-- **Owner is final authority.** Agents advise, verify, audit — they do not decide.
-- **Governance serves product progress.** Anti-cycle controls prevent governance spirals.
-- **Orchestrator is coordination only.** It may coordinate and recommend; it may not approve, merge, deploy, or bypass gates.
+```bash
+# Clean any prior generated state
+rm -rf .pnpd/runtime-readiness
 
----
+# Generate and write a report locally
+node scripts/pnpd-orchestrator-dry-run.mjs --write-runtime-readiness
+
+# Find the generated report file
+REPORT="$(find .pnpd/runtime-readiness -maxdepth 2 -type f -name '*.json' | head -n 1)"
+
+# Validate the report file
+node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report "$REPORT"
+
+# Clean up generated state
+rm -rf .pnpd/runtime-readiness
+```
+
+Notes:
+
+- Generated files under `.pnpd/runtime-readiness/` are gitignored and must not be committed.
+- Report validation is advisory-only and does not authorize any action.
+- Phase 1J validates the filename hash prefix against stored `integrity.contentHash`; it does not recompute the full content hash.
+
+## Current capabilities
+
+| Capability | Status |
+|------------|--------|
+| Schema validation | Complete |
+| Dry-run orchestration | Complete |
+| Dispatch readiness validation | Complete |
+| Runtime readiness report generation | Complete |
+| Runtime readiness local write | Complete |
+| Runtime readiness report file validation | Complete |
+| Ledger writer (behind explicit flag) | Complete |
+| Handoff writer (behind explicit flag) | Complete |
+| Lockfile support (behind explicit flag) | Complete |
+| Scheduler scaffold (non-dispatching) | Complete |
+| CI validation | Complete |
+
+See [`docs/pnpd/current-capability-map.md`](docs/pnpd/current-capability-map.md) for full detail.
+
+## Blocked capabilities
+
+These are intentionally blocked, not "coming soon." Any change requires a separate governed phase, Codex audit, and Owner approval.
+
+- dispatch execution
+- GitHub/API mutation
+- deployment
+- daemon/watcher
+- installer
+- packaging
+- production-readiness certification
+- authority escalation
+- autonomous agent routing
+- Owner/Codex bypass
+
+## Governance model
+
+| Role | Responsibility |
+|------|---------------|
+| **Owner** | Final authority on all decisions |
+| **Hermes** | Design and verification |
+| **DeepSeek** | Implementation after Owner approval |
+| **Codex** | Formal audit and final review |
+| **AgentBridge** | Coordination, handoff, and state support only |
+
+AgentBridge does not approve, merge, deploy, certify, or dispatch.
+
+## Repository map
+
+| Path | Purpose |
+|------|---------|
+| `README.md` | Project front door |
+| `docs/quickstart-local.md` | Local verification guide |
+| `docs/pnpd/current-capability-map.md` | Detailed capability inventory |
+| `docs/pnpd/runtime-readiness-usage.md` | Runtime readiness command documentation |
+| `docs/pnpd/runtime-readiness-consumption-design.md` | Future consumption design (design-only) |
+| `.pnpd/*.schema.json` | JSON Schema definitions |
+| `tests/fixtures/pnpd/` | Valid and invalid test fixtures |
+| `scripts/pnpd-validate-schemas.mjs` | Schema and fixture validator |
+| `scripts/pnpd-orchestrator-dry-run.mjs` | Orchestrator dry-run |
+| `.github/workflows/pnpd-ci.yml` | CI validation pipeline |
+
+## Deeper docs
+
+- [`docs/quickstart-local.md`](docs/quickstart-local.md)
+- [`docs/pnpd/current-capability-map.md`](docs/pnpd/current-capability-map.md)
+- [`docs/pnpd/runtime-readiness-usage.md`](docs/pnpd/runtime-readiness-usage.md)
+- [`docs/pnpd/runtime-readiness-consumption-design.md`](docs/pnpd/runtime-readiness-consumption-design.md)
+
+## Contributor rules
+
+- No agent certifies its own work.
+- Git state is truth.
+- Keep phases scoped.
+- Do not mix runtime, docs, schema, validator, CI, and distribution work unless a governed phase explicitly allows it.
+- Do not commit generated `.pnpd/runtime-readiness/`, `.pnpd/ledger/`, `.pnpd/handoffs/`, or `.pnpd/locks/`.
+- Owner approval and Codex audit are required before merge.
+
+## Roadmap / safe next increments
+
+This README and adoption front-door refresh is Phase 1K. Future work must be separately designed, audited by Codex, and approved by the Owner.
+
+Runtime consumption linking, dispatch, deployment, daemonization, installer, packaging, Cursor/Claude integrations, bootstrap tooling, and distribution work are not part of this phase and are not promised.
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
-
----
-
-*PNPD-OS is a framework for project delivery, not a product. It has no runtime, no servers, no live messaging, and no automated merge/deploy authority.*
+Apache 2.0 — see [`LICENSE`](LICENSE).
