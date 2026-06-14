@@ -73,6 +73,8 @@ See [`docs/quickstart-local.md`](docs/quickstart-local.md) for prerequisites, di
 
 Dispatch remains blocked; these commands validate schemas/fixtures and run local dry-run checks only.
 
+For current PNPD capabilities and runtime readiness usage, see [`docs/pnpd/current-capability-map.md`](docs/pnpd/current-capability-map.md) and [`docs/pnpd/runtime-readiness-usage.md`](docs/pnpd/runtime-readiness-usage.md).
+
 ---
 
 ## Philosophy
