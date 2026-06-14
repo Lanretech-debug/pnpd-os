@@ -124,11 +124,14 @@ const PHASE_1C_FIXTURES = [
 
 
 function parseArgs(argv) {
-  const args = { phase: null };
+  const args = { phase: null, runtimeReadinessReport: null };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--phase") {
+      if (args.runtimeReadinessReport) {
+        throw new Error("--runtime-readiness-report is a standalone validator and cannot be combined with --phase.");
+      }
       if (!argv[i + 1]) {
         throw new Error("--phase requires a value (0, 1b, 1c, 1f, or 1h).");
       }
@@ -138,11 +141,27 @@ function parseArgs(argv) {
       }
       args.phase = phaseVal;
       i += 1;
+    } else if (arg === "--runtime-readiness-report") {
+      if (args.phase) {
+        throw new Error("--runtime-readiness-report is a standalone validator and cannot be combined with --phase.");
+      }
+      if (!argv[i + 1]) {
+        throw new Error("--runtime-readiness-report requires a file path argument.");
+      }
+      if (args.runtimeReadinessReport) {
+        throw new Error("--runtime-readiness-report accepts exactly one file path.");
+      }
+      if (argv[i + 1].startsWith("-")) {
+        throw new Error("--runtime-readiness-report requires a file path argument, got: " + argv[i + 1]);
+      }
+      args.runtimeReadinessReport = argv[i + 1];
+      i += 1;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`PNPD Schema Validator
 
 Usage:
   node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h]
+  node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
 
 Options:
   --phase 0   Validate Phase 0 invariants only.
@@ -150,6 +169,7 @@ Options:
   --phase 1c  Validate Phase 0 + Phase 1B + Phase 1C invariants + fixture instance validation.
   --phase 1f  Validate PNPD dispatch readiness fixtures (explicit-only, not included in default).
   --phase 1h  Validate PNPD runtime readiness schema and fixtures (explicit-only, not included in default).
+  --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
     } else {
@@ -2085,10 +2105,338 @@ function validatePhase1HRuntimeReadiness() {
   process.exit(exitCode);
 }
 
+// ── Phase 1J: Runtime Readiness Report File Validation ───────────────────────────
+
+function resolveReportPath(reportPathArg) {
+  // Reject absolute paths
+  if (path.isAbsolute(reportPathArg)) {
+    throw new Error("Absolute paths are not allowed. Provide a relative path under .pnpd/runtime-readiness/.");
+  }
+
+  // Reject path traversal patterns
+  if (reportPathArg.includes("..")) {
+    throw new Error("Path traversal is not allowed.");
+  }
+
+  const resolvedPath = path.resolve(ROOT, reportPathArg);
+  const containmentRoot = path.resolve(ROOT, ".pnpd/runtime-readiness");
+
+  // Resolve symlinks
+  let realPath;
+  try {
+    realPath = fs.realpathSync(resolvedPath);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      throw new Error("Report file not found: " + reportPathArg);
+    }
+    throw new Error("Cannot resolve report path: " + e.message);
+  }
+
+  // Containment check
+  if (!realPath.startsWith(containmentRoot + path.sep) && realPath !== containmentRoot) {
+    throw new Error("Report file must be under .pnpd/runtime-readiness/. Got: " + reportPathArg);
+  }
+
+  // Must be a file, not a directory
+  let stat;
+  try {
+    stat = fs.statSync(realPath);
+  } catch (e) {
+    throw new Error("Cannot stat report file: " + e.message);
+  }
+
+  if (!stat.isFile()) {
+    throw new Error("Path must be a file, not a directory: " + reportPathArg);
+  }
+
+  return { resolvedPath: realPath, originalPath: reportPathArg };
+}
+
+function validateRuntimeReadinessReportFile(reportPathArg) {
+  let exitCode = 0;
+  const checks = [];
+
+  function pass(label) {
+    console.log("[PASS] " + label);
+    checks.push({ label, ok: true });
+  }
+
+  function fail(label, detail) {
+    const msg = detail ? label + ": " + detail : label;
+    console.log("[FAIL] " + msg);
+    checks.push({ label, ok: false, detail });
+    exitCode = 1;
+  }
+
+  // ── Resolve and validate path ──
+  let pathInfo;
+  try {
+    pathInfo = resolveReportPath(reportPathArg);
+  } catch (e) {
+    console.error("Path validation failed: " + e.message);
+    process.exit(1);
+  }
+
+  const reportPath = pathInfo.resolvedPath;
+  const displayPath = pathInfo.originalPath;
+  const filename = path.basename(reportPath);
+
+  console.log("PNPD Runtime Readiness Report Validation");
+  console.log("Report: " + displayPath);
+  console.log("");
+
+  // ── JSON parse ──
+  let rawContent;
+  let report;
+  try {
+    rawContent = fs.readFileSync(reportPath, "utf8");
+    report = JSON.parse(rawContent);
+    pass("JSON parse");
+  } catch (e) {
+    fail("JSON parse", e.message);
+    process.exit(1);
+  }
+
+  // ── Load runtime readiness schema ──
+  let schema;
+  try {
+    const schemaRaw = fs.readFileSync(path.join(ROOT, RUNTIME_READINESS_SCHEMA_PATH), "utf8");
+    schema = JSON.parse(schemaRaw);
+  } catch (e) {
+    console.error("Runtime readiness schema load failed: " + e.message);
+    process.exit(2);
+  }
+
+  // ── Schema validation ──
+  const schemaFails = validateInstance(report, schema, schema, "$");
+  if (schemaFails.length === 0) {
+    pass("Schema structure");
+  } else {
+    for (const f of schemaFails) {
+      fail("Schema structure", f.path + ": " + f.expected + " (got " + f.actual + ")");
+    }
+  }
+
+  // ── Top-level required field checks ──
+  if (report.schemaVersion !== "1.0.0") {
+    fail("schemaVersion", 'expected "1.0.0", got ' + JSON.stringify(report.schemaVersion));
+  } else {
+    pass("schemaVersion: 1.0.0");
+  }
+
+  if (report.recordType !== "pnpd.runtimeReadiness") {
+    fail("recordType", 'expected "pnpd.runtimeReadiness", got ' + JSON.stringify(report.recordType));
+  } else {
+    pass("recordType: pnpd.runtimeReadiness");
+  }
+
+  // ── Source checks ──
+  const source = report.source || {};
+
+  if (source.localOnly !== true) {
+    fail("source.localOnly", "expected true, got " + JSON.stringify(source.localOnly));
+  } else {
+    pass("source.localOnly: true");
+  }
+
+  if (source.externalApiUsed !== false) {
+    fail("source.externalApiUsed", "expected false, got " + JSON.stringify(source.externalApiUsed));
+  }
+
+  if (source.manualEvidenceOnly !== true) {
+    fail("source.manualEvidenceOnly", "expected true, got " + JSON.stringify(source.manualEvidenceOnly));
+  }
+
+  if (source.remoteCiObserved !== false) {
+    fail("source.remoteCiObserved", "expected false (remote CI reports not yet supported for file validation), got " + JSON.stringify(source.remoteCiObserved));
+  } else {
+    pass("source.remoteCiObserved: false");
+  }
+
+  // Remote CI fields must be null when remoteCiObserved is false
+  if (source.remoteCiObserved === false) {
+    const remoteCiFields = ["remoteCiProvider", "remoteCiRunId", "remoteCiStatus", "remoteCiConclusion", "remoteCiUrl"];
+    for (const field of remoteCiFields) {
+      if (source[field] !== null && source[field] !== undefined) {
+        fail("source." + field, "expected null when remoteCiObserved is false, got " + JSON.stringify(source[field]));
+      }
+    }
+  }
+
+  // ── Repo path check ──
+  const repo = report.repo || {};
+  const repoPath = repo.path;
+  if (repoPath === undefined || repoPath === null) {
+    fail("repo.path", "missing");
+  } else if (typeof repoPath !== "string") {
+    fail("repo.path", "expected string, got " + typeof repoPath);
+  } else if (path.isAbsolute(repoPath) || repoPath.startsWith("/")) {
+    fail("repo.path", "must not be absolute: " + repoPath);
+  } else if (repoPath.includes("/Users/")) {
+    fail("repo.path", "must not contain local path: " + repoPath);
+  } else if (repoPath.includes("\\") || repoPath.includes("..")) {
+    fail("repo.path", "must not contain path traversal or backslashes: " + repoPath);
+  } else if (!/^[a-zA-Z0-9_-]+$/.test(repoPath)) {
+    fail("repo.path", "must match safe pattern [a-zA-Z0-9_-]+, got: " + repoPath);
+  }
+  // Pass implicitly if no failures
+
+  // ── Dry-run checks ──
+  const dryRun = report.dryRun || {};
+
+  if (dryRun.dispatchEnabled !== false) {
+    fail("dryRun.dispatchEnabled", "expected false, got " + JSON.stringify(dryRun.dispatchEnabled));
+  } else {
+    pass("dryRun.dispatchEnabled: false");
+  }
+
+  if (dryRun.dispatchAllowed !== false) {
+    fail("dryRun.dispatchAllowed", "expected false, got " + JSON.stringify(dryRun.dispatchAllowed));
+  } else {
+    pass("dryRun.dispatchAllowed: false");
+  }
+
+  if (dryRun.maxParallelDispatch !== 0) {
+    fail("dryRun.maxParallelDispatch", "expected 0, got " + JSON.stringify(dryRun.maxParallelDispatch));
+  }
+
+  if (dryRun.classification !== "CODEX_REVIEW_REQUIRED") {
+    fail("dryRun.classification", 'expected "CODEX_REVIEW_REQUIRED", got ' + JSON.stringify(dryRun.classification));
+  } else {
+    pass("dryRun.classification: CODEX_REVIEW_REQUIRED");
+  }
+
+  // ── Authority checks ──
+  const authority = report.authority || {};
+  const authorityChecks = [
+    ["agentBridgeMayApprove", false],
+    ["agentBridgeMayMerge", false],
+    ["agentBridgeMayDeploy", false],
+    ["agentBridgeMayDispatch", false],
+    ["agentBridgeMayCertifyProduction", false],
+    ["ownerFinalAuthority", true],
+    ["codexAuditRequired", true],
+  ];
+
+  let authorityPass = true;
+  for (const [field, expected] of authorityChecks) {
+    if (authority[field] !== expected) {
+      fail("authority." + field, "expected " + JSON.stringify(expected) + ", got " + JSON.stringify(authority[field]));
+      authorityPass = false;
+    }
+  }
+  if (authorityPass) {
+    pass("authority flags are non-authorizing");
+  }
+
+  // ── Safety checks ──
+  const safety = report.safety || {};
+  const safetyChecks = [
+    ["advisoryOnly", true],
+    ["authorizesDispatch", false],
+    ["authorizesDeployment", false],
+    ["authorizesMerge", false],
+    ["certifiesProductionReadiness", false],
+    ["executesDispatch", false],
+    ["mutatesGitHub", false],
+    ["externalWritesAllowed", false],
+    ["githubMutationAllowed", false],
+  ];
+
+  let safetyPass = true;
+  for (const [field, expected] of safetyChecks) {
+    if (safety[field] !== expected) {
+      fail("safety." + field, "expected " + JSON.stringify(expected) + ", got " + JSON.stringify(safety[field]));
+      safetyPass = false;
+    }
+  }
+  if (safetyPass) {
+    pass("safety flags are advisory-only and non-authorizing");
+  }
+
+  // ── Readiness checks ──
+  const readiness = report.readiness || {};
+  if (readiness.status !== "reviewBlocked") {
+    fail("readiness.status", 'expected "reviewBlocked", got ' + JSON.stringify(readiness.status));
+  } else {
+    pass("readiness.status: reviewBlocked");
+  }
+
+  // ── Audit checks ──
+  const audit = report.audit || {};
+  if (audit.mergeAllowed !== false) {
+    fail("audit.mergeAllowed", "expected false, got " + JSON.stringify(audit.mergeAllowed));
+  }
+  if (audit.pushAllowed !== false) {
+    fail("audit.pushAllowed", "expected false, got " + JSON.stringify(audit.pushAllowed));
+  }
+
+  // ── Integrity / contentHash check ──
+  const integrity = report.integrity || {};
+  if (!integrity.contentHash || !/^[a-f0-9]{64}$/.test(integrity.contentHash)) {
+    fail("integrity.contentHash", "expected 64-char hex string, got " + JSON.stringify(integrity.contentHash));
+  }
+
+  // ── Filename hash-prefix check ──
+  const filenameRe = /^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)-([a-f0-9]{8})\.json$/;
+  const fileMatch = filename.match(filenameRe);
+  if (!fileMatch) {
+    fail("filename hash prefix", "filename does not match expected format YYYY-MM-DDTHH-mm-ss-SSSZ-{hash8}.json: " + filename);
+  } else {
+    const fileHashPrefix = fileMatch[2];
+    const contentHashPrefix = integrity.contentHash ? integrity.contentHash.slice(0, 8) : "";
+    if (fileHashPrefix !== contentHashPrefix) {
+      fail("filename hash prefix", "filename hash prefix " + fileHashPrefix + " does not match stored contentHash prefix " + contentHashPrefix);
+    } else {
+      pass("filename hash prefix matches stored contentHash prefix");
+    }
+  }
+
+  // ── Forbidden-field scan ──
+  const forbiddenFields = [];
+  scanForbiddenRuntimeReadinessFields(report, "$", forbiddenFields);
+  if (forbiddenFields.length > 0) {
+    for (const ff of forbiddenFields) {
+      fail("forbidden-field scan", "forbidden field: " + ff);
+    }
+  } else {
+    pass("forbidden-field scan");
+  }
+
+  // ── Fake-data/security scan ──
+  const fakeDataFindings = scanRuntimeReadinessFakeData(rawContent, filename);
+  const contentFindings = scanRuntimeReadinessFixtureContent(report);
+  const allSecurityFindings = [...fakeDataFindings, ...contentFindings];
+  if (allSecurityFindings.length > 0) {
+    for (const sf of allSecurityFindings) {
+      fail("fake-data/security scan", sf);
+    }
+  } else {
+    pass("fake-data/security scan");
+  }
+
+  // ── Summary ──
+  console.log("");
+  if (exitCode === 0) {
+    console.log("Report valid: all checks passed.");
+  } else {
+    console.log("Report invalid: " + checks.filter(c => !c.ok).length + " check(s) failed.");
+  }
+
+  process.exit(exitCode);
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
   const args = parseArgs(process.argv);
+
+  // Phase 1J: runtime readiness report file validation (standalone)
+  if (args.runtimeReadinessReport) {
+    validateRuntimeReadinessReportFile(args.runtimeReadinessReport);
+    // validateRuntimeReadinessReportFile calls process.exit internally
+  }
+
   const runPhase1f = args.phase === "1f";
   const runPhase1h = args.phase === "1h";
 
