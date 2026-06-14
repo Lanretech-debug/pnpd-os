@@ -24,6 +24,24 @@
 
 ---
 
+## Why This Hypothesis Matters
+
+<!-- Why is this hypothesis worth testing now? What decision would it affect? -->
+
+---
+
+## Expected Result
+
+<!-- What result do we expect before running the test? -->
+
+---
+
+## Confidence Before Test
+
+<!-- Low / Medium / High, with reason. -->
+
+---
+
 ## Date Started
 
 <!-- YYYY-MM-DD -->
@@ -37,6 +55,12 @@
 ## Method
 
 <!-- Describe what was done. Keep it specific enough that someone else could replicate it. -->
+
+---
+
+## Test Performed
+
+<!-- What test was actually performed? Include exact steps or conditions. -->
 
 ---
 
@@ -55,15 +79,27 @@
 
 ---
 
-## Results
+## Actual Result
 
 <!-- What actually happened? Include quantitative data where possible. -->
+
+---
+
+## Difference Between Expected and Actual
+
+<!-- Compare the expected result to the actual result. What changed? -->
 
 ---
 
 ## Analysis
 
 <!-- Interpret the results. Did the evidence support or contradict the hypothesis? -->
+
+---
+
+## Updated Belief
+
+<!-- What changed in our belief after the test? -->
 
 ---
 
@@ -91,9 +127,17 @@
 
 ---
 
-## Next Steps
+## Next Action
 
 <!-- What should happen next based on these results? Another experiment? Owner decision? -->
+
+---
+
+## Disposable?
+
+**Default: yes.** Experiments should be disposable unless the Owner separately approves implementation design.
+
+This experiment log does not authorize implementation, merge, dispatch, or deployment.
 
 ---
 

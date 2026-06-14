@@ -6,7 +6,7 @@
 
 ---
 
-## Decision Topic
+## Decision Title
 
 <!-- A short name for the decision being made. -->
 
@@ -36,7 +36,7 @@
 
 ---
 
-## Evidence Reviewed
+## Research Evidence Reviewed
 
 <!-- What evidence informed this decision? Link to specific research records. -->
 
@@ -45,6 +45,22 @@
 | | <!-- Problem Discovery / Source Review / Experiment Log / Failure Mining --> | |
 | | | |
 | | | |
+
+---
+
+## Main Finding
+
+<!-- The clearest finding from the research evidence. -->
+
+---
+
+## Open Questions
+
+<!-- What remains unresolved after this decision? -->
+
+1.
+2.
+3.
 
 ---
 
@@ -73,11 +89,22 @@
 
 **The Owner decides:**
 
-- [ ] **Option A** — <!-- summary -->
-- [ ] **Option B** — <!-- summary -->
-- [ ] **Option C** — <!-- summary -->
-- [ ] **Defer** — More evidence needed before deciding. Specify what evidence:
-- [ ] **Reject all** — None of the options are acceptable. New direction needed:
+- [ ] **Approve implementation design** — Research is sufficient to request a separate implementation design phase.
+- [ ] **Request more research** — Evidence is insufficient; specify what is missing:
+- [ ] **Reject** — Do not proceed.
+- [ ] **Park** — Keep for later; no current action.
+
+---
+
+## Recommended Next Phase
+
+<!-- None / more research / implementation design / other governed phase. -->
+
+---
+
+## Codex Audit Required Before Merge
+
+**Default: yes.** Any implementation design, code, merge, dispatch, deployment, or certification path still requires Codex audit and Owner approval.
 
 ---
 
@@ -117,3 +144,7 @@
 ## Date Decided
 
 <!-- YYYY-MM-DD -->
+
+---
+
+This owner decision record does not authorize merge, does not authorize dispatch, does not authorize deploy, and does not authorize implementation by itself.

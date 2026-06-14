@@ -36,6 +36,18 @@
 
 ---
 
+## Why Now?
+
+<!-- Why is this problem important now instead of later? What changed? -->
+
+---
+
+## Why This Problem, Not a Trendy Adjacent Problem?
+
+<!-- Explain why this problem deserves attention. Distinguish real pull from trend-following or adjacent enthusiasm. -->
+
+---
+
 ## How Painful Is It?
 
 - [ ] **Critical** — Blocks core operations; users cannot proceed without a workaround.
@@ -63,6 +75,14 @@
 
 ## Evidence Quality Assessment
 
+## Evidence Exists
+
+<!-- What concrete evidence exists today? Link interviews, observations, data, tickets, examples, or source reviews. -->
+
+## Missing Evidence
+
+<!-- What evidence is missing before this problem can be treated as validated? -->
+
 | Claim | Evidence Class | Source |
 |-------|---------------|--------|
 | <!-- claim 1 --> | <!-- known fact / assumption / unknown / research needed / owner decision --> | <!-- source --> |
@@ -70,6 +90,22 @@
 | <!-- claim 3 --> | | |
 
 **Overall evidence strength:** <!-- Strong / Moderate / Weak / Anecdotal -->
+
+---
+
+## Assumptions
+
+<!-- What are we assuming? Which assumptions would materially change the conclusion if false? -->
+
+1.
+2.
+3.
+
+---
+
+## What Would Disprove This Problem?
+
+<!-- What evidence would falsify or materially weaken the problem claim? -->
 
 ---
 
@@ -102,9 +138,20 @@
 
 ---
 
-## Next Steps
+## Smallest Next Research Action
 
 <!-- What should happen next? Source review? Customer interview? Experiment? Owner decision? -->
+
+---
+
+## Owner Decision Options
+
+- [ ] Proceed to source review.
+- [ ] Proceed to experiment planning.
+- [ ] Hold for more evidence.
+- [ ] Reject or park the problem.
+
+This template does not authorize implementation, merge, dispatch, or deployment.
 
 ---
 

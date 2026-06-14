@@ -6,9 +6,21 @@
 
 ---
 
-## Failure Description
+## Failure Observed
 
 <!-- A short name or headline for this failure. -->
+
+---
+
+## Where It Appeared
+
+<!-- Product, workflow, repo, phase, customer context, or operational surface where the failure appeared. -->
+
+---
+
+## Frequency
+
+<!-- One-off / recurring / systemic / unknown. Include evidence. -->
 
 ---
 
@@ -49,6 +61,28 @@
 5. <!-- why did that happen? (root cause) -->
 
 **Root cause:** <!-- Summarise the deepest cause. -->
+
+---
+
+## Likely Cause
+
+<!-- Current best explanation for the failure. Mark assumptions clearly. -->
+
+---
+
+## Competing Explanations
+
+<!-- Other plausible causes that remain possible. -->
+
+1.
+2.
+3.
+
+---
+
+## Biggest Failure Pile
+
+<!-- Which repeated failure pattern has the most accumulated evidence? -->
 
 ---
 
@@ -100,6 +134,22 @@
 ## Applicable Insights
 
 <!-- What specific, actionable insight does this failure provide for current or future work? -->
+
+---
+
+## Smallest Next Fix / Test
+
+<!-- What is the smallest next test or corrective probe? -->
+
+---
+
+## What Not To Change Yet
+
+<!-- What should remain untouched until evidence is stronger? -->
+
+---
+
+This failure mining record does not authorize corrective action, implementation, merge, dispatch, or deployment.
 
 ---
 

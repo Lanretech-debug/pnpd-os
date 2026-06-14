@@ -18,6 +18,7 @@ It complements the existing 12 VertiForge output modes by adding a dedicated res
 - Not a replacement for domain expertise.
 - Not a substitute for market data or competitive intelligence tools.
 - Not a product decision engine — the Owner remains the final decision-maker.
+- Not a decision engine and does not authorize implementation, merge, dispatch, or deployment.
 
 ## Why it exists
 
@@ -39,13 +40,13 @@ Research Discovery Mode is organised into five phases. Each phase has a correspo
 |---|-------|----------|---------|
 | 1 | **Problem Discovery** | `problem-discovery.md` | Identify and define a real problem worth investigating |
 | 2 | **Source Review** | `source-review.md` | Assess the credibility, relevance, and insight of a single source |
-| 3 | **Experiment Log** | `experiment-log.md` | Design, run, and learn from a lightweight test or probe |
+| 3 | **Experiment Log** | `experiment-log.md` | Record a hypothesis, expected result, actual result, and learning from a lightweight test or probe |
 | 4 | **Failure Mining** | `failure-mining.md` | Extract lessons from a past failure or blocked attempt |
-| 5 | **Owner Decision** | `owner-decision.md` | Synthesise evidence into a structured owner-level decision |
+| 5 | **Owner Decision** | `owner-decision.md` | Synthesise evidence into a structured owner-level decision and, if approved, a handoff into implementation design |
 
 These phases are not strictly linear. A research cycle may move between them as evidence accumulates.
 
-## When to invoke Research Discovery Mode
+## When to use Research Discovery Mode
 
 Invoke Research Discovery Mode when the task involves:
 
@@ -54,6 +55,16 @@ Invoke Research Discovery Mode when the task involves:
 - Designing or running a lightweight experiment to test an assumption.
 - Analysing a past failure for reusable lessons.
 - Making an owner-level decision that requires structured evidence synthesis.
+
+## When not to use Research Discovery Mode
+
+Do not invoke Research Discovery Mode to:
+
+- Start implementation.
+- Approve a merge.
+- Dispatch an agent.
+- Deploy or certify production readiness.
+- Replace Owner judgement, Codex audit, Hermes verification, or PNPD governance.
 
 ## How it fits with VertiForge modes
 
@@ -77,7 +88,19 @@ Research Discovery Mode belongs to the **Product Strategy Layer** of PNPD-OS, al
 |---------------|--------------------------------------|
 | P0 — Idea Capture | Problem Discovery, Source Review |
 | P1 — Validation Plan | Experiment Log, Failure Mining |
-| P2 — MVP Definition | Owner Decision (scope decisions) |
+| P2 — MVP Definition | Owner Decision (scope decisions and handoff into implementation design) |
+
+## Role boundaries
+
+| Role | Boundary |
+|------|----------|
+| Owner | Owner remains final authority for research conclusions, scope decisions, and any move into implementation design. |
+| Hermes | Hermes may design and verify research framing; Hermes does not approve implementation, merge, dispatch, or deployment. |
+| DeepSeek | DeepSeek may draft or refine research artifacts after Owner approval; DeepSeek does not certify its own work. |
+| Codex | Codex audit is required before merge or governed phase advancement. |
+| AgentBridge | AgentBridge coordinates state and handoff only; AgentBridge does not approve, merge, deploy, certify, or dispatch. |
+
+Research artifacts do not authorize implementation, do not authorize merge, do not authorize dispatch, and do not authorize deploy. A completed Owner Decision can only request a separately governed implementation design phase.
 
 ## Evidence labelling
 

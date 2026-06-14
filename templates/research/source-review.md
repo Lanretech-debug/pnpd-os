@@ -12,6 +12,14 @@
 
 ---
 
+## Source Title / Source Link
+
+**Source title:** <!-- title -->
+
+**Source link:** <!-- URL or local reference -->
+
+---
+
 ## Source Type
 
 - [ ] Customer / user interview
@@ -57,6 +65,38 @@
 
 ---
 
+## Why This Source Matters
+
+<!-- Why does this source matter for the problem under investigation? -->
+
+---
+
+## Claims This Source Supports
+
+<!-- Which specific claims become stronger because of this source? -->
+
+1.
+2.
+3.
+
+---
+
+## Claims This Source Weakens
+
+<!-- Which specific claims become weaker or more uncertain because of this source? -->
+
+1.
+2.
+3.
+
+---
+
+## Uncertainty Remains
+
+<!-- What remains unknown after reviewing this source? -->
+
+---
+
 ## Credibility Assessment
 
 | Factor | Assessment |
@@ -87,6 +127,12 @@
 
 ---
 
+## Over-Weighted Risk
+
+<!-- Are we over-weighted on this one source? What additional source type is needed before using it in a decision? -->
+
+---
+
 ## Actionable Insights
 
 <!-- What can we do with this information? What decisions does it inform? -->
@@ -110,3 +156,7 @@
 ## Date Reviewed
 
 <!-- YYYY-MM-DD -->
+
+---
+
+This source review does not authorize conclusion, implementation, merge, dispatch, or deployment.
