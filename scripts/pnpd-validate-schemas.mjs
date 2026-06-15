@@ -133,11 +133,11 @@ function parseArgs(argv) {
         throw new Error("--runtime-readiness-report is a standalone validator and cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, or 1h).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, or 1m).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", or "1h".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", or "1m".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -160,7 +160,7 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
 
 Options:
@@ -169,6 +169,7 @@ Options:
   --phase 1c  Validate Phase 0 + Phase 1B + Phase 1C invariants + fixture instance validation.
   --phase 1f  Validate PNPD dispatch readiness fixtures (explicit-only, not included in default).
   --phase 1h  Validate PNPD runtime readiness schema and fixtures (explicit-only, not included in default).
+  --phase 1m  Validate Research Discovery schema and fixtures (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
@@ -2105,6 +2106,594 @@ function validatePhase1HRuntimeReadiness() {
   process.exit(exitCode);
 }
 
+// ── Phase 1M: Research Discovery Schema + Fixture Validation ────────────────────
+
+const RESEARCH_DISCOVERY_SCHEMA_PATH = ".pnpd/research-discovery.schema.json";
+const RESEARCH_DISCOVERY_FIXTURES_DIR = "tests/fixtures/pnpd/research-discovery";
+
+const RD_POSITIVE_FIXTURES = new Set([
+  "valid-problem-discovery-minimal.json",
+  "valid-source-review-primary.json",
+  "valid-experiment-log-expected-vs-actual.json",
+  "valid-failure-mining-cluster.json",
+  "valid-owner-decision-park.json",
+  "valid-owner-decision-approve-implementation-design.json",
+]);
+
+const RD_NEGATIVE_FIXTURES = new Set([
+  "invalid-authorizes-implementation.json",
+  "invalid-authorizes-dispatch.json",
+  "invalid-owner-bypass.json",
+  "invalid-missing-uncertainty.json",
+  "invalid-missing-disproof-criteria.json",
+  "invalid-experiment-missing-expected-result.json",
+  "invalid-missing-artifact-type.json",
+  "invalid-forbidden-field.json",
+  "invalid-production-certification-claim.json",
+  "invalid-codex-bypass.json",
+]);
+
+const FORBIDDEN_RD_FIELDS = new Set([
+  "dispatchApproved",
+  "executeDispatch",
+  "productionReady",
+  "productionCertified",
+  "mergeApproved",
+  "ownerBypassed",
+  "codexBypassed",
+  "agentBridgeApproved",
+  "githubMutationEnabled",
+  "secretsEnabled",
+  "autoDispatch",
+  "deployNow",
+  "releaseNow",
+]);
+
+const RD_ARTIFACT_TYPES = new Set([
+  "problem_discovery",
+  "source_review",
+  "experiment_log",
+  "failure_mining",
+  "owner_decision",
+]);
+
+const RD_PHASES = new Set([
+  "draft",
+  "under_review",
+  "ready_for_owner_decision",
+  "owner_approved_for_implementation_design",
+  "parked",
+  "rejected",
+]);
+
+const RD_SOURCE_QUALITIES = new Set([
+  "primary",
+  "secondary",
+  "anecdotal",
+  "marketing",
+  "benchmark",
+  "academic",
+  "code",
+  "user_evidence",
+  "expert_opinion",
+  "unverified",
+]);
+
+const RD_OWNER_DECISIONS = new Set([
+  "approve_implementation_design",
+  "request_more_research",
+  "reject",
+  "park",
+]);
+
+const RD_TYPE_SPECIFIC_MAP = {
+  "problem_discovery": "problemDiscovery",
+  "source_review": "sourceReview",
+  "experiment_log": "experimentLog",
+  "failure_mining": "failureMining",
+  "owner_decision": "ownerDecision",
+};
+
+function scanForbiddenRDFields(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanForbiddenRDFields(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (FORBIDDEN_RD_FIELDS.has(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanForbiddenRDFields(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function scanRDFixtureSecurity(rawContent) {
+  const findings = [];
+  if (SECRET_VALUE_PATTERN.test(rawContent)) {
+    findings.push("secret-like value detected");
+  }
+  for (const frag of FORBIDDEN_PATH_FRAGMENTS) {
+    if (rawContent.includes(frag)) {
+      findings.push("forbidden path fragment: " + frag);
+    }
+  }
+  if (/\/Users\//.test(rawContent) || /\/home\//.test(rawContent) || /\/etc\//.test(rawContent) || /\/var\//.test(rawContent)) {
+    findings.push("real system path detected");
+  }
+  if (/[A-Z]:\\/.test(rawContent)) {
+    findings.push("Windows drive path detected");
+  }
+  if (/https?:\/\/(?!example\.com)[^\s"]+/.test(rawContent)) {
+    findings.push("non-example.com URL detected");
+  }
+  if (/\.env/.test(rawContent)) {
+    findings.push(".env reference detected");
+  }
+  if (/production-ready|production ready|deployment enabled|dispatch enabled|enterprise-grade/.test(rawContent)) {
+    findings.push("premature production/deployment claim");
+  }
+  return findings;
+}
+
+function scanRDFixtureSecretKeys(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanRDFixtureSecretKeys(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (SECRET_KEY_PATTERN.test(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanRDFixtureSecretKeys(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function checkRDPositiveFixture(fixture) {
+  const failures = [];
+
+  if (fixture.schemaVersion !== "1.0.0") failures.push("schemaVersion must be 1.0.0");
+  if (fixture.recordType !== "pnpd.researchDiscovery") failures.push("recordType must be pnpd.researchDiscovery");
+
+  if (!fixture.artifactId || typeof fixture.artifactId !== "string" || fixture.artifactId.length === 0)
+    failures.push("artifactId missing or empty");
+  if (!fixture.artifactType || !RD_ARTIFACT_TYPES.has(fixture.artifactType))
+    failures.push("artifactType missing or invalid");
+  if (!fixture.phase || !RD_PHASES.has(fixture.phase))
+    failures.push("phase missing or invalid");
+  if (!fixture.createdAt || typeof fixture.createdAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(fixture.createdAt))
+    failures.push("createdAt missing or invalid format");
+  if (!fixture.createdBy || typeof fixture.createdBy !== "string" || fixture.createdBy.length === 0)
+    failures.push("createdBy missing or empty");
+
+  const g = fixture.governance;
+  if (!g) {
+    failures.push("governance missing");
+  } else {
+    if (g.authorizesImplementation !== false) failures.push("governance.authorizesImplementation must be false");
+    if (g.authorizesMerge !== false) failures.push("governance.authorizesMerge must be false");
+    if (g.authorizesDispatch !== false) failures.push("governance.authorizesDispatch must be false");
+    if (g.authorizesDeployment !== false) failures.push("governance.authorizesDeployment must be false");
+    if (g.productionCertification !== false) failures.push("governance.productionCertification must be false");
+    if (g.ownerFinalAuthority !== true) failures.push("governance.ownerFinalAuthority must be true");
+    if (g.codexAuditRequiredBeforeMerge !== true) failures.push("governance.codexAuditRequiredBeforeMerge must be true");
+    if (g.agentBridgeAuthority !== false) failures.push("governance.agentBridgeAuthority must be false");
+  }
+
+  const e = fixture.evidence;
+  if (!e) {
+    failures.push("evidence missing");
+  } else {
+    if (!e.evidenceExists || typeof e.evidenceExists !== "string" || e.evidenceExists.length === 0)
+      failures.push("evidence.evidenceExists missing or empty");
+    if (!e.evidenceMissing || typeof e.evidenceMissing !== "string" || e.evidenceMissing.length === 0)
+      failures.push("evidence.evidenceMissing missing or empty");
+    if (!Array.isArray(e.assumptions) || e.assumptions.length === 0)
+      failures.push("evidence.assumptions missing or empty array");
+    else if (e.assumptions.some(a => typeof a !== "string" || a.length === 0))
+      failures.push("evidence.assumptions contains empty item");
+    if (!e.uncertainty || typeof e.uncertainty !== "string" || e.uncertainty.length === 0)
+      failures.push("evidence.uncertainty missing or empty");
+    if (!e.disproofCriteria || typeof e.disproofCriteria !== "string" || e.disproofCriteria.length === 0)
+      failures.push("evidence.disproofCriteria missing or empty");
+    if (!e.sourceQuality || !RD_SOURCE_QUALITIES.has(e.sourceQuality))
+      failures.push("evidence.sourceQuality missing or invalid");
+  }
+
+  const artifactType = fixture.artifactType;
+  const expectedKey = RD_TYPE_SPECIFIC_MAP[artifactType];
+  if (!expectedKey) {
+    failures.push("unknown artifactType: " + artifactType);
+  } else {
+    const tsObj = fixture[expectedKey];
+    if (!tsObj || typeof tsObj !== "object") {
+      failures.push(expectedKey + " missing or not an object");
+    } else {
+      for (const [at, mappedKey] of Object.entries(RD_TYPE_SPECIFIC_MAP)) {
+        if (at !== artifactType && fixture[mappedKey] !== undefined) {
+          failures.push("extraneous type-specific object: " + mappedKey + " (artifactType is " + artifactType + ")");
+        }
+      }
+
+      switch (artifactType) {
+        case "problem_discovery":
+          if (!tsObj.problemName || typeof tsObj.problemName !== "string" || tsObj.problemName.length === 0) failures.push("problemDiscovery.problemName missing or empty");
+          if (!tsObj.whoHasThisProblem || typeof tsObj.whoHasThisProblem !== "string" || tsObj.whoHasThisProblem.length === 0) failures.push("problemDiscovery.whoHasThisProblem missing or empty");
+          if (!tsObj.whyNow || typeof tsObj.whyNow !== "string" || tsObj.whyNow.length === 0) failures.push("problemDiscovery.whyNow missing or empty");
+          if (!tsObj.whyNotTrendy || typeof tsObj.whyNotTrendy !== "string" || tsObj.whyNotTrendy.length === 0) failures.push("problemDiscovery.whyNotTrendy missing or empty");
+          if (!tsObj.painLevel || !["critical","high","moderate","low"].includes(tsObj.painLevel)) failures.push("problemDiscovery.painLevel missing or invalid");
+          if (!tsObj.problemClassification || typeof tsObj.problemClassification !== "string" || tsObj.problemClassification.length === 0) failures.push("problemDiscovery.problemClassification missing or empty");
+          if (!tsObj.currentSolutions || typeof tsObj.currentSolutions !== "string" || tsObj.currentSolutions.length === 0) failures.push("problemDiscovery.currentSolutions missing or empty");
+          if (!tsObj.whyCurrentSolutionsFail || typeof tsObj.whyCurrentSolutionsFail !== "string" || tsObj.whyCurrentSolutionsFail.length === 0) failures.push("problemDiscovery.whyCurrentSolutionsFail missing or empty");
+          if (!tsObj.smallestNextResearchAction || typeof tsObj.smallestNextResearchAction !== "string" || tsObj.smallestNextResearchAction.length === 0) failures.push("problemDiscovery.smallestNextResearchAction missing or empty");
+          if (!Array.isArray(tsObj.ownerDecisionOptions) || tsObj.ownerDecisionOptions.length === 0) failures.push("problemDiscovery.ownerDecisionOptions missing or empty array");
+          break;
+        case "source_review":
+          if (!tsObj.sourceIdentifier || typeof tsObj.sourceIdentifier !== "string" || tsObj.sourceIdentifier.length === 0) failures.push("sourceReview.sourceIdentifier missing or empty");
+          if (!tsObj.sourceType || !RD_SOURCE_QUALITIES.has(tsObj.sourceType)) failures.push("sourceReview.sourceType missing or invalid");
+          if (!tsObj.sourceAge || typeof tsObj.sourceAge !== "string" || tsObj.sourceAge.length === 0) failures.push("sourceReview.sourceAge missing or empty");
+          if (!tsObj.keyClaims || typeof tsObj.keyClaims !== "string" || tsObj.keyClaims.length === 0) failures.push("sourceReview.keyClaims missing or empty");
+          if (!tsObj.credibilityAssessment || typeof tsObj.credibilityAssessment !== "string" || tsObj.credibilityAssessment.length === 0) failures.push("sourceReview.credibilityAssessment missing or empty");
+          if (!tsObj.biasAssessment || typeof tsObj.biasAssessment !== "string" || tsObj.biasAssessment.length === 0) failures.push("sourceReview.biasAssessment missing or empty");
+          if (!tsObj.overWeightedRisk || typeof tsObj.overWeightedRisk !== "string" || tsObj.overWeightedRisk.length === 0) failures.push("sourceReview.overWeightedRisk missing or empty");
+          if (!tsObj.claimSupported || typeof tsObj.claimSupported !== "string" || tsObj.claimSupported.length === 0) failures.push("sourceReview.claimSupported missing or empty");
+          if (!tsObj.claimWeakened || typeof tsObj.claimWeakened !== "string" || tsObj.claimWeakened.length === 0) failures.push("sourceReview.claimWeakened missing or empty");
+          if (!tsObj.uncertaintyRemaining || typeof tsObj.uncertaintyRemaining !== "string" || tsObj.uncertaintyRemaining.length === 0) failures.push("sourceReview.uncertaintyRemaining missing or empty");
+          break;
+        case "experiment_log":
+          if (!tsObj.experimentName || typeof tsObj.experimentName !== "string" || tsObj.experimentName.length === 0) failures.push("experimentLog.experimentName missing or empty");
+          if (!tsObj.hypothesis || typeof tsObj.hypothesis !== "string" || tsObj.hypothesis.length === 0) failures.push("experimentLog.hypothesis missing or empty");
+          if (!tsObj.whyMatters || typeof tsObj.whyMatters !== "string" || tsObj.whyMatters.length === 0) failures.push("experimentLog.whyMatters missing or empty");
+          if (!tsObj.expectedResult || typeof tsObj.expectedResult !== "string" || tsObj.expectedResult.length === 0) failures.push("experimentLog.expectedResult missing or empty");
+          if (!tsObj.confidenceBeforeTest || !["low","medium","high"].includes(tsObj.confidenceBeforeTest)) failures.push("experimentLog.confidenceBeforeTest missing or invalid");
+          if (!tsObj.testPerformed || typeof tsObj.testPerformed !== "string" || tsObj.testPerformed.length === 0) failures.push("experimentLog.testPerformed missing or empty");
+          if (!tsObj.actualResult || typeof tsObj.actualResult !== "string" || tsObj.actualResult.length === 0) failures.push("experimentLog.actualResult missing or empty");
+          if (!tsObj.expectedVsActualDelta || typeof tsObj.expectedVsActualDelta !== "string" || tsObj.expectedVsActualDelta.length === 0) failures.push("experimentLog.expectedVsActualDelta missing or empty");
+          if (!tsObj.updatedBelief || typeof tsObj.updatedBelief !== "string" || tsObj.updatedBelief.length === 0) failures.push("experimentLog.updatedBelief missing or empty");
+          if (!tsObj.nextAction || typeof tsObj.nextAction !== "string" || tsObj.nextAction.length === 0) failures.push("experimentLog.nextAction missing or empty");
+          if (tsObj.disposable !== true && tsObj.disposable !== false) failures.push("experimentLog.disposable missing");
+          break;
+        case "failure_mining":
+          if (!tsObj.failureObserved || typeof tsObj.failureObserved !== "string" || tsObj.failureObserved.length === 0) failures.push("failureMining.failureObserved missing or empty");
+          if (!tsObj.whereAppeared || typeof tsObj.whereAppeared !== "string" || tsObj.whereAppeared.length === 0) failures.push("failureMining.whereAppeared missing or empty");
+          if (!tsObj.frequency || !["once","occasional","repeating"].includes(tsObj.frequency)) failures.push("failureMining.frequency missing or invalid");
+          if (!tsObj.impact || !["blocked","degraded","informative"].includes(tsObj.impact)) failures.push("failureMining.impact missing or invalid");
+          if (!tsObj.likelyCause || typeof tsObj.likelyCause !== "string" || tsObj.likelyCause.length === 0) failures.push("failureMining.likelyCause missing or empty");
+          if (!tsObj.competingExplanations || typeof tsObj.competingExplanations !== "string" || tsObj.competingExplanations.length === 0) failures.push("failureMining.competingExplanations missing or empty");
+          if (!tsObj.biggestFailurePile || typeof tsObj.biggestFailurePile !== "string" || tsObj.biggestFailurePile.length === 0) failures.push("failureMining.biggestFailurePile missing or empty");
+          if (!tsObj.smallestNextFixOrTest || typeof tsObj.smallestNextFixOrTest !== "string" || tsObj.smallestNextFixOrTest.length === 0) failures.push("failureMining.smallestNextFixOrTest missing or empty");
+          if (!tsObj.whatNotToChangeYet || typeof tsObj.whatNotToChangeYet !== "string" || tsObj.whatNotToChangeYet.length === 0) failures.push("failureMining.whatNotToChangeYet missing or empty");
+          if (!tsObj.patternRecognition || typeof tsObj.patternRecognition !== "string" || tsObj.patternRecognition.length === 0) failures.push("failureMining.patternRecognition missing or empty");
+          break;
+        case "owner_decision":
+          if (!tsObj.decisionTitle || typeof tsObj.decisionTitle !== "string" || tsObj.decisionTitle.length === 0) failures.push("ownerDecision.decisionTitle missing or empty");
+          if (!tsObj.researchEvidenceReviewed || typeof tsObj.researchEvidenceReviewed !== "string" || tsObj.researchEvidenceReviewed.length === 0) failures.push("ownerDecision.researchEvidenceReviewed missing or empty");
+          if (!tsObj.mainFinding || typeof tsObj.mainFinding !== "string" || tsObj.mainFinding.length === 0) failures.push("ownerDecision.mainFinding missing or empty");
+          if (!tsObj.risks || typeof tsObj.risks !== "string" || tsObj.risks.length === 0) failures.push("ownerDecision.risks missing or empty");
+          if (!tsObj.openQuestions || typeof tsObj.openQuestions !== "string" || tsObj.openQuestions.length === 0) failures.push("ownerDecision.openQuestions missing or empty");
+          if (!tsObj.recommendedNextPhase || typeof tsObj.recommendedNextPhase !== "string" || tsObj.recommendedNextPhase.length === 0) failures.push("ownerDecision.recommendedNextPhase missing or empty");
+          if (!tsObj.decision || !RD_OWNER_DECISIONS.has(tsObj.decision)) failures.push("ownerDecision.decision missing or invalid");
+          if (!tsObj.rationale || typeof tsObj.rationale !== "string" || tsObj.rationale.length === 0) failures.push("ownerDecision.rationale missing or empty");
+          if (!tsObj.constraints || typeof tsObj.constraints !== "string" || tsObj.constraints.length === 0) failures.push("ownerDecision.constraints missing or empty");
+          if (!tsObj.nextActions || typeof tsObj.nextActions !== "string" || tsObj.nextActions.length === 0) failures.push("ownerDecision.nextActions missing or empty");
+          if (!tsObj.ownerSignature || typeof tsObj.ownerSignature !== "string" || tsObj.ownerSignature.length === 0) failures.push("ownerDecision.ownerSignature missing or empty");
+          break;
+      }
+    }
+  }
+
+  return failures;
+}
+
+function detectRDNegativeFailure(fixture, filename) {
+  const reasons = [];
+
+  switch (filename) {
+    case "invalid-authorizes-implementation.json":
+      if (fixture.governance && fixture.governance.authorizesImplementation === true)
+        reasons.push("governance.authorizesImplementation is true");
+      break;
+    case "invalid-authorizes-dispatch.json":
+      if (fixture.governance && fixture.governance.authorizesDispatch === true)
+        reasons.push("governance.authorizesDispatch is true");
+      break;
+    case "invalid-owner-bypass.json":
+      if (fixture.governance && fixture.governance.ownerFinalAuthority === false)
+        reasons.push("governance.ownerFinalAuthority is false");
+      break;
+    case "invalid-missing-uncertainty.json":
+      if (!fixture.evidence || !fixture.evidence.uncertainty || (typeof fixture.evidence.uncertainty === "string" && fixture.evidence.uncertainty.length === 0))
+        reasons.push("evidence.uncertainty missing or empty");
+      break;
+    case "invalid-missing-disproof-criteria.json":
+      if (!fixture.evidence || !fixture.evidence.disproofCriteria || (typeof fixture.evidence.disproofCriteria === "string" && fixture.evidence.disproofCriteria.length === 0))
+        reasons.push("evidence.disproofCriteria missing or empty");
+      break;
+    case "invalid-experiment-missing-expected-result.json":
+      if (!fixture.experimentLog || !fixture.experimentLog.expectedResult || (typeof fixture.experimentLog.expectedResult === "string" && fixture.experimentLog.expectedResult.length === 0))
+        reasons.push("experimentLog.expectedResult missing or empty");
+      break;
+    case "invalid-missing-artifact-type.json":
+      if (!fixture.artifactType)
+        reasons.push("artifactType missing");
+      break;
+    case "invalid-forbidden-field.json":
+      if (fixture.dispatchApproved === true)
+        reasons.push("forbidden field dispatchApproved present");
+      break;
+    case "invalid-production-certification-claim.json":
+      if (fixture.governance && fixture.governance.productionCertification === true)
+        reasons.push("governance.productionCertification is true");
+      break;
+    case "invalid-codex-bypass.json":
+      if (fixture.governance && fixture.governance.codexAuditRequiredBeforeMerge === false)
+        reasons.push("governance.codexAuditRequiredBeforeMerge is false");
+      break;
+  }
+
+  if (reasons.length === 0) {
+    const structFails = checkRDPositiveFixture(fixture);
+    if (structFails.length > 0) {
+      reasons.push("structural failure: " + structFails[0]);
+    }
+  }
+
+  return reasons;
+}
+
+function validateResearchDiscoveryPhase1M() {
+  let exitCode = 0;
+  let positivePassed = 0;
+  let positiveFailed = 0;
+  let negativeInvalid = 0;
+  let negativeUnexpectedPass = 0;
+  let forbiddenFieldPass = true;
+  let securityPass = true;
+
+  // ── Schema load checks ──
+  let schema;
+  try {
+    const schemaRaw = fs.readFileSync(path.join(ROOT, RESEARCH_DISCOVERY_SCHEMA_PATH), "utf8");
+    schema = JSON.parse(schemaRaw);
+  } catch (e) {
+    console.error("Research Discovery schema load failed: " + e.message);
+    process.exit(2);
+  }
+
+  if (schema.$schema !== "https://json-schema.org/draft/2020-12/schema") {
+    console.error("Schema $schema must be https://json-schema.org/draft/2020-12/schema");
+    process.exit(2);
+  }
+  if (schema.$id !== "pnpd-research-discovery.schema.json") {
+    console.error("Schema $id must be pnpd-research-discovery.schema.json");
+    process.exit(2);
+  }
+  if (schema.title !== "PNPD Research Discovery Artifact Schema") {
+    console.error("Schema title must be 'PNPD Research Discovery Artifact Schema'");
+    process.exit(2);
+  }
+  if (schema.type !== "object") {
+    console.error("Schema top-level type must be object");
+    process.exit(2);
+  }
+  if (schema.additionalProperties !== false) {
+    console.error("Schema top-level additionalProperties must be false");
+    process.exit(2);
+  }
+
+  const props = schema.properties || {};
+  if (!props.recordType || props.recordType.const !== "pnpd.researchDiscovery") {
+    console.error("Schema recordType const must be pnpd.researchDiscovery");
+    process.exit(2);
+  }
+  if (!props.schemaVersion || props.schemaVersion.const !== "1.0.0") {
+    console.error("Schema schemaVersion const must be 1.0.0");
+    process.exit(2);
+  }
+
+  const atEnum = props.artifactType && props.artifactType.enum;
+  if (!atEnum || !Array.isArray(atEnum)) {
+    console.error("Schema artifactType must have an enum");
+    process.exit(2);
+  }
+  for (const at of RD_ARTIFACT_TYPES) {
+    if (!atEnum.includes(at)) {
+      console.error("Schema artifactType enum missing: " + at);
+      process.exit(2);
+    }
+  }
+
+  for (const key of Object.values(RD_TYPE_SPECIFIC_MAP)) {
+    if (!props[key]) {
+      console.error("Schema properties missing: " + key);
+      process.exit(2);
+    }
+  }
+
+  if (!Array.isArray(schema.oneOf) || schema.oneOf.length !== 5) {
+    console.error("Schema oneOf must have exactly 5 branches");
+    process.exit(2);
+  }
+
+  const defs = schema.$defs || {};
+  if (!defs.governance) {
+    console.error("Schema $defs.governance missing");
+    process.exit(2);
+  }
+  if (!defs.evidence) {
+    console.error("Schema $defs.evidence missing");
+    process.exit(2);
+  }
+  for (const key of Object.values(RD_TYPE_SPECIFIC_MAP)) {
+    if (!defs[key]) {
+      console.error("Schema $defs." + key + " missing");
+      process.exit(2);
+    }
+  }
+
+  const gProps = defs.governance && defs.governance.properties;
+  if (gProps) {
+    const consts = {
+      authorizesImplementation: false,
+      authorizesMerge: false,
+      authorizesDispatch: false,
+      authorizesDeployment: false,
+      productionCertification: false,
+      ownerFinalAuthority: true,
+      codexAuditRequiredBeforeMerge: true,
+      agentBridgeAuthority: false,
+    };
+    for (const [key, expected] of Object.entries(consts)) {
+      if (!gProps[key] || gProps[key].const !== expected) {
+        console.error("Schema governance." + key + " const must be " + expected);
+        process.exit(2);
+      }
+    }
+  }
+
+  const caProps = props.createdAt;
+  if (!caProps || !caProps.pattern) {
+    console.error("Schema createdAt must have explicit pattern (not just format)");
+    process.exit(2);
+  }
+
+  // ── Fixture discovery ──
+  const fixturesDir = path.join(ROOT, RESEARCH_DISCOVERY_FIXTURES_DIR);
+  let fixtureFiles;
+  try {
+    fixtureFiles = fs.readdirSync(fixturesDir).filter(f => f.endsWith(".json")).sort();
+  } catch (e) {
+    console.error("Research Discovery fixture directory not readable: " + e.message);
+    process.exit(2);
+  }
+
+  if (fixtureFiles.length !== 16) {
+    console.error("Expected exactly 16 research discovery fixture files, found: " + fixtureFiles.length);
+    process.exit(1);
+  }
+
+  const allExpected = new Set([...RD_POSITIVE_FIXTURES, ...RD_NEGATIVE_FIXTURES]);
+  for (const f of allExpected) {
+    if (!fixtureFiles.includes(f)) {
+      console.error("Missing expected fixture: " + f);
+      process.exit(1);
+    }
+  }
+
+  // ── Process each fixture ──
+  console.log("PNPD Research Discovery Validation");
+  console.log("Schema: " + RESEARCH_DISCOVERY_SCHEMA_PATH);
+  console.log("Fixtures: " + RESEARCH_DISCOVERY_FIXTURES_DIR);
+  console.log("");
+
+  for (const filename of fixtureFiles) {
+    const filePath = path.join(fixturesDir, filename);
+    let rawContent;
+    let fixture;
+
+    try {
+      rawContent = fs.readFileSync(filePath, "utf8");
+      fixture = JSON.parse(rawContent);
+    } catch (e) {
+      console.log("[FAIL] " + filename + " — JSON parse error: " + e.message);
+      if (filename.startsWith("valid-")) {
+        positiveFailed++;
+      }
+      exitCode = 1;
+      continue;
+    }
+
+    // ── Security/fake-data scan ──
+    const secFindings = scanRDFixtureSecurity(rawContent);
+    const keyFindings = scanRDFixtureSecretKeys(fixture, "$", []);
+    const allSecFindings = [...secFindings, ...keyFindings.map(k => "secret-like key: " + k)];
+    if (allSecFindings.length > 0) {
+      console.log("[FAIL] " + filename + " — SECURITY/FAKE-DATA VIOLATION: " + allSecFindings.join("; "));
+      securityPass = false;
+      exitCode = 1;
+      continue;
+    }
+
+    if (filename.startsWith("valid-")) {
+      // ── Positive fixture validation ──
+      const structFails = checkRDPositiveFixture(fixture);
+
+      const forbiddenFields = [];
+      scanForbiddenRDFields(fixture, "$", forbiddenFields);
+
+      const allFailures = [];
+      if (structFails.length > 0) allFailures.push(structFails.join("; "));
+      if (forbiddenFields.length > 0) {
+        allFailures.push("forbidden field(s): " + forbiddenFields.join(", "));
+        forbiddenFieldPass = false;
+      }
+
+      if (allFailures.length > 0) {
+        console.log("[FAIL] " + filename + " — " + allFailures.join(" | "));
+        positiveFailed++;
+        exitCode = 1;
+      } else {
+        if (filename === "valid-owner-decision-approve-implementation-design.json") {
+          console.log("[PASS] " + filename + " — valid fixture accepted (owner approves design only, governance non-authorizing)");
+        } else if (filename === "valid-experiment-log-expected-vs-actual.json") {
+          console.log("[PASS] " + filename + " — valid fixture accepted (expected vs actual complete)");
+        } else {
+          console.log("[PASS] " + filename + " — valid fixture accepted");
+        }
+        positivePassed++;
+      }
+    } else if (filename.startsWith("invalid-")) {
+      // ── Negative fixture validation ──
+      const expectedReasons = detectRDNegativeFailure(fixture, filename);
+
+      if (expectedReasons.length > 0) {
+        console.log("[INVALID-as-expected] " + filename + " — " + expectedReasons.join("; "));
+        negativeInvalid++;
+      } else {
+        const structFails = checkRDPositiveFixture(fixture);
+        if (structFails.length > 0) {
+          console.log("[INVALID-as-expected] " + filename + " — structural failure: " + structFails[0]);
+          negativeInvalid++;
+        } else {
+          console.log("[FAIL] " + filename + " — expected INVALID but passed all checks");
+          negativeUnexpectedPass++;
+          exitCode = 1;
+        }
+      }
+
+      if (filename !== "invalid-forbidden-field.json") {
+        const forbiddenFields = [];
+        scanForbiddenRDFields(fixture, "$", forbiddenFields);
+        if (forbiddenFields.length > 0) {
+          console.log("[FAIL] " + filename + " — unexpected forbidden field(s): " + forbiddenFields.join(", "));
+          forbiddenFieldPass = false;
+          exitCode = 1;
+        }
+      }
+    }
+  }
+
+  // ── Summary ──
+  console.log("");
+  console.log("Positive fixtures: " + positivePassed + " passed, " + positiveFailed + " failed");
+  console.log("Negative fixtures: " + negativeInvalid + " invalid as expected, " + negativeUnexpectedPass + " unexpectedly passed");
+  console.log("Forbidden-field scan: " + (forbiddenFieldPass ? "pass" : "fail"));
+  console.log("Fake-data/security scan: " + (securityPass ? "pass" : "fail"));
+
+  process.exit(exitCode);
+}
+
 // ── Phase 1J: Runtime Readiness Report File Validation ───────────────────────────
 
 function resolveReportPath(reportPathArg) {
@@ -2446,6 +3035,12 @@ try {
 
   if (runPhase1h) {
     validatePhase1HRuntimeReadiness();
+  }
+
+  const runPhase1m = args.phase === "1m";
+
+  if (runPhase1m) {
+    validateResearchDiscoveryPhase1M();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
