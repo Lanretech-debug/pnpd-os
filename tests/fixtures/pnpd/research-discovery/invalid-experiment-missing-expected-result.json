@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.researchDiscovery",
+  "artifactId": "invalid-exp-missing-expected-0001",
+  "artifactType": "experiment_log",
+  "phase": "draft",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "researcher-three",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "productionCertification": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "agentBridgeAuthority": false
+  },
+  "evidence": {
+    "evidenceExists": "Example evidence.",
+    "evidenceMissing": "Example missing evidence.",
+    "assumptions": ["Example assumption."],
+    "uncertainty": "Example uncertainty.",
+    "disproofCriteria": "Example disproof criteria.",
+    "sourceQuality": "code"
+  },
+  "experimentLog": {
+    "experimentName": "Example experiment",
+    "hypothesis": "Example hypothesis.",
+    "whyMatters": "Example why matters.",
+    "confidenceBeforeTest": "medium",
+    "testPerformed": "Example test performed.",
+    "actualResult": "Example actual result.",
+    "expectedVsActualDelta": "Example delta.",
+    "updatedBelief": "Example updated belief.",
+    "nextAction": "Example next action.",
+    "disposable": true
+  }
+}

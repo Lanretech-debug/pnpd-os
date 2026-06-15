@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.researchDiscovery",
+  "artifactId": "owner-dec-park-0001",
+  "artifactType": "owner_decision",
+  "phase": "parked",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "owner-jane",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "productionCertification": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "agentBridgeAuthority": false
+  },
+  "evidence": {
+    "evidenceExists": "Problem discovery artifact prob-disc-0001, experiment log exp-log-0001, and source review src-review-0001 were reviewed.",
+    "evidenceMissing": "We lack data on how competing products handle similar save-latency constraints.",
+    "assumptions": [
+      "The observed super-linear scaling is not an artifact of the measurement harness.",
+      "Users will tolerate current save latency for another quarter."
+    ],
+    "uncertainty": "We are uncertain whether the optimization effort would conflict with planned collaboration features in the next release.",
+    "disproofCriteria": "If users begin churning due to save latency before the next quarter, the park decision should be revisited.",
+    "sourceQuality": "primary"
+  },
+  "ownerDecision": {
+    "decisionTitle": "Park save-latency research until Q2 planning",
+    "researchEvidenceReviewed": "Problem discovery prob-disc-0001, experiment log exp-log-0001, source review src-review-0001.",
+    "mainFinding": "Save latency is a real and measurable problem with super-linear scaling, but the current release schedule has higher-priority items.",
+    "risks": "Users may experience increasing frustration; large documents may become practically unusable if document size continues to grow.",
+    "openQuestions": "How will the planned collaboration rewrite affect the save path? Will it make the current bottleneck irrelevant?",
+    "recommendedNextPhase": "Revisit in Q2 planning when collaboration architecture is more defined.",
+    "decision": "park",
+    "rationale": "Fixing save latency now risks duplicating effort if the collaboration rewrite changes the serialization path. Better to align optimization with the new architecture.",
+    "constraints": "No save-path changes in Q1. Performance telemetry collection should continue.",
+    "nextActions": "Continue collecting telemetry. Add a dashboard widget tracking P95 save latency per document size bucket.",
+    "ownerSignature": "owner-jane"
+  }
+}

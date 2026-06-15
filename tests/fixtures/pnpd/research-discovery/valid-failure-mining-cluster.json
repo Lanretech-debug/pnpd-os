@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.researchDiscovery",
+  "artifactId": "fail-mine-0001",
+  "artifactType": "failure_mining",
+  "phase": "under_review",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "researcher-four",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "productionCertification": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "agentBridgeAuthority": false
+  },
+  "evidence": {
+    "evidenceExists": "Crash reports aggregated from the last 3 months show 47 incidents matching this pattern.",
+    "evidenceMissing": "Stack traces are available but minimal repro steps were captured; we lack a deterministic reproducer.",
+    "assumptions": [
+      "All 47 incidents share a common root cause, not multiple distinct bugs.",
+      "The crash reporter captures the full call stack without corruption."
+    ],
+    "uncertainty": "Without a deterministic reproducer, we cannot confirm that a proposed fix will actually prevent recurrence.",
+    "disproofCriteria": "If we find that the 47 incidents have at least 3 distinct root causes, the clustering assumption fails and we must split this artifact.",
+    "sourceQuality": "user_evidence"
+  },
+  "failureMining": {
+    "failureObserved": "Application crashes when rendering a table with more than 10,000 rows after a column sort.",
+    "whereAppeared": "Production dashboard view, observed across Chrome 120+ and Firefox 130+.",
+    "frequency": "repeating",
+    "impact": "degraded",
+    "likelyCause": "Virtualized row recycling logic does not clean up sort-comparator references, causing use-after-free in the render cycle.",
+    "competingExplanations": "Memory pressure from large DOM subtrees; or a race between sort completion and the next render frame.",
+    "biggestFailurePile": "47 crash reports in 3 months; 12 users reported the issue more than once.",
+    "smallestNextFixOrTest": "Write a minimal reproducer that creates 10,001 rows, triggers a column sort, and asserts no crash.",
+    "whatNotToChangeYet": "Do not rewrite the virtualized table component until the root cause is confirmed; a premature rewrite could mask the bug without fixing it.",
+    "patternRecognition": "Similar to a previously fixed crash in the tree-view component where event listener cleanup was incomplete."
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.researchDiscovery",
+  "artifactId": "exp-log-0001",
+  "artifactType": "experiment_log",
+  "phase": "draft",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "researcher-three",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "productionCertification": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "agentBridgeAuthority": false
+  },
+  "evidence": {
+    "evidenceExists": "We instrumented the save-path and collected latency data from 50 synthetic documents.",
+    "evidenceMissing": "Synthetic documents may not capture real-world document complexity or concurrent editing patterns.",
+    "assumptions": [
+      "Synthetic document generation is representative of average user content.",
+      "The measurement harness itself does not introduce significant overhead."
+    ],
+    "uncertainty": "We do not yet know whether the measured latency scales linearly or super-linearly with paragraph count beyond 500.",
+    "disproofCriteria": "If the same test on real-world documents shows latency at least 50% lower than synthetic tests, the synthetic document assumption fails.",
+    "sourceQuality": "code"
+  },
+  "experimentLog": {
+    "experimentName": "Save-latency profiling for 500-1000 paragraph documents",
+    "hypothesis": "Save latency is dominated by paragraph serialization and exceeds 2 seconds for documents with more than 500 paragraphs.",
+    "whyMatters": "If confirmed, this validates the user-reported friction and gives us a measurable target for optimization.",
+    "expectedResult": "Save latency will exceed 2000ms for 500+ paragraph documents.",
+    "confidenceBeforeTest": "medium",
+    "testPerformed": "50 synthetic documents from 500 to 1000 paragraphs were saved sequentially with timing instrumentation.",
+    "actualResult": "Save latency reached 2100ms at 500 paragraphs, 3800ms at 750 paragraphs, and 5600ms at 1000 paragraphs.",
+    "expectedVsActualDelta": "Actual latency was 5-12% higher than expected at each tier; super-linear scaling was observed above 750 paragraphs.",
+    "updatedBelief": "The problem is worse than initially described. User reports of 2-second saves were conservative. Super-linear scaling suggests an algorithmic bottleneck.",
+    "nextAction": "Profile individual serialization functions to identify the specific hot path causing super-linear scaling.",
+    "disposable": true
+  }
+}

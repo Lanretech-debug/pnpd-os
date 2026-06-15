@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.researchDiscovery",
+  "artifactId": "src-review-0001",
+  "artifactType": "source_review",
+  "phase": "under_review",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "researcher-two",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "productionCertification": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "agentBridgeAuthority": false
+  },
+  "evidence": {
+    "evidenceExists": "Primary source: direct interview with the maintainer of the competing library.",
+    "evidenceMissing": "We have not yet corroborated the maintainer's claims with independent benchmarks.",
+    "assumptions": [
+      "The maintainer was candid and had no incentive to misrepresent the library capabilities.",
+      "The library version discussed is representative of the current stable release."
+    ],
+    "uncertainty": "The interview answers may reflect personal optimism rather than measured performance.",
+    "disproofCriteria": "If independent benchmarks show a performance gap larger than 20% from what the maintainer described, the source credibility must be downgraded.",
+    "sourceQuality": "primary"
+  },
+  "sourceReview": {
+    "sourceIdentifier": "https://example.com/research/source/competing-lib-maintainer-interview",
+    "sourceType": "primary",
+    "sourceAge": "2025-11",
+    "keyClaims": "The competing library claims sub-100ms response times for 95th percentile queries under 10k concurrent connections.",
+    "credibilityAssessment": "The maintainer is the original author and has a track record of accurate public benchmarks.",
+    "biasAssessment": "Possible optimism bias; the maintainer benefits from positive perception of their library.",
+    "overWeightedRisk": "The team may overweight this single source because it confirms our existing architectural preference.",
+    "claimSupported": "Benchmark methodology was described in detail and appears reproducible.",
+    "claimWeakened": "No third-party has independently reproduced the benchmarks.",
+    "uncertaintyRemaining": "We cannot distinguish between a genuinely fast library and a library fast only under the maintainer's chosen benchmark conditions."
+  }
+}
