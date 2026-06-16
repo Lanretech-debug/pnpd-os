@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.productDelivery",
+  "artifactId": "invalid-pspec-no-ac-0001",
+  "artifactType": "productSpec",
+  "phase": "draft",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "owner-example",
+  "repo": "example-saas",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "codexIsOwner": false,
+    "advisoryOnly": true
+  },
+  "evidence": {
+    "evidenceSummary": "Evidence summary.",
+    "evidenceLabels": {
+      "knownFacts": ["Fact one."],
+      "assumptions": ["Assumption one."],
+      "unknowns": ["Unknown one."],
+      "researchNeeded": ["Research item one."],
+      "ownerDecisions": ["Decision one."]
+    }
+  },
+  "productSpec": {
+    "features": ["Feature one."],
+    "userStories": ["Story one."],
+    "outOfScopeBehaviors": ["Out of scope one."],
+    "ownerDecisionRequiredBeforeImplementation": true
+  }
+}

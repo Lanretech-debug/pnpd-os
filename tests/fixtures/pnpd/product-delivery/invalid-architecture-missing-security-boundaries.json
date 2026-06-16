@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.productDelivery",
+  "artifactId": "invalid-arch-no-sec-0001",
+  "artifactType": "architectureSpec",
+  "phase": "draft",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "owner-example",
+  "repo": "example-saas",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "codexIsOwner": false,
+    "advisoryOnly": true
+  },
+  "evidence": {
+    "evidenceSummary": "Evidence summary.",
+    "evidenceLabels": {
+      "knownFacts": ["Fact one."],
+      "assumptions": ["Assumption one."],
+      "unknowns": ["Unknown one."],
+      "researchNeeded": ["Research item one."],
+      "ownerDecisions": ["Decision one."]
+    }
+  },
+  "architectureSpec": {
+    "overview": "A test architecture.",
+    "components": ["Test component."],
+    "dataModel": ["Test entity."],
+    "ownerDecisionRequiredBeforeImplementation": true
+  }
+}

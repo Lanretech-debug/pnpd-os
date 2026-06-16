@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.productDelivery",
+  "artifactId": "product-spec-minimal-0001",
+  "artifactType": "productSpec",
+  "phase": "draft",
+  "createdAt": "2099-01-15T00:00:00.000Z",
+  "createdBy": "owner-example",
+  "repo": "example-saas",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "codexIsOwner": false,
+    "advisoryOnly": true
+  },
+  "evidence": {
+    "evidenceSummary": "PRD requirements translated into functional spec.",
+    "evidenceLabels": {
+      "knownFacts": ["PRD defines 3 core requirements."],
+      "assumptions": ["Each requirement maps to a single feature."],
+      "unknowns": ["Edge case behaviour for concurrent uploads not yet defined."],
+      "researchNeeded": ["Load testing with 100 concurrent uploads."],
+      "ownerDecisions": ["Approved PRD, proceed to Product Spec."]
+    }
+  },
+  "productSpec": {
+    "features": ["Document upload with drag-and-drop."],
+    "userStories": ["As a user, I want to upload a receipt so that I can extract its data."],
+    "acceptanceCriteria": ["Upload accepts PDF and PNG files up to 10MB."],
+    "outOfScopeBehaviors": ["Video file upload is not supported in v1."],
+    "ownerDecisionRequiredBeforeImplementation": true
+  }
+}

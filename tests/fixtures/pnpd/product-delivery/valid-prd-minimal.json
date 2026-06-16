@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.productDelivery",
+  "artifactId": "prd-minimal-0001",
+  "artifactType": "prd",
+  "phase": "draft",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "owner-example",
+  "repo": "example-saas",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "codexIsOwner": false,
+    "advisoryOnly": true
+  },
+  "evidence": {
+    "evidenceSummary": "User interviews and competitor analysis support the existence of this problem.",
+    "evidenceLabels": {
+      "knownFacts": ["Users report spending 4 hours per week on manual data entry."],
+      "assumptions": ["Automation can reduce manual entry time by 80%."],
+      "unknowns": ["Whether users will trust automated classification."],
+      "researchNeeded": ["Usability study with 5 target users."],
+      "ownerDecisions": ["Proceed to Design Tree."]
+    },
+    "sourceArtifacts": ["research-discovery/problem-discovery-001"],
+    "riskNotes": ["Market window may close within 6 months."]
+  },
+  "prd": {
+    "productName": "DataEntry Helper",
+    "problemStatement": "Small business owners spend too much time on manual data entry instead of serving customers.",
+    "targetUsers": ["Small business owners with 1-10 employees"],
+    "goals": ["Reduce data entry time by 50%."],
+    "nonGoals": ["Enterprise ERP integration is out of scope."],
+    "scope": "Manual data entry automation for small service businesses.",
+    "successCriteria": ["Users complete data entry tasks in under 10 minutes per day."],
+    "ownerDecisionRequiredBeforeProductSpec": true
+  }
+}

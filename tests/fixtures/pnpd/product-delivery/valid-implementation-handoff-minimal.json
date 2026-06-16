@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.productDelivery",
+  "artifactId": "handoff-minimal-0001",
+  "artifactType": "implementationHandoff",
+  "phase": "owner_approved",
+  "createdAt": "2099-04-01T00:00:00.000Z",
+  "createdBy": "owner-example",
+  "repo": "example-saas",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "codexIsOwner": false,
+    "advisoryOnly": true
+  },
+  "evidence": {
+    "evidenceSummary": "All upstream specs approved. Ready for scoped implementation.",
+    "evidenceLabels": {
+      "knownFacts": ["Architecture Spec defines a monolithic Node.js app."],
+      "assumptions": ["The implementation agent follows the allowed file list."],
+      "unknowns": ["None at this stage."],
+      "researchNeeded": [],
+      "ownerDecisions": ["Authorised implementation of document upload feature."]
+    }
+  },
+  "implementationHandoff": {
+    "branchName": "deepseek/feat-document-upload",
+    "taskScope": "Implement document upload endpoint with drag-and-drop UI.",
+    "allowedFiles": ["src/routes/upload.ts", "src/components/UploadZone.tsx"],
+    "forbiddenFiles": ["package.json", ".github/workflows/pnpd-ci.yml"],
+    "implementationSteps": [
+      "Create POST /api/documents/upload route.",
+      "Add file type and size validation middleware.",
+      "Build UploadZone React component with drag-and-drop."
+    ],
+    "gatesToRun": ["npm run validate", "npm test", "npm run dry-run"],
+    "noPushUnlessAuthorized": true,
+    "noMergeUnlessAuthorized": true,
+    "noDeployUnlessAuthorized": true,
+    "ownerAuthorizationRequired": true,
+    "codexAuditRequired": true
+  }
+}

@@ -1,0 +1,737 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pnpd-product-delivery.schema.json",
+  "title": "PNPD Product Delivery Artifact Schema",
+  "description": "Advisory-only schema for PNPD Product Delivery artifacts. Validates structure and governance invariants only. Does not validate truth, viability, or correctness. Does not authorize implementation, merge, dispatch, deployment, GitHub/API mutation, or production certification. Owner remains final authority. Codex is auditor, not Owner. AgentBridge has no authority to approve, merge, deploy, certify, or dispatch.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "artifactType",
+    "artifactId",
+    "createdAt",
+    "createdBy",
+    "phase",
+    "repo",
+    "governance",
+    "evidence"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Schema version identifier."
+    },
+    "recordType": {
+      "type": "string",
+      "const": "pnpd.productDelivery",
+      "description": "Record type discriminator."
+    },
+    "artifactType": {
+      "type": "string",
+      "description": "Discriminator that selects the type-specific product delivery object.",
+      "enum": [
+        "prd",
+        "productSpec",
+        "architectureSpec",
+        "implementationHandoff"
+      ]
+    },
+    "artifactId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique artifact identifier."
+    },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+      "description": "ISO 8601 UTC timestamp with millisecond precision."
+    },
+    "createdBy": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Entity that created this artifact."
+    },
+    "phase": {
+      "type": "string",
+      "description": "Product delivery phase or status.",
+      "enum": [
+        "draft",
+        "under_review",
+        "owner_approved",
+        "parked",
+        "rejected"
+      ]
+    },
+    "repo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repository this artifact belongs to."
+    },
+    "governance": {
+      "$ref": "#/$defs/governance"
+    },
+    "evidence": {
+      "$ref": "#/$defs/evidence"
+    },
+    "prd": {
+      "$ref": "#/$defs/prd"
+    },
+    "productSpec": {
+      "$ref": "#/$defs/productSpec"
+    },
+    "architectureSpec": {
+      "$ref": "#/$defs/architectureSpec"
+    },
+    "implementationHandoff": {
+      "$ref": "#/$defs/implementationHandoff"
+    }
+  },
+  "oneOf": [
+    {
+      "description": "artifactType prd requires prd; prohibits other type-specific objects.",
+      "properties": {
+        "artifactType": { "const": "prd" }
+      },
+      "required": ["prd"],
+      "not": {
+        "anyOf": [
+          { "required": ["productSpec"] },
+          { "required": ["architectureSpec"] },
+          { "required": ["implementationHandoff"] }
+        ]
+      }
+    },
+    {
+      "description": "artifactType productSpec requires productSpec; prohibits other type-specific objects.",
+      "properties": {
+        "artifactType": { "const": "productSpec" }
+      },
+      "required": ["productSpec"],
+      "not": {
+        "anyOf": [
+          { "required": ["prd"] },
+          { "required": ["architectureSpec"] },
+          { "required": ["implementationHandoff"] }
+        ]
+      }
+    },
+    {
+      "description": "artifactType architectureSpec requires architectureSpec; prohibits other type-specific objects.",
+      "properties": {
+        "artifactType": { "const": "architectureSpec" }
+      },
+      "required": ["architectureSpec"],
+      "not": {
+        "anyOf": [
+          { "required": ["prd"] },
+          { "required": ["productSpec"] },
+          { "required": ["implementationHandoff"] }
+        ]
+      }
+    },
+    {
+      "description": "artifactType implementationHandoff requires implementationHandoff; prohibits other type-specific objects.",
+      "properties": {
+        "artifactType": { "const": "implementationHandoff" }
+      },
+      "required": ["implementationHandoff"],
+      "not": {
+        "anyOf": [
+          { "required": ["prd"] },
+          { "required": ["productSpec"] },
+          { "required": ["architectureSpec"] }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Governance constraints. All authority flags are locked false by schema const. Owner holds final decision authority. Codex audit is required before any merge. Codex is auditor, not Owner.",
+      "required": [
+        "authorizesImplementation",
+        "authorizesMerge",
+        "authorizesDispatch",
+        "authorizesDeployment",
+        "authorizesGitHubMutation",
+        "authorizesApiMutation",
+        "certifiesProductionReadiness",
+        "ownerFinalAuthority",
+        "codexAuditRequiredBeforeMerge",
+        "codexIsOwner",
+        "advisoryOnly"
+      ],
+      "properties": {
+        "authorizesImplementation": {
+          "type": "boolean",
+          "const": false,
+          "description": "Implementation must not be authorized by this artifact."
+        },
+        "authorizesMerge": {
+          "type": "boolean",
+          "const": false,
+          "description": "Merge must not be authorized by this artifact."
+        },
+        "authorizesDispatch": {
+          "type": "boolean",
+          "const": false,
+          "description": "Dispatch must not be authorized by this artifact."
+        },
+        "authorizesDeployment": {
+          "type": "boolean",
+          "const": false,
+          "description": "Deployment must not be authorized by this artifact."
+        },
+        "authorizesGitHubMutation": {
+          "type": "boolean",
+          "const": false,
+          "description": "GitHub/API mutation must not be authorized by this artifact."
+        },
+        "authorizesApiMutation": {
+          "type": "boolean",
+          "const": false,
+          "description": "API mutation must not be authorized by this artifact."
+        },
+        "certifiesProductionReadiness": {
+          "type": "boolean",
+          "const": false,
+          "description": "Production certification must not be claimed by this artifact."
+        },
+        "ownerFinalAuthority": {
+          "type": "boolean",
+          "const": true,
+          "description": "The Owner holds final decision authority."
+        },
+        "codexAuditRequiredBeforeMerge": {
+          "type": "boolean",
+          "const": true,
+          "description": "A Codex formal audit is required before any merge."
+        },
+        "codexIsOwner": {
+          "type": "boolean",
+          "const": false,
+          "description": "Codex is auditor, not Owner. This field must be false."
+        },
+        "advisoryOnly": {
+          "type": "boolean",
+          "const": true,
+          "description": "This artifact is advisory only and does not authorize any action."
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Evidence block. Requires explicit statements of known facts, assumptions, unknowns, research needed, and owner decisions.",
+      "required": [
+        "evidenceSummary",
+        "evidenceLabels"
+      ],
+      "properties": {
+        "evidenceSummary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Summary of the evidence underpinning this artifact."
+        },
+        "evidenceLabels": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Categorised evidence labels separating facts from assumptions, unknowns, and decisions.",
+          "required": [
+            "knownFacts",
+            "assumptions",
+            "unknowns",
+            "researchNeeded",
+            "ownerDecisions"
+          ],
+          "properties": {
+            "knownFacts": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "What is known with reasonable confidence."
+            },
+            "assumptions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Explicit assumptions underpinning this artifact."
+            },
+            "unknowns": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "What is explicitly unknown or uncertain."
+            },
+            "researchNeeded": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "What research or investigation is still needed."
+            },
+            "ownerDecisions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Owner decisions already made that affect this artifact."
+            }
+          }
+        },
+        "sourceArtifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "References to related artifacts that provide evidence."
+        },
+        "riskNotes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Notes about risks identified during evidence gathering."
+        }
+      }
+    },
+    "prd": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Product Requirements Document. Defines what the product must do, for whom, and why.",
+      "required": [
+        "productName",
+        "problemStatement",
+        "targetUsers",
+        "goals",
+        "nonGoals",
+        "successCriteria",
+        "ownerDecisionRequiredBeforeProductSpec"
+      ],
+      "properties": {
+        "productName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Working product name."
+        },
+        "problemStatement": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What problem this product solves."
+        },
+        "targetUsers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Who the product is for."
+        },
+        "goals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Measurable outcomes the product achieves."
+        },
+        "nonGoals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "What this product explicitly does NOT achieve."
+        },
+        "scope": {
+          "type": "string",
+          "description": "In-scope capabilities for this version."
+        },
+        "userJourneys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Key user journeys through the product."
+        },
+        "functionalRequirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Functional requirements."
+        },
+        "successCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Measurable criteria for product success."
+        },
+        "acceptanceCriteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Owner-level acceptance criteria."
+        },
+        "risks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Risks to delivery or success."
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "External systems, services, or resources needed."
+        },
+        "openQuestions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Unresolved questions requiring research or owner input."
+        },
+        "ownerDecisionRequiredBeforeProductSpec": {
+          "type": "boolean",
+          "const": true,
+          "description": "Owner must explicitly decide to proceed to Product Spec after PRD."
+        }
+      }
+    },
+    "productSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Product Spec. Defines functional requirements, user stories, acceptance criteria, and out-of-scope behaviours.",
+      "required": [
+        "features",
+        "userStories",
+        "acceptanceCriteria",
+        "outOfScopeBehaviors",
+        "ownerDecisionRequiredBeforeImplementation"
+      ],
+      "properties": {
+        "features": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Product features."
+        },
+        "userStories": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "User stories in standard format."
+        },
+        "acceptanceCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Acceptance criteria per feature."
+        },
+        "edgeCases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Unusual, boundary, or error conditions."
+        },
+        "dataRequirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Data entities, fields, and constraints."
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Access control and permission rules."
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Operating constraints on the product."
+        },
+        "nonFunctionalRequirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Non-functional requirements."
+        },
+        "outOfScopeBehaviors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Behaviours, features, or use cases explicitly excluded."
+        },
+        "ownerDecisionRequiredBeforeImplementation": {
+          "type": "boolean",
+          "const": true,
+          "description": "Owner must explicitly decide to proceed to implementation after Product Spec."
+        }
+      }
+    },
+    "architectureSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Architecture Spec. Defines system design, technical boundaries, data model, APIs, and security boundaries.",
+      "required": [
+        "overview",
+        "components",
+        "dataModel",
+        "securityBoundaries",
+        "ownerDecisionRequiredBeforeImplementation"
+      ],
+      "properties": {
+        "overview": {
+          "type": "string",
+          "minLength": 1,
+          "description": "High-level architecture overview."
+        },
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Key system components and their responsibilities."
+        },
+        "dataModel": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Data entities, fields, and relationships."
+        },
+        "apiSurface": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "APIs exposed or consumed by the system."
+        },
+        "integrations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "External systems this product integrates with."
+        },
+        "securityBoundaries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Security boundaries, trust zones, and protection measures."
+        },
+        "dependencyChoices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Major dependencies chosen and rationale."
+        },
+        "scalingConcerns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Anticipated scaling challenges."
+        },
+        "failureModes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Failure modes and mitigation strategies."
+        },
+        "tradeOffs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Trade-offs made and documented explicitly."
+        },
+        "outOfScopeInfrastructure": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Infrastructure concerns not addressed here."
+        },
+        "ownerDecisionRequiredBeforeImplementation": {
+          "type": "boolean",
+          "const": true,
+          "description": "Owner must explicitly decide to proceed to implementation after Architecture Spec."
+        }
+      }
+    },
+    "implementationHandoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Implementation Handoff. Scoped, agent-ready implementation plan with explicit push/merge/deploy locks.",
+      "required": [
+        "branchName",
+        "taskScope",
+        "allowedFiles",
+        "forbiddenFiles",
+        "implementationSteps",
+        "gatesToRun",
+        "noPushUnlessAuthorized",
+        "noMergeUnlessAuthorized",
+        "noDeployUnlessAuthorized",
+        "ownerAuthorizationRequired",
+        "codexAuditRequired"
+      ],
+      "properties": {
+        "branchName": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9/._-]+$",
+          "description": "Implementation branch name."
+        },
+        "taskScope": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What is being implemented in this handoff."
+        },
+        "allowedFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Files that may be created or modified."
+        },
+        "forbiddenFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Files that must not be touched."
+        },
+        "implementationSteps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Ordered implementation steps."
+        },
+        "acceptanceCriteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Acceptance criteria for this implementation."
+        },
+        "gatesToRun": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Commands that must pass locally before commit."
+        },
+        "expectedVerdict": {
+          "type": "string",
+          "description": "Expected DeepSeek verdict string."
+        },
+        "securityScans": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Security checks that must pass."
+        },
+        "cleanupRequired": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Temporary files or state dirs to remove before commit."
+        },
+        "noPushUnlessAuthorized": {
+          "type": "boolean",
+          "const": true,
+          "description": "Push is not authorized by this handoff. Requires separate Owner authorization."
+        },
+        "noMergeUnlessAuthorized": {
+          "type": "boolean",
+          "const": true,
+          "description": "Merge is not authorized by this handoff. Requires separate Owner authorization."
+        },
+        "noDeployUnlessAuthorized": {
+          "type": "boolean",
+          "const": true,
+          "description": "Deployment is not authorized by this handoff. Requires separate Owner authorization."
+        },
+        "ownerAuthorizationRequired": {
+          "type": "boolean",
+          "const": true,
+          "description": "Owner must explicitly authorize before proceeding past this handoff."
+        },
+        "codexAuditRequired": {
+          "type": "boolean",
+          "const": true,
+          "description": "Codex audit is required before merge."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.productDelivery",
+  "artifactId": "prd-full-0001",
+  "artifactType": "prd",
+  "phase": "owner_approved",
+  "createdAt": "2099-03-15T00:00:00.000Z",
+  "createdBy": "owner-example",
+  "repo": "example-saas",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "codexIsOwner": false,
+    "advisoryOnly": true
+  },
+  "evidence": {
+    "evidenceSummary": "Extensive user research, prototype results, and market analysis support this PRD.",
+    "evidenceLabels": {
+      "knownFacts": [
+        "12 of 15 interviewed users confirmed the pain point.",
+        "Prototype reduced task time by 62% in a controlled test."
+      ],
+      "assumptions": [
+        "The prototype result generalises to a broader user base.",
+        "Pricing model of $29/month is acceptable to the target segment."
+      ],
+      "unknowns": [
+        "Long-term retention rate is unknown.",
+        "Enterprise upgrade path is not yet explored."
+      ],
+      "researchNeeded": [
+        "Pricing sensitivity survey with 50 target users.",
+        "Security audit of the data processing pipeline."
+      ],
+      "ownerDecisions": [
+        "Approved Design Tree branch B.",
+        "Approved prototype results.",
+        "Authorised PRD creation."
+      ]
+    },
+    "sourceArtifacts": [
+      "research-discovery/problem-discovery-001",
+      "research-discovery/source-review-003",
+      "design-tree/design-tree-001",
+      "prototype-plan/prototype-001"
+    ],
+    "riskNotes": [
+      "Competitor X launched a similar feature last month.",
+      "API dependency on third-party OCR service introduces availability risk."
+    ]
+  },
+  "prd": {
+    "productName": "DataEntry Helper Pro",
+    "problemStatement": "Small business owners spend too much time on manual data entry instead of serving customers. Existing solutions are either too expensive or too complex for non-technical users.",
+    "targetUsers": [
+      "Small business owners with 1-10 employees",
+      "Freelance bookkeepers managing up to 20 clients"
+    ],
+    "goals": [
+      "Reduce data entry time by 50% within the first month of use.",
+      "Achieve 90% accuracy on automated field classification."
+    ],
+    "nonGoals": [
+      "Enterprise ERP integration is out of scope.",
+      "Real-time collaboration is out of scope for v1.",
+      "Mobile native app is out of scope."
+    ],
+    "scope": "Manual data entry automation for small service businesses, focusing on invoice, receipt, and timesheet processing.",
+    "userJourneys": [
+      "User uploads a scanned invoice; system extracts fields; user confirms or corrects; data is saved.",
+      "User connects email inbox; system auto-detects receipts; user reviews weekly summary."
+    ],
+    "functionalRequirements": [
+      "REQ-001: Upload scanned documents via drag-and-drop.",
+      "REQ-002: Extract key fields (date, amount, vendor) from documents.",
+      "REQ-003: Export extracted data to CSV."
+    ],
+    "successCriteria": [
+      "Users complete data entry tasks in under 10 minutes per day.",
+      "Net Promoter Score above 30 after 30 days."
+    ],
+    "acceptanceCriteria": [
+      "All REQ-00x items pass manual and automated tests.",
+      "No data loss on concurrent uploads."
+    ],
+    "risks": [
+      "OCR accuracy degrades on low-quality scans.",
+      "User onboarding drop-off if initial setup takes more than 5 minutes."
+    ],
+    "dependencies": [
+      "Third-party OCR API (vendor TBD).",
+      "Cloud storage for uploaded documents."
+    ],
+    "openQuestions": [
+      "Should we support handwriting recognition in v1?",
+      "Should we offer a free tier with limited documents per month?"
+    ],
+    "ownerDecisionRequiredBeforeProductSpec": true
+  }
+}

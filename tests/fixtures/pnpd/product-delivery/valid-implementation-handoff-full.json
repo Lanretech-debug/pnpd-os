@@ -1,0 +1,120 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.productDelivery",
+  "artifactId": "handoff-full-0001",
+  "artifactType": "implementationHandoff",
+  "phase": "owner_approved",
+  "createdAt": "2099-04-15T00:00:00.000Z",
+  "createdBy": "owner-example",
+  "repo": "example-saas",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "codexIsOwner": false,
+    "advisoryOnly": true
+  },
+  "evidence": {
+    "evidenceSummary": "Full implementation handoff for the document processing pipeline.",
+    "evidenceLabels": {
+      "knownFacts": [
+        "Architecture Spec approved.",
+        "Test Plan defines 15 unit tests and 3 E2E tests.",
+        "All dependencies are pinned to known-safe versions."
+      ],
+      "assumptions": [
+        "The OCR vendor API key is available in the secrets manager.",
+        "The staging environment matches the architecture spec."
+      ],
+      "unknowns": [
+        "Performance under 10,000 concurrent uploads not yet tested."
+      ],
+      "researchNeeded": [],
+      "ownerDecisions": [
+        "Approved Architecture Spec.",
+        "Approved Test Plan.",
+        "Authorised implementation handoff."
+      ]
+    },
+    "sourceArtifacts": [
+      "product-delivery/prd-full-0001",
+      "product-delivery/product-spec-minimal-0001",
+      "product-delivery/arch-spec-minimal-0001"
+    ],
+    "riskNotes": [
+      "OCR vendor API has a 99.5% SLA; plan for degraded mode if SLA is breached."
+    ]
+  },
+  "implementationHandoff": {
+    "branchName": "deepseek/feat-document-processing-pipeline",
+    "taskScope": "Implement the full document processing pipeline including upload, OCR extraction, field mapping, and CSV export.",
+    "allowedFiles": [
+      "src/routes/upload.ts",
+      "src/routes/extract.ts",
+      "src/routes/export.ts",
+      "src/components/UploadZone.tsx",
+      "src/components/ReviewTable.tsx",
+      "src/services/ocr.ts",
+      "src/services/export-csv.ts",
+      "tests/upload.test.ts",
+      "tests/extract.test.ts",
+      "tests/export.test.ts"
+    ],
+    "forbiddenFiles": [
+      "package.json",
+      "package-lock.json",
+      ".github/workflows/pnpd-ci.yml",
+      ".gitignore",
+      "scripts/",
+      ".pnpd/",
+      "README.md",
+      "docs/"
+    ],
+    "implementationSteps": [
+      "Create POST /api/documents/upload route with file validation.",
+      "Build UploadZone React component with drag-and-drop and progress indicator.",
+      "Implement OCR service wrapper with retry and timeout logic.",
+      "Create POST /api/documents/extract endpoint that triggers OCR.",
+      "Build ReviewTable component for confirming and correcting extracted fields.",
+      "Implement CSV export service and GET /api/documents/export endpoint.",
+      "Add unit tests for upload, extract, and export routes.",
+      "Add E2E test for the happy-path upload-to-export flow."
+    ],
+    "acceptanceCriteria": [
+      "Upload accepts PDF and PNG files up to 10MB.",
+      "Extraction completes within 30 seconds for documents under 5 pages.",
+      "CSV export includes all extracted fields with correct types.",
+      "All unit and E2E tests pass.",
+      "Security scans report no high or critical findings."
+    ],
+    "gatesToRun": [
+      "npm run validate",
+      "npm test",
+      "npm run dry-run",
+      "npm run lint"
+    ],
+    "expectedVerdict": "DEEPSEEK_PHASE_DOCUMENT_PIPELINE_COMMITTED_AMBER_NOT_CODEX_AUDITED",
+    "securityScans": [
+      "No secrets in committed files.",
+      "File upload size and type validation in place.",
+      "CSV injection prevention."
+    ],
+    "cleanupRequired": [
+      "rm -rf .pnpd/runtime-readiness",
+      "rm -rf .pnpd/ledger",
+      "rm -rf .pnpd/handoffs",
+      "rm -rf .pnpd/locks"
+    ],
+    "noPushUnlessAuthorized": true,
+    "noMergeUnlessAuthorized": true,
+    "noDeployUnlessAuthorized": true,
+    "ownerAuthorizationRequired": true,
+    "codexAuditRequired": true
+  }
+}
