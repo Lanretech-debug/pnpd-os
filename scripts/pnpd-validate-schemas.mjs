@@ -136,11 +136,11 @@ function parseArgs(argv) {
         throw new Error("--research-discovery-artifact is a standalone validator and cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, or 1m).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, or 1n).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", or "1m".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", or "1n".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -181,7 +181,7 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
 
@@ -192,6 +192,7 @@ Options:
   --phase 1f  Validate PNPD dispatch readiness fixtures (explicit-only, not included in default).
   --phase 1h  Validate PNPD runtime readiness schema and fixtures (explicit-only, not included in default).
   --phase 1m  Validate Research Discovery schema and fixtures (explicit-only, not included in default).
+  --phase 1n  Validate Product Delivery schema and fixtures (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
@@ -3217,6 +3218,751 @@ function validateRuntimeReadinessReportFile(reportPathArg) {
   process.exit(exitCode);
 }
 
+// ── Phase 1N: Product Delivery Validation ───────────────────────────────────────
+
+const PD_SCHEMA_PATH = ".pnpd/product-delivery.schema.json";
+const PD_FIXTURE_DIR = "tests/fixtures/pnpd/product-delivery";
+
+const PD_ARTIFACT_TYPES = new Set([
+  "prd",
+  "productSpec",
+  "architectureSpec",
+  "implementationHandoff",
+]);
+
+const PD_PHASES = new Set([
+  "draft",
+  "under_review",
+  "owner_approved",
+  "parked",
+  "rejected",
+]);
+
+const PD_POSITIVE_FIXTURES = new Set([
+  "valid-prd-minimal.json",
+  "valid-prd-full.json",
+  "valid-product-spec-minimal.json",
+  "valid-architecture-spec-minimal.json",
+  "valid-implementation-handoff-minimal.json",
+  "valid-implementation-handoff-full.json",
+]);
+
+const PD_NEGATIVE_FIXTURES = new Set([
+  "invalid-prd-authorizes-implementation.json",
+  "invalid-prd-missing-non-goals.json",
+  "invalid-prd-codex-is-owner.json",
+  "invalid-product-spec-missing-out-of-scope.json",
+  "invalid-product-spec-missing-acceptance-criteria.json",
+  "invalid-architecture-authorizes-deployment.json",
+  "invalid-architecture-missing-security-boundaries.json",
+  "invalid-handoff-allows-push.json",
+  "invalid-handoff-allows-merge.json",
+  "invalid-handoff-empty-forbidden-files.json",
+]);
+
+const PD_TYPE_SPECIFIC_MAP = {
+  prd: "prd",
+  productSpec: "productSpec",
+  architectureSpec: "architectureSpec",
+  implementationHandoff: "implementationHandoff",
+};
+
+const FORBIDDEN_PD_FIELDS = new Set([
+  "approvedForImplementation",
+  "implementationApproved",
+  "mergeApproved",
+  "dispatchApproved",
+  "deploymentApproved",
+  "productionReady",
+  "productionCertified",
+  "releaseApproved",
+  "executeDispatch",
+  "autoDispatch",
+  "deployNow",
+  "releaseNow",
+  "mergeNow",
+  "ownerBypassed",
+  "codexBypassed",
+  "agentBridgeApproved",
+  "agentBridgeApproves",
+  "codexAuthorizesMerge",
+  "githubMutationEnabled",
+  "apiMutationEnabled",
+  "secretsEnabled",
+  "unsafeAutonomyEnabled",
+]);
+
+const UNSAFE_PD_CLAIM_PATTERNS = [
+  "authorizes implementation",
+  "codex is the owner",
+  "agentbridge approves merge",
+  "agentbridge approves",
+  "ready for production",
+  "deployment approved",
+  "dispatch approved",
+  "github mutation enabled",
+  "skip owner approval",
+  "skip codex audit",
+  "merge now",
+  "release now",
+  "production certified",
+  "bypass owner",
+  "bypass codex",
+];
+
+// ── Phase 1N helper functions ───────────────────────────────────────────────────
+
+function scanForbiddenPDFields(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanForbiddenPDFields(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (FORBIDDEN_PD_FIELDS.has(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanForbiddenPDFields(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function scanPDUnsafeClaims(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanPDUnsafeClaims(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === "string") {
+      const lower = value.toLowerCase();
+      for (const pattern of UNSAFE_PD_CLAIM_PATTERNS) {
+        if (lower.includes(pattern)) {
+          findings.push(currentPath + "." + key + " (\"" + pattern + "\")");
+        }
+      }
+    }
+    if (value && typeof value === "object") {
+      scanPDUnsafeClaims(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function scanPDFixtureSecurity(rawContent) {
+  const findings = [];
+  if (SECRET_VALUE_PATTERN.test(rawContent)) {
+    findings.push("secret-like value detected");
+  }
+  for (const frag of FORBIDDEN_PATH_FRAGMENTS) {
+    if (rawContent.includes(frag)) {
+      findings.push("forbidden path fragment: " + frag);
+    }
+  }
+  if (/\/Users\//.test(rawContent) || /\/home\//.test(rawContent) || /\/etc\//.test(rawContent) || /\/var\//.test(rawContent)) {
+    findings.push("real system path detected");
+  }
+  if (/[A-Z]:\\/.test(rawContent)) {
+    findings.push("Windows drive path detected");
+  }
+  if (/\.env/.test(rawContent)) {
+    findings.push(".env reference detected");
+  }
+  if (/https?:\/\/(?!example\.com)[^\s"]+/.test(rawContent)) {
+    findings.push("non-example.com URL detected");
+  }
+  if (/production-ready|production ready|deployment enabled|dispatch enabled|enterprise-grade/.test(rawContent)) {
+    findings.push("premature production/deployment claim");
+  }
+  return findings;
+}
+
+const PD_SAFE_SECRET_LIKE_KEYS = new Set([
+  "ownerAuthorizationRequired",
+]);
+
+function scanPDFixtureSecretKeys(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanPDFixtureSecretKeys(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (SECRET_KEY_PATTERN.test(key) && !PD_SAFE_SECRET_LIKE_KEYS.has(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanPDFixtureSecretKeys(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+// ── Positive fixture validation ─────────────────────────────────────────────────
+
+function checkPDPositiveFixture(fixture) {
+  const failures = [];
+
+  if (fixture.schemaVersion !== "1.0.0") failures.push("schemaVersion must be 1.0.0");
+  if (fixture.recordType !== "pnpd.productDelivery") failures.push("recordType must be pnpd.productDelivery");
+
+  if (!fixture.artifactId || typeof fixture.artifactId !== "string" || fixture.artifactId.length === 0)
+    failures.push("artifactId missing or empty");
+  if (!fixture.artifactType || !PD_ARTIFACT_TYPES.has(fixture.artifactType))
+    failures.push("artifactType missing or invalid");
+  if (!fixture.phase || !PD_PHASES.has(fixture.phase))
+    failures.push("phase missing or invalid");
+  if (!fixture.createdAt || typeof fixture.createdAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(fixture.createdAt))
+    failures.push("createdAt missing or invalid format");
+  if (!fixture.createdBy || typeof fixture.createdBy !== "string" || fixture.createdBy.length === 0)
+    failures.push("createdBy missing or empty");
+  if (!fixture.repo || typeof fixture.repo !== "string" || fixture.repo.length === 0)
+    failures.push("repo missing or empty");
+
+  const g = fixture.governance;
+  if (!g) {
+    failures.push("governance missing");
+  } else {
+    if (g.authorizesImplementation !== false) failures.push("governance.authorizesImplementation must be false");
+    if (g.authorizesMerge !== false) failures.push("governance.authorizesMerge must be false");
+    if (g.authorizesDispatch !== false) failures.push("governance.authorizesDispatch must be false");
+    if (g.authorizesDeployment !== false) failures.push("governance.authorizesDeployment must be false");
+    if (g.authorizesGitHubMutation !== false) failures.push("governance.authorizesGitHubMutation must be false");
+    if (g.authorizesApiMutation !== false) failures.push("governance.authorizesApiMutation must be false");
+    if (g.certifiesProductionReadiness !== false) failures.push("governance.certifiesProductionReadiness must be false");
+    if (g.ownerFinalAuthority !== true) failures.push("governance.ownerFinalAuthority must be true");
+    if (g.codexAuditRequiredBeforeMerge !== true) failures.push("governance.codexAuditRequiredBeforeMerge must be true");
+    if (g.codexIsOwner !== false) failures.push("governance.codexIsOwner must be false");
+    if (g.advisoryOnly !== true) failures.push("governance.advisoryOnly must be true");
+  }
+
+  const e = fixture.evidence;
+  if (!e) {
+    failures.push("evidence missing");
+  } else {
+    if (!e.evidenceSummary || typeof e.evidenceSummary !== "string" || e.evidenceSummary.length === 0)
+      failures.push("evidence.evidenceSummary missing or empty");
+    const labels = e.evidenceLabels;
+    if (!labels || typeof labels !== "object") {
+      failures.push("evidence.evidenceLabels missing");
+    } else {
+      if (!Array.isArray(labels.knownFacts)) failures.push("evidence.evidenceLabels.knownFacts missing or not an array");
+      if (!Array.isArray(labels.assumptions)) failures.push("evidence.evidenceLabels.assumptions missing or not an array");
+      if (!Array.isArray(labels.unknowns)) failures.push("evidence.evidenceLabels.unknowns missing or not an array");
+      if (!Array.isArray(labels.researchNeeded)) failures.push("evidence.evidenceLabels.researchNeeded missing or not an array");
+      if (!Array.isArray(labels.ownerDecisions)) failures.push("evidence.evidenceLabels.ownerDecisions missing or not an array");
+    }
+  }
+
+  if (fixture.sourceArtifacts !== undefined) {
+    if (!Array.isArray(fixture.sourceArtifacts) || fixture.sourceArtifacts.some(s => typeof s !== "string" || s.length === 0))
+      failures.push("sourceArtifacts must be an array of non-empty strings");
+  }
+
+  if (fixture.riskNotes !== undefined) {
+    if (!Array.isArray(fixture.riskNotes) || fixture.riskNotes.some(r => typeof r !== "string"))
+      failures.push("riskNotes must be an array of strings");
+  }
+
+  const artifactType = fixture.artifactType;
+  const expectedKey = PD_TYPE_SPECIFIC_MAP[artifactType];
+  if (!expectedKey) {
+    failures.push("unknown artifactType: " + artifactType);
+  } else {
+    const tsObj = fixture[expectedKey];
+    if (!tsObj || typeof tsObj !== "object") {
+      failures.push(expectedKey + " missing or not an object");
+    } else {
+      for (const [at, mappedKey] of Object.entries(PD_TYPE_SPECIFIC_MAP)) {
+        if (at !== artifactType && fixture[mappedKey] !== undefined) {
+          failures.push("extraneous type-specific object: " + mappedKey + " (artifactType is " + artifactType + ")");
+        }
+      }
+
+      switch (artifactType) {
+        case "prd":
+          if (!tsObj.productName || typeof tsObj.productName !== "string" || tsObj.productName.length === 0)
+            failures.push("prd.productName missing or empty");
+          if (!tsObj.problemStatement || typeof tsObj.problemStatement !== "string" || tsObj.problemStatement.length === 0)
+            failures.push("prd.problemStatement missing or empty");
+          if (!Array.isArray(tsObj.targetUsers) || tsObj.targetUsers.length === 0)
+            failures.push("prd.targetUsers missing or empty array");
+          if (!Array.isArray(tsObj.goals) || tsObj.goals.length === 0)
+            failures.push("prd.goals missing or empty array");
+          if (!Array.isArray(tsObj.nonGoals) || tsObj.nonGoals.length === 0)
+            failures.push("prd.nonGoals missing or empty array");
+          if (!Array.isArray(tsObj.successCriteria) || tsObj.successCriteria.length === 0)
+            failures.push("prd.successCriteria missing or empty array");
+          if (tsObj.ownerDecisionRequiredBeforeProductSpec !== true)
+            failures.push("prd.ownerDecisionRequiredBeforeProductSpec must be true");
+          break;
+        case "productSpec":
+          if (!Array.isArray(tsObj.features) || tsObj.features.length === 0)
+            failures.push("productSpec.features missing or empty array");
+          if (!Array.isArray(tsObj.userStories) || tsObj.userStories.length === 0)
+            failures.push("productSpec.userStories missing or empty array");
+          if (!Array.isArray(tsObj.acceptanceCriteria) || tsObj.acceptanceCriteria.length === 0)
+            failures.push("productSpec.acceptanceCriteria missing or empty array");
+          if (!Array.isArray(tsObj.outOfScopeBehaviors) || tsObj.outOfScopeBehaviors.length === 0)
+            failures.push("productSpec.outOfScopeBehaviors missing or empty array");
+          if (tsObj.ownerDecisionRequiredBeforeImplementation !== true)
+            failures.push("productSpec.ownerDecisionRequiredBeforeImplementation must be true");
+          break;
+        case "architectureSpec":
+          if (!tsObj.overview || typeof tsObj.overview !== "string" || tsObj.overview.length === 0)
+            failures.push("architectureSpec.overview missing or empty");
+          if (!Array.isArray(tsObj.components) || tsObj.components.length === 0)
+            failures.push("architectureSpec.components missing or empty array");
+          if (!Array.isArray(tsObj.dataModel) || tsObj.dataModel.length === 0)
+            failures.push("architectureSpec.dataModel missing or empty array");
+          if (!Array.isArray(tsObj.securityBoundaries) || tsObj.securityBoundaries.length === 0)
+            failures.push("architectureSpec.securityBoundaries missing or empty array");
+          if (tsObj.ownerDecisionRequiredBeforeImplementation !== true)
+            failures.push("architectureSpec.ownerDecisionRequiredBeforeImplementation must be true");
+          break;
+        case "implementationHandoff":
+          if (!tsObj.branchName || typeof tsObj.branchName !== "string" || !/^[a-zA-Z0-9/._-]+$/.test(tsObj.branchName))
+            failures.push("implementationHandoff.branchName missing or invalid pattern");
+          if (!tsObj.taskScope || typeof tsObj.taskScope !== "string" || tsObj.taskScope.length === 0)
+            failures.push("implementationHandoff.taskScope missing or empty");
+          if (!Array.isArray(tsObj.allowedFiles) || tsObj.allowedFiles.length === 0)
+            failures.push("implementationHandoff.allowedFiles missing or empty array");
+          if (!Array.isArray(tsObj.forbiddenFiles) || tsObj.forbiddenFiles.length === 0)
+            failures.push("implementationHandoff.forbiddenFiles missing or empty array");
+          if (!Array.isArray(tsObj.implementationSteps) || tsObj.implementationSteps.length === 0)
+            failures.push("implementationHandoff.implementationSteps missing or empty array");
+          if (!Array.isArray(tsObj.gatesToRun) || tsObj.gatesToRun.length === 0)
+            failures.push("implementationHandoff.gatesToRun missing or empty array");
+          if (tsObj.noPushUnlessAuthorized !== true)
+            failures.push("implementationHandoff.noPushUnlessAuthorized must be true");
+          if (tsObj.noMergeUnlessAuthorized !== true)
+            failures.push("implementationHandoff.noMergeUnlessAuthorized must be true");
+          if (tsObj.noDeployUnlessAuthorized !== true)
+            failures.push("implementationHandoff.noDeployUnlessAuthorized must be true");
+          if (tsObj.ownerAuthorizationRequired !== true)
+            failures.push("implementationHandoff.ownerAuthorizationRequired must be true");
+          if (tsObj.codexAuditRequired !== true)
+            failures.push("implementationHandoff.codexAuditRequired must be true");
+          break;
+      }
+    }
+  }
+
+  return failures;
+}
+
+// ── Negative fixture detection ──────────────────────────────────────────────────
+
+function detectPDNegativeFailure(fixture, filename) {
+  const reasons = [];
+
+  switch (filename) {
+    case "invalid-prd-authorizes-implementation.json":
+      if (fixture.governance && fixture.governance.authorizesImplementation === true)
+        reasons.push("governance.authorizesImplementation is true");
+      break;
+    case "invalid-prd-missing-non-goals.json":
+      if (!fixture.prd || !Array.isArray(fixture.prd.nonGoals) || fixture.prd.nonGoals.length === 0)
+        reasons.push("prd.nonGoals missing or empty");
+      break;
+    case "invalid-prd-codex-is-owner.json":
+      if (fixture.governance && fixture.governance.codexIsOwner === true)
+        reasons.push("governance.codexIsOwner is true");
+      break;
+    case "invalid-product-spec-missing-out-of-scope.json":
+      if (!fixture.productSpec || !Array.isArray(fixture.productSpec.outOfScopeBehaviors) || fixture.productSpec.outOfScopeBehaviors.length === 0)
+        reasons.push("productSpec.outOfScopeBehaviors missing or empty");
+      break;
+    case "invalid-product-spec-missing-acceptance-criteria.json":
+      if (!fixture.productSpec || !Array.isArray(fixture.productSpec.acceptanceCriteria) || fixture.productSpec.acceptanceCriteria.length === 0)
+        reasons.push("productSpec.acceptanceCriteria missing or empty");
+      break;
+    case "invalid-architecture-authorizes-deployment.json":
+      if (fixture.governance && fixture.governance.authorizesDeployment === true)
+        reasons.push("governance.authorizesDeployment is true");
+      break;
+    case "invalid-architecture-missing-security-boundaries.json":
+      if (!fixture.architectureSpec || !Array.isArray(fixture.architectureSpec.securityBoundaries) || fixture.architectureSpec.securityBoundaries.length === 0)
+        reasons.push("architectureSpec.securityBoundaries missing or empty");
+      break;
+    case "invalid-handoff-allows-push.json":
+      if (fixture.implementationHandoff && fixture.implementationHandoff.noPushUnlessAuthorized === false)
+        reasons.push("implementationHandoff.noPushUnlessAuthorized is false");
+      break;
+    case "invalid-handoff-allows-merge.json":
+      if (fixture.implementationHandoff && fixture.implementationHandoff.noMergeUnlessAuthorized === false)
+        reasons.push("implementationHandoff.noMergeUnlessAuthorized is false");
+      break;
+    case "invalid-handoff-empty-forbidden-files.json":
+      if (!fixture.implementationHandoff || !Array.isArray(fixture.implementationHandoff.forbiddenFiles) || fixture.implementationHandoff.forbiddenFiles.length === 0)
+        reasons.push("implementationHandoff.forbiddenFiles missing or empty");
+      break;
+  }
+
+  if (reasons.length === 0) {
+    const structFails = checkPDPositiveFixture(fixture);
+    if (structFails.length > 0) {
+      reasons.push("structural failure: " + structFails[0]);
+    }
+  }
+
+  return reasons;
+}
+
+// ── Main Phase 1N validator ─────────────────────────────────────────────────────
+
+function validateProductDeliveryPhase1N() {
+  let exitCode = 0;
+  let positivePassed = 0;
+  let positiveFailed = 0;
+  let negativeInvalid = 0;
+  let negativeUnexpectedPass = 0;
+  let forbiddenFieldPass = true;
+  let unsafeClaimPass = true;
+  let securityPass = true;
+
+  // ── Schema load checks ──
+  let schema;
+  try {
+    const schemaRaw = fs.readFileSync(path.join(ROOT, PD_SCHEMA_PATH), "utf8");
+    schema = JSON.parse(schemaRaw);
+  } catch (e) {
+    console.error("Product Delivery schema load failed: " + e.message);
+    process.exit(2);
+  }
+
+  if (schema.$schema !== "https://json-schema.org/draft/2020-12/schema") {
+    console.error("Schema $schema must be https://json-schema.org/draft/2020-12/schema");
+    process.exit(2);
+  }
+  if (schema.$id !== "pnpd-product-delivery.schema.json") {
+    console.error("Schema $id must be pnpd-product-delivery.schema.json");
+    process.exit(2);
+  }
+  if (schema.title !== "PNPD Product Delivery Artifact Schema") {
+    console.error("Schema title must be 'PNPD Product Delivery Artifact Schema'");
+    process.exit(2);
+  }
+  if (schema.type !== "object") {
+    console.error("Schema top-level type must be object");
+    process.exit(2);
+  }
+  if (schema.additionalProperties !== false) {
+    console.error("Schema top-level additionalProperties must be false");
+    process.exit(2);
+  }
+
+  const props = schema.properties || {};
+  if (!props.recordType || props.recordType.const !== "pnpd.productDelivery") {
+    console.error("Schema recordType const must be pnpd.productDelivery");
+    process.exit(2);
+  }
+  if (!props.schemaVersion || props.schemaVersion.const !== "1.0.0") {
+    console.error("Schema schemaVersion const must be 1.0.0");
+    process.exit(2);
+  }
+
+  const atEnum = props.artifactType && props.artifactType.enum;
+  if (!atEnum || !Array.isArray(atEnum)) {
+    console.error("Schema artifactType must have an enum");
+    process.exit(2);
+  }
+  for (const at of PD_ARTIFACT_TYPES) {
+    if (!atEnum.includes(at)) {
+      console.error("Schema artifactType enum missing: " + at);
+      process.exit(2);
+    }
+  }
+
+  // Check root properties exist
+  const expectedRootProps = ["schemaVersion", "recordType", "artifactType", "artifactId", "createdAt", "createdBy", "phase", "repo", "governance", "evidence", "prd", "productSpec", "architectureSpec", "implementationHandoff"];
+  for (const rp of expectedRootProps) {
+    if (!props[rp]) {
+      console.error("Schema properties missing: " + rp);
+      process.exit(2);
+    }
+  }
+
+  if (!Array.isArray(schema.oneOf) || schema.oneOf.length !== 4) {
+    console.error("Schema oneOf must have exactly 4 branches");
+    process.exit(2);
+  }
+
+  // $defs checks
+  const defs = schema.$defs || {};
+  if (!defs.governance) { console.error("Schema $defs.governance missing"); process.exit(2); }
+  if (!defs.evidence) { console.error("Schema $defs.evidence missing"); process.exit(2); }
+  if (!defs.prd) { console.error("Schema $defs.prd missing"); process.exit(2); }
+  if (!defs.productSpec) { console.error("Schema $defs.productSpec missing"); process.exit(2); }
+  if (!defs.architectureSpec) { console.error("Schema $defs.architectureSpec missing"); process.exit(2); }
+  if (!defs.implementationHandoff) { console.error("Schema $defs.implementationHandoff missing"); process.exit(2); }
+
+  // Governance schema validation
+  const gov = defs.governance;
+  if (gov.additionalProperties !== false) {
+    console.error("Schema $defs.governance additionalProperties must be false");
+    process.exit(2);
+  }
+  const gProps = gov.properties;
+  if (gProps) {
+    const consts = {
+      authorizesImplementation: false,
+      authorizesMerge: false,
+      authorizesDispatch: false,
+      authorizesDeployment: false,
+      authorizesGitHubMutation: false,
+      authorizesApiMutation: false,
+      certifiesProductionReadiness: false,
+      ownerFinalAuthority: true,
+      codexAuditRequiredBeforeMerge: true,
+      codexIsOwner: false,
+      advisoryOnly: true,
+    };
+    for (const [key, expected] of Object.entries(consts)) {
+      if (!gProps[key] || gProps[key].const !== expected) {
+        console.error("Schema governance." + key + " const must be " + expected);
+        process.exit(2);
+      }
+    }
+  }
+
+  // Evidence schema validation
+  const ev = defs.evidence;
+  if (!ev) { console.error("Schema $defs.evidence missing"); process.exit(2); }
+  if (ev.additionalProperties !== false) {
+    console.error("Schema $defs.evidence additionalProperties must be false");
+    process.exit(2);
+  }
+  const evProps = ev.properties || {};
+  if (!evProps.evidenceSummary) { console.error("Schema evidence.evidenceSummary missing"); process.exit(2); }
+  if (!evProps.evidenceLabels) { console.error("Schema evidence.evidenceLabels missing"); process.exit(2); }
+  const labelsDef = evProps.evidenceLabels;
+  if (labelsDef && labelsDef.properties) {
+    if (!labelsDef.properties.knownFacts) { console.error("Schema evidenceLabels.knownFacts missing"); process.exit(2); }
+    if (!labelsDef.properties.assumptions) { console.error("Schema evidenceLabels.assumptions missing"); process.exit(2); }
+    if (!labelsDef.properties.unknowns) { console.error("Schema evidenceLabels.unknowns missing"); process.exit(2); }
+    if (!labelsDef.properties.researchNeeded) { console.error("Schema evidenceLabels.researchNeeded missing"); process.exit(2); }
+    if (!labelsDef.properties.ownerDecisions) { console.error("Schema evidenceLabels.ownerDecisions missing"); process.exit(2); }
+  }
+
+  // Type-specific schema validation
+  const prdDef = defs.prd;
+  if (prdDef.additionalProperties !== false) { console.error("Schema $defs.prd additionalProperties must be false"); process.exit(2); }
+  const prdProps = prdDef.properties || {};
+  if (!prdProps.productName) { console.error("Schema prd.productName missing"); process.exit(2); }
+  if (!prdProps.problemStatement) { console.error("Schema prd.problemStatement missing"); process.exit(2); }
+  if (!prdProps.targetUsers) { console.error("Schema prd.targetUsers missing"); process.exit(2); }
+  if (!prdProps.goals) { console.error("Schema prd.goals missing"); process.exit(2); }
+  if (!prdProps.nonGoals) { console.error("Schema prd.nonGoals missing"); process.exit(2); }
+  if (!prdProps.successCriteria) { console.error("Schema prd.successCriteria missing"); process.exit(2); }
+  if (!prdProps.ownerDecisionRequiredBeforeProductSpec || prdProps.ownerDecisionRequiredBeforeProductSpec.const !== true) {
+    console.error("Schema prd.ownerDecisionRequiredBeforeProductSpec const must be true"); process.exit(2);
+  }
+  if (!prdProps.nonGoals.minItems || prdProps.nonGoals.minItems < 1) {
+    console.error("Schema prd.nonGoals minItems must be >= 1"); process.exit(2);
+  }
+
+  const psDef = defs.productSpec;
+  if (psDef.additionalProperties !== false) { console.error("Schema $defs.productSpec additionalProperties must be false"); process.exit(2); }
+  const psProps = psDef.properties || {};
+  if (!psProps.features) { console.error("Schema productSpec.features missing"); process.exit(2); }
+  if (!psProps.userStories) { console.error("Schema productSpec.userStories missing"); process.exit(2); }
+  if (!psProps.acceptanceCriteria) { console.error("Schema productSpec.acceptanceCriteria missing"); process.exit(2); }
+  if (!psProps.outOfScopeBehaviors) { console.error("Schema productSpec.outOfScopeBehaviors missing"); process.exit(2); }
+  if (!psProps.ownerDecisionRequiredBeforeImplementation || psProps.ownerDecisionRequiredBeforeImplementation.const !== true) {
+    console.error("Schema productSpec.ownerDecisionRequiredBeforeImplementation const must be true"); process.exit(2);
+  }
+  if (!psProps.acceptanceCriteria.minItems || psProps.acceptanceCriteria.minItems < 1) {
+    console.error("Schema productSpec.acceptanceCriteria minItems must be >= 1"); process.exit(2);
+  }
+  if (!psProps.outOfScopeBehaviors.minItems || psProps.outOfScopeBehaviors.minItems < 1) {
+    console.error("Schema productSpec.outOfScopeBehaviors minItems must be >= 1"); process.exit(2);
+  }
+
+  const asDef = defs.architectureSpec;
+  if (asDef.additionalProperties !== false) { console.error("Schema $defs.architectureSpec additionalProperties must be false"); process.exit(2); }
+  const asProps = asDef.properties || {};
+  if (!asProps.overview) { console.error("Schema architectureSpec.overview missing"); process.exit(2); }
+  if (!asProps.components) { console.error("Schema architectureSpec.components missing"); process.exit(2); }
+  if (!asProps.dataModel) { console.error("Schema architectureSpec.dataModel missing"); process.exit(2); }
+  if (!asProps.securityBoundaries) { console.error("Schema architectureSpec.securityBoundaries missing"); process.exit(2); }
+  if (!asProps.ownerDecisionRequiredBeforeImplementation || asProps.ownerDecisionRequiredBeforeImplementation.const !== true) {
+    console.error("Schema architectureSpec.ownerDecisionRequiredBeforeImplementation const must be true"); process.exit(2);
+  }
+  if (!asProps.securityBoundaries.minItems || asProps.securityBoundaries.minItems < 1) {
+    console.error("Schema architectureSpec.securityBoundaries minItems must be >= 1"); process.exit(2);
+  }
+
+  const ihDef = defs.implementationHandoff;
+  if (ihDef.additionalProperties !== false) { console.error("Schema $defs.implementationHandoff additionalProperties must be false"); process.exit(2); }
+  const ihProps = ihDef.properties || {};
+  if (!ihProps.branchName) { console.error("Schema implementationHandoff.branchName missing"); process.exit(2); }
+  if (!ihProps.taskScope) { console.error("Schema implementationHandoff.taskScope missing"); process.exit(2); }
+  if (!ihProps.allowedFiles) { console.error("Schema implementationHandoff.allowedFiles missing"); process.exit(2); }
+  if (!ihProps.forbiddenFiles) { console.error("Schema implementationHandoff.forbiddenFiles missing"); process.exit(2); }
+  if (!ihProps.implementationSteps) { console.error("Schema implementationHandoff.implementationSteps missing"); process.exit(2); }
+  if (!ihProps.gatesToRun) { console.error("Schema implementationHandoff.gatesToRun missing"); process.exit(2); }
+  if (!ihProps.noPushUnlessAuthorized || ihProps.noPushUnlessAuthorized.const !== true) {
+    console.error("Schema implementationHandoff.noPushUnlessAuthorized const must be true"); process.exit(2);
+  }
+  if (!ihProps.noMergeUnlessAuthorized || ihProps.noMergeUnlessAuthorized.const !== true) {
+    console.error("Schema implementationHandoff.noMergeUnlessAuthorized const must be true"); process.exit(2);
+  }
+  if (!ihProps.noDeployUnlessAuthorized || ihProps.noDeployUnlessAuthorized.const !== true) {
+    console.error("Schema implementationHandoff.noDeployUnlessAuthorized const must be true"); process.exit(2);
+  }
+  if (!ihProps.ownerAuthorizationRequired || ihProps.ownerAuthorizationRequired.const !== true) {
+    console.error("Schema implementationHandoff.ownerAuthorizationRequired const must be true"); process.exit(2);
+  }
+  if (!ihProps.codexAuditRequired || ihProps.codexAuditRequired.const !== true) {
+    console.error("Schema implementationHandoff.codexAuditRequired const must be true"); process.exit(2);
+  }
+  if (!ihProps.branchName.pattern || ihProps.branchName.pattern !== "^[a-zA-Z0-9/._-]+$") {
+    console.error("Schema implementationHandoff.branchName pattern must be ^[a-zA-Z0-9/._-]+$"); process.exit(2);
+  }
+  if (!ihProps.allowedFiles.minItems || ihProps.allowedFiles.minItems < 1) {
+    console.error("Schema implementationHandoff.allowedFiles minItems must be >= 1"); process.exit(2);
+  }
+  if (!ihProps.forbiddenFiles.minItems || ihProps.forbiddenFiles.minItems < 1) {
+    console.error("Schema implementationHandoff.forbiddenFiles minItems must be >= 1"); process.exit(2);
+  }
+  if (!ihProps.gatesToRun.minItems || ihProps.gatesToRun.minItems < 1) {
+    console.error("Schema implementationHandoff.gatesToRun minItems must be >= 1"); process.exit(2);
+  }
+
+  // ── Fixture discovery ──
+  const fixturesDir = path.join(ROOT, PD_FIXTURE_DIR);
+  let fixtureFiles;
+  try {
+    fixtureFiles = fs.readdirSync(fixturesDir).filter(f => f.endsWith(".json")).sort();
+  } catch (e) {
+    console.error("Product Delivery fixture directory not readable: " + e.message);
+    process.exit(2);
+  }
+
+  if (fixtureFiles.length !== 16) {
+    console.error("Expected exactly 16 product delivery fixture files, found: " + fixtureFiles.length);
+    process.exit(1);
+  }
+
+  const allExpected = new Set([...PD_POSITIVE_FIXTURES, ...PD_NEGATIVE_FIXTURES]);
+  for (const f of allExpected) {
+    if (!fixtureFiles.includes(f)) {
+      console.error("Missing expected fixture: " + f);
+      process.exit(1);
+    }
+  }
+
+  // ── Process each fixture ──
+  console.log("PNPD Product Delivery Validation");
+  console.log("Schema: " + PD_SCHEMA_PATH);
+  console.log("Fixtures: " + PD_FIXTURE_DIR);
+  console.log("");
+
+  for (const filename of fixtureFiles) {
+    const filePath = path.join(fixturesDir, filename);
+    let rawContent;
+    let fixture;
+
+    try {
+      rawContent = fs.readFileSync(filePath, "utf8");
+      fixture = JSON.parse(rawContent);
+    } catch (e) {
+      console.log("[FAIL] " + filename + " — JSON parse error: " + e.message);
+      if (filename.startsWith("valid-")) {
+        positiveFailed++;
+      }
+      exitCode = 1;
+      continue;
+    }
+
+    // ── Security/fake-data scan (all fixtures) ──
+    const secFindings = scanPDFixtureSecurity(rawContent);
+    const keyFindings = scanPDFixtureSecretKeys(fixture, "$", []);
+    const allSecFindings = [...secFindings, ...keyFindings.map(k => "secret-like key: " + k)];
+    if (allSecFindings.length > 0) {
+      console.log("[FAIL] " + filename + " — SECURITY/FAKE-DATA VIOLATION: " + allSecFindings.join("; "));
+      securityPass = false;
+      exitCode = 1;
+      continue;
+    }
+
+    if (filename.startsWith("valid-")) {
+      // ── Positive fixture validation ──
+      const structFails = checkPDPositiveFixture(fixture);
+
+      const forbiddenFields = [];
+      scanForbiddenPDFields(fixture, "$", forbiddenFields);
+
+      const unsafeClaims = [];
+      scanPDUnsafeClaims(fixture, "$", unsafeClaims);
+
+      const allFailures = [];
+      if (structFails.length > 0) allFailures.push(structFails.join("; "));
+      if (forbiddenFields.length > 0) {
+        allFailures.push("forbidden field(s): " + forbiddenFields.join(", "));
+        forbiddenFieldPass = false;
+      }
+      if (unsafeClaims.length > 0) {
+        allFailures.push("unsafe claim(s): " + unsafeClaims.join(", "));
+        unsafeClaimPass = false;
+      }
+
+      if (allFailures.length > 0) {
+        console.log("[FAIL] " + filename + " — " + allFailures.join(" | "));
+        positiveFailed++;
+        exitCode = 1;
+      } else {
+        console.log("[PASS] " + filename + " — valid fixture accepted");
+        positivePassed++;
+      }
+    } else if (filename.startsWith("invalid-")) {
+      // ── Negative fixture validation ──
+      const expectedReasons = detectPDNegativeFailure(fixture, filename);
+
+      if (expectedReasons.length > 0) {
+        console.log("[INVALID-as-expected] " + filename + " — " + expectedReasons.join("; "));
+        negativeInvalid++;
+      } else {
+        const structFails = checkPDPositiveFixture(fixture);
+        if (structFails.length > 0) {
+          console.log("[INVALID-as-expected] " + filename + " — structural failure: " + structFails[0]);
+          negativeInvalid++;
+        } else {
+          console.log("[FAIL] " + filename + " — expected INVALID but passed all checks");
+          negativeUnexpectedPass++;
+          exitCode = 1;
+        }
+      }
+
+      // Do NOT scan negative fixtures for forbidden fields or unsafe claims
+    }
+  }
+
+  // ── Summary ──
+  console.log("");
+  console.log("Product Delivery schema: pass");
+  console.log("Product Delivery positive fixtures: " + positivePassed + " passed, " + positiveFailed + " failed");
+  console.log("Product Delivery negative fixtures: " + negativeInvalid + " invalid as expected, " + negativeUnexpectedPass + " unexpectedly passed");
+  console.log("Product Delivery forbidden-field scan: " + (forbiddenFieldPass ? "pass" : "fail"));
+  console.log("Product Delivery unsafe-claim scan: " + (unsafeClaimPass ? "pass" : "fail"));
+  console.log("Product Delivery fake-data/security scan: " + (securityPass ? "pass" : "fail"));
+
+  if (exitCode === 0) {
+    console.log("Phase 1N Product Delivery validation passed");
+  }
+
+  process.exit(exitCode);
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
@@ -3249,6 +3995,12 @@ try {
 
   if (runPhase1m) {
     validateResearchDiscoveryPhase1M();
+  }
+
+  const runPhase1n = args.phase === "1n";
+
+  if (runPhase1n) {
+    validateProductDeliveryPhase1N();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
