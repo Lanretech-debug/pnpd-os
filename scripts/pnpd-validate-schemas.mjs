@@ -124,13 +124,16 @@ const PHASE_1C_FIXTURES = [
 
 
 function parseArgs(argv) {
-  const args = { phase: null, runtimeReadinessReport: null };
+  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--phase") {
       if (args.runtimeReadinessReport) {
         throw new Error("--runtime-readiness-report is a standalone validator and cannot be combined with --phase.");
+      }
+      if (args.researchDiscoveryArtifact) {
+        throw new Error("--research-discovery-artifact is a standalone validator and cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
         throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, or 1m).");
@@ -156,12 +159,31 @@ function parseArgs(argv) {
       }
       args.runtimeReadinessReport = argv[i + 1];
       i += 1;
+    } else if (arg === "--research-discovery-artifact") {
+      if (args.phase) {
+        throw new Error("--research-discovery-artifact is a standalone validator and cannot be combined with --phase.");
+      }
+      if (args.runtimeReadinessReport) {
+        throw new Error("--research-discovery-artifact is a standalone validator and cannot be combined with --runtime-readiness-report.");
+      }
+      if (!argv[i + 1]) {
+        throw new Error("--research-discovery-artifact requires a file path argument.");
+      }
+      if (args.researchDiscoveryArtifact) {
+        throw new Error("--research-discovery-artifact accepts exactly one file path.");
+      }
+      if (argv[i + 1].startsWith("-")) {
+        throw new Error("--research-discovery-artifact requires a file path argument, got: " + argv[i + 1]);
+      }
+      args.researchDiscoveryArtifact = argv[i + 1];
+      i += 1;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`PNPD Schema Validator
 
 Usage:
   node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
+  node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
 
 Options:
   --phase 0   Validate Phase 0 invariants only.
@@ -171,6 +193,7 @@ Options:
   --phase 1h  Validate PNPD runtime readiness schema and fixtures (explicit-only, not included in default).
   --phase 1m  Validate Research Discovery schema and fixtures (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
+  --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
     } else {
@@ -2694,6 +2717,185 @@ function validateResearchDiscoveryPhase1M() {
   process.exit(exitCode);
 }
 
+// ── Phase 1M-D: Standalone Research Discovery Artifact Validation ────────────────
+
+function resolveRDArtifactPath(pathArg) {
+  if (!pathArg) {
+    throw new Error("--research-discovery-artifact requires a file path argument.");
+  }
+
+  if (path.isAbsolute(pathArg)) {
+    throw new Error("Absolute paths are not allowed. Provide a relative path under the repository root.");
+  }
+
+  if (pathArg.includes("..")) {
+    throw new Error("Path traversal is not allowed.");
+  }
+
+  if (!pathArg.endsWith(".json")) {
+    throw new Error("Artifact file must end with .json.");
+  }
+
+  const resolvedPath = path.resolve(ROOT, pathArg);
+
+  let realPath;
+  try {
+    realPath = fs.realpathSync(resolvedPath);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      throw new Error("Artifact file not found: " + pathArg);
+    }
+    throw new Error("Cannot resolve artifact path: " + e.message);
+  }
+
+  // Containment check: must resolve inside repository root
+  if (!realPath.startsWith(ROOT + path.sep) && realPath !== ROOT) {
+    throw new Error("Artifact file must be inside the repository root. Got: " + pathArg);
+  }
+
+  let stat;
+  try {
+    stat = fs.statSync(realPath);
+  } catch (e) {
+    throw new Error("Cannot stat artifact file: " + e.message);
+  }
+
+  if (!stat.isFile()) {
+    throw new Error("Path must be a regular file, not a directory: " + pathArg);
+  }
+
+  return realPath;
+}
+
+function scanRDArtifactSecurity(rawContent, fixture) {
+  const findings = [];
+
+  // Secret-like value patterns
+  const SECRET_VALUE_EXTENDED = /(sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9_]{12,}|gho_[A-Za-z0-9_]{12,}|github_pat_[A-Za-z0-9_]{12,}|xox[baprs]-[A-Za-z0-9-]{12,}|AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)/;
+  if (SECRET_VALUE_EXTENDED.test(rawContent)) {
+    findings.push("secret-like value detected");
+  }
+
+  // Forbidden path fragments (legacy BricLab)
+  for (const frag of FORBIDDEN_PATH_FRAGMENTS) {
+    if (rawContent.includes(frag)) {
+      findings.push("forbidden path fragment: " + frag);
+    }
+  }
+
+  // Private/local filesystem paths
+  if (/\/Users\//.test(rawContent) || /\/home\//.test(rawContent) || /\/etc\//.test(rawContent) || /\/var\//.test(rawContent)) {
+    findings.push("private/local filesystem path detected");
+  }
+
+  // Windows drive paths
+  if (/[A-Z]:\\/.test(rawContent)) {
+    findings.push("Windows drive path detected");
+  }
+
+  // .env references
+  if (/\.env/.test(rawContent)) {
+    findings.push(".env reference detected");
+  }
+
+  // Premature production/deployment/dispatch/GitHub mutation claims
+  if (/production-ready|production ready|deployment enabled|dispatch enabled|enterprise-grade|production certified|ready for production|deploy to production|github mutation|github write|github api mutation|mutates github/i.test(rawContent)) {
+    findings.push("premature production/deployment/dispatch claim detected");
+  }
+
+  // Secret-like keys scan
+  const secretKeyFindings = [];
+  scanRDArtifactSecretKeys(fixture, "$", secretKeyFindings);
+  for (const skf of secretKeyFindings) {
+    findings.push("secret-like key: " + skf);
+  }
+
+  // Forbidden authority fields scan (reuse existing function)
+  const forbiddenFieldFindings = [];
+  scanForbiddenRDFields(fixture, "$", forbiddenFieldFindings);
+  for (const fff of forbiddenFieldFindings) {
+    findings.push("forbidden field: " + fff);
+  }
+
+  return findings;
+}
+
+function scanRDArtifactSecretKeys(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanRDArtifactSecretKeys(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (SECRET_KEY_PATTERN.test(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanRDArtifactSecretKeys(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function validateResearchDiscoveryArtifact(pathArg) {
+  console.log("PNPD Research Discovery Artifact Validation");
+  console.log("Artifact: " + pathArg);
+  console.log("");
+
+  // 1. Path safety
+  let realPath;
+  try {
+    realPath = resolveRDArtifactPath(pathArg);
+  } catch (e) {
+    console.error("Path safety failure: " + e.message);
+    process.exit(1);
+  }
+
+  // 2. JSON parse
+  let rawContent;
+  let artifact;
+  try {
+    rawContent = fs.readFileSync(realPath, "utf8");
+    artifact = JSON.parse(rawContent);
+    console.log("[PASS] JSON parse");
+  } catch (e) {
+    console.error("JSON parse failure: " + e.message);
+    process.exit(1);
+  }
+
+  // 3. Security scan
+  const secFindings = scanRDArtifactSecurity(rawContent, artifact);
+  if (secFindings.length > 0) {
+    console.error("Security scan failure: " + secFindings.join("; "));
+    process.exit(1);
+  }
+  console.log("[PASS] Security scan");
+
+  // 4. Structural checks
+  const structFails = checkRDPositiveFixture(artifact);
+  if (structFails.length > 0) {
+    console.error("Structural check failure: " + structFails.join("; "));
+    process.exit(1);
+  }
+  console.log("[PASS] Structural checks");
+
+  // 5. Forbidden-field scan
+  const forbiddenFields = [];
+  scanForbiddenRDFields(artifact, "$", forbiddenFields);
+  if (forbiddenFields.length > 0) {
+    console.error("Forbidden-field scan failure: " + forbiddenFields.join(", "));
+    process.exit(1);
+  }
+  console.log("[PASS] Forbidden-field scan");
+
+  // Success
+  console.log("");
+  console.log("Artifact valid: all checks passed.");
+  process.exit(0);
+}
+
 // ── Phase 1J: Runtime Readiness Report File Validation ───────────────────────────
 
 function resolveReportPath(reportPathArg) {
@@ -3024,6 +3226,12 @@ try {
   if (args.runtimeReadinessReport) {
     validateRuntimeReadinessReportFile(args.runtimeReadinessReport);
     // validateRuntimeReadinessReportFile calls process.exit internally
+  }
+
+  // Phase 1M-D: standalone Research Discovery artifact validation
+  if (args.researchDiscoveryArtifact) {
+    validateResearchDiscoveryArtifact(args.researchDiscoveryArtifact);
+    // validateResearchDiscoveryArtifact calls process.exit internally
   }
 
   const runPhase1f = args.phase === "1f";
