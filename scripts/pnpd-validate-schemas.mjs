@@ -124,7 +124,7 @@ const PHASE_1C_FIXTURES = [
 
 
 function parseArgs(argv) {
-  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null };
+  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -134,6 +134,9 @@ function parseArgs(argv) {
       }
       if (args.researchDiscoveryArtifact) {
         throw new Error("--research-discovery-artifact is a standalone validator and cannot be combined with --phase.");
+      }
+      if (args.productDeliveryArtifact) {
+        throw new Error("--product-delivery-artifact is a standalone validator and cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
         throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, or 1n).");
@@ -147,6 +150,9 @@ function parseArgs(argv) {
     } else if (arg === "--runtime-readiness-report") {
       if (args.phase) {
         throw new Error("--runtime-readiness-report is a standalone validator and cannot be combined with --phase.");
+      }
+      if (args.productDeliveryArtifact) {
+        throw new Error("--runtime-readiness-report is a standalone validator and cannot be combined with --product-delivery-artifact.");
       }
       if (!argv[i + 1]) {
         throw new Error("--runtime-readiness-report requires a file path argument.");
@@ -166,6 +172,9 @@ function parseArgs(argv) {
       if (args.runtimeReadinessReport) {
         throw new Error("--research-discovery-artifact is a standalone validator and cannot be combined with --runtime-readiness-report.");
       }
+      if (args.productDeliveryArtifact) {
+        throw new Error("--research-discovery-artifact is a standalone validator and cannot be combined with --product-delivery-artifact.");
+      }
       if (!argv[i + 1]) {
         throw new Error("--research-discovery-artifact requires a file path argument.");
       }
@@ -177,6 +186,27 @@ function parseArgs(argv) {
       }
       args.researchDiscoveryArtifact = argv[i + 1];
       i += 1;
+    } else if (arg === "--product-delivery-artifact") {
+      if (args.phase) {
+        throw new Error("--product-delivery-artifact is a standalone validator and cannot be combined with --phase.");
+      }
+      if (args.runtimeReadinessReport) {
+        throw new Error("--product-delivery-artifact is a standalone validator and cannot be combined with --runtime-readiness-report.");
+      }
+      if (args.researchDiscoveryArtifact) {
+        throw new Error("--product-delivery-artifact is a standalone validator and cannot be combined with --research-discovery-artifact.");
+      }
+      if (!argv[i + 1]) {
+        throw new Error("--product-delivery-artifact requires a file path argument.");
+      }
+      if (args.productDeliveryArtifact) {
+        throw new Error("--product-delivery-artifact accepts exactly one file path.");
+      }
+      if (argv[i + 1].startsWith("-")) {
+        throw new Error("--product-delivery-artifact requires a file path argument, got: " + argv[i + 1]);
+      }
+      args.productDeliveryArtifact = argv[i + 1];
+      i += 1;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`PNPD Schema Validator
 
@@ -184,6 +214,7 @@ Usage:
   node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
+  node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
 
 Options:
   --phase 0   Validate Phase 0 invariants only.
@@ -195,6 +226,7 @@ Options:
   --phase 1n  Validate Product Delivery schema and fixtures (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
+  --product-delivery-artifact <path>  Validate a user-created Product Delivery artifact JSON file.
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
     } else {
@@ -3617,6 +3649,227 @@ function detectPDNegativeFailure(fixture, filename) {
   return reasons;
 }
 
+// ── Phase 1N-E: Product Delivery Artifact Standalone Validation ──────────────────
+
+function resolvePDArtifactPath(pathArg) {
+  if (!pathArg) {
+    throw new Error("--product-delivery-artifact requires a file path argument.");
+  }
+
+  if (path.isAbsolute(pathArg)) {
+    throw new Error("Absolute paths are not allowed. Provide a relative path under the repository root.");
+  }
+
+  if (pathArg.includes("..")) {
+    throw new Error("Path traversal is not allowed.");
+  }
+
+  if (!pathArg.endsWith(".json")) {
+    throw new Error("Artifact file must end with .json.");
+  }
+
+  const resolvedPath = path.resolve(ROOT, pathArg);
+
+  let realPath;
+  try {
+    realPath = fs.realpathSync(resolvedPath);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      throw new Error("Artifact file not found: " + pathArg);
+    }
+    throw new Error("Cannot resolve artifact path: " + e.message);
+  }
+
+  // Containment check: must resolve inside repository root
+  if (!realPath.startsWith(ROOT + path.sep) && realPath !== ROOT) {
+    throw new Error("Artifact file must be inside the repository root. Got: " + pathArg);
+  }
+
+  let stat;
+  try {
+    stat = fs.statSync(realPath);
+  } catch (e) {
+    throw new Error("Cannot stat artifact file: " + e.message);
+  }
+
+  if (!stat.isFile()) {
+    throw new Error("Path must be a regular file, not a directory: " + pathArg);
+  }
+
+  return realPath;
+}
+
+function scanPDArtifactSecurity(rawContent, artifact) {
+  const findings = [];
+
+  // Secret-like value patterns
+  const SECRET_VALUE_EXTENDED = /(sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9_]{12,}|gho_[A-Za-z0-9_]{12,}|github_pat_[A-Za-z0-9_]{12,}|xox[baprs]-[A-Za-z0-9-]{12,}|AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)/;
+  if (SECRET_VALUE_EXTENDED.test(rawContent)) {
+    findings.push("secret-like value detected");
+  }
+
+  // Forbidden path fragments (legacy BricLab)
+  for (const frag of FORBIDDEN_PATH_FRAGMENTS) {
+    if (rawContent.includes(frag)) {
+      findings.push("forbidden path fragment: " + frag);
+    }
+  }
+
+  // Private/local filesystem paths
+  if (/\/Users\//.test(rawContent) || /\/home\//.test(rawContent) || /\/etc\//.test(rawContent) || /\/var\//.test(rawContent)) {
+    findings.push("private/local filesystem path detected");
+  }
+
+  // Windows drive paths
+  if (/[A-Z]:\\/.test(rawContent)) {
+    findings.push("Windows drive path detected");
+  }
+
+  // .env references
+  if (/\.env/.test(rawContent)) {
+    findings.push(".env reference detected");
+  }
+
+  // Premature production/deployment/dispatch/GitHub mutation claims
+  if (/production-ready|production ready|deployment enabled|dispatch enabled|enterprise-grade|production certified|ready for production|deploy to production|github mutation|github write|github api mutation|mutates github/i.test(rawContent)) {
+    findings.push("premature production/deployment/dispatch claim detected");
+  }
+
+  // GitHub/API mutation claims
+  if (/github mutation|github write|github api mutation|api mutation allowed|mutates github/i.test(rawContent)) {
+    findings.push("GitHub/API mutation claim detected");
+  }
+
+  // Deploy/release claims
+  if (/deploy now|release now|deploy to production|production deploy|auto deploy|auto release/i.test(rawContent)) {
+    findings.push("deploy/release claim detected");
+  }
+
+  // Owner/Codex bypass claims
+  if (/owner bypass|codex bypass|owner bypassed|codex bypassed|skip owner|skip codex|owner override|codex override/i.test(rawContent)) {
+    findings.push("Owner/Codex bypass claim detected");
+  }
+
+  // AgentBridge authority claims
+  if (/agentbridge approves|agentbridge authority|agentbridge authorizes|agentbridge merge|agentbridge dispatch/i.test(rawContent)) {
+    findings.push("AgentBridge authority claim detected");
+  }
+
+  return findings;
+}
+
+function scanPDArtifactSecretKeys(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanPDArtifactSecretKeys(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (SECRET_KEY_PATTERN.test(key) && !PD_SAFE_SECRET_LIKE_KEYS.has(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanPDArtifactSecretKeys(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function validateProductDeliveryArtifact(pathArg) {
+  console.log("PNPD Product Delivery Artifact Validation");
+  console.log("Artifact: " + pathArg);
+  console.log("");
+
+  // 1. Path safety
+  let realPath;
+  try {
+    realPath = resolvePDArtifactPath(pathArg);
+  } catch (e) {
+    console.error("Path safety failure: " + e.message);
+    process.exit(1);
+  }
+
+  // 2. JSON parse
+  let rawContent;
+  let artifact;
+  try {
+    rawContent = fs.readFileSync(realPath, "utf8");
+    artifact = JSON.parse(rawContent);
+    console.log("[PASS] JSON parse");
+  } catch (e) {
+    console.error("JSON parse failure: " + e.message);
+    process.exit(1);
+  }
+
+  const allFindings = [];
+  let valid = true;
+
+  // 3. Security scan
+  const secFindings = scanPDArtifactSecurity(rawContent, artifact);
+  if (secFindings.length > 0) {
+    console.error("[FAIL] Security scan: " + secFindings.join("; "));
+    allFindings.push(...secFindings);
+    valid = false;
+  } else {
+    console.log("[PASS] Security scan");
+  }
+
+  // 4. Secret-key scan
+  const secretKeyFindings = [];
+  scanPDArtifactSecretKeys(artifact, "$", secretKeyFindings);
+  if (secretKeyFindings.length > 0) {
+    console.error("[FAIL] Secret-key scan: " + secretKeyFindings.join(", "));
+    allFindings.push(...secretKeyFindings);
+    valid = false;
+  } else {
+    console.log("[PASS] Secret-key scan");
+  }
+
+  // 5. Structural checks
+  const structFails = checkPDPositiveFixture(artifact);
+  if (structFails.length > 0) {
+    console.error("[FAIL] Structural checks: " + structFails.join("; "));
+    allFindings.push(...structFails);
+    valid = false;
+  } else {
+    console.log("[PASS] Structural checks");
+  }
+
+  // 6. Forbidden-field scan
+  const forbiddenFields = [];
+  scanForbiddenPDFields(artifact, "$", forbiddenFields);
+  if (forbiddenFields.length > 0) {
+    console.error("[FAIL] Forbidden-field scan: " + forbiddenFields.join(", "));
+    allFindings.push(...forbiddenFields);
+    valid = false;
+  } else {
+    console.log("[PASS] Forbidden-field scan");
+  }
+
+  // 7. Unsafe-claim scan
+  const unsafeClaims = [];
+  scanPDUnsafeClaims(artifact, "$", unsafeClaims);
+  if (unsafeClaims.length > 0) {
+    console.error("[FAIL] Unsafe-claim scan: " + unsafeClaims.join(", "));
+    allFindings.push(...unsafeClaims);
+    valid = false;
+  } else {
+    console.log("[PASS] Unsafe-claim scan");
+  }
+
+  // Summary
+  console.log("");
+  if (valid) {
+    console.log("Product Delivery artifact valid: all checks passed.");
+    process.exit(0);
+  } else {
+    console.log("Product Delivery artifact invalid: " + allFindings.length + " violation(s).");
+    process.exit(1);
+  }
+}
+
 // ── Main Phase 1N validator ─────────────────────────────────────────────────────
 
 function validateProductDeliveryPhase1N() {
@@ -3978,6 +4231,12 @@ try {
   if (args.researchDiscoveryArtifact) {
     validateResearchDiscoveryArtifact(args.researchDiscoveryArtifact);
     // validateResearchDiscoveryArtifact calls process.exit internally
+  }
+
+  // Phase 1N-E: standalone Product Delivery artifact validation
+  if (args.productDeliveryArtifact) {
+    validateProductDeliveryArtifact(args.productDeliveryArtifact);
+    // validateProductDeliveryArtifact calls process.exit internally
   }
 
   const runPhase1f = args.phase === "1f";
