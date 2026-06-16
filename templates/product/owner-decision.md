@@ -19,7 +19,7 @@ updated_at: ""
 
 ## Purpose
 
-Record a human Owner decision. Every phase gate in PNPD requires an explicit Owner decision before proceeding. This template captures what was decided, what evidence was reviewed, what alternatives were considered, what risk was accepted, and what is authorised next.
+Record a human Owner decision. Every phase gate in PNPD requires an explicit Owner decision before proceeding. This template captures what was decided, what evidence was reviewed, what alternatives were considered, what risk was accepted, and what next phase is approved for planning.
 
 ---
 
@@ -41,7 +41,7 @@ Use this template at every phase gate where the Owner must decide whether to pro
 
 <!-- What decision is being made? One sentence. -->
 
-- [ ] **Proceed** to the next authorised phase.
+- [ ] **Proceed** to the next approved phase.
 - [ ] **Revise** the current artifact before proceeding.
 - [ ] **Park** this work for later.
 - [ ] **Kill** this work permanently.
@@ -86,11 +86,11 @@ Use this template at every phase gate where the Owner must decide whether to pro
 
 ---
 
-## 6. Next Authorised Phase
+## 6. Next Approved Phase
 
-<!-- What phase or action is authorised? Be specific. -->
+<!-- What phase or planning action is approved next? Be specific. This record is not self-executing. -->
 
-**Authorised:**
+**Approved next phase or planning action:**
 
 **Phase gate:** <!-- e.g., Phase 1N-C, Design Spec, Implementation Handoff, Merge -->
 
@@ -100,6 +100,7 @@ Use this template at every phase gate where the Owner must decide whether to pro
 
 <!-- What must NOT happen as a result of this decision? Be explicit. -->
 
+- [ ] No implementation without a separate scoped Implementation Handoff.
 - [ ] No merge without separate Owner authorisation.
 - [ ] No push without separate Owner authorisation.
 - [ ] No dispatch.
@@ -120,4 +121,4 @@ Use this template at every phase gate where the Owner must decide whether to pro
 
 ## Governance Boundary
 
-This artifact records a human decision. It does not authorise implementation, merge, dispatch, deployment, GitHub/API mutation, or production certification beyond what is explicitly listed in Section 6. The Owner remains accountable for the decision and its consequences.
+This artifact records a human decision. It does not authorize implementation, merge, dispatch, deployment, GitHub/API mutation, or production certification. It is not self-executing: any implementation still requires a separate scoped Implementation Handoff, and merge/push still require separate Owner authorisation after Codex audit. The Owner remains accountable for the decision and its consequences.
