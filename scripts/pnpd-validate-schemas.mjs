@@ -2799,7 +2799,7 @@ function scanRDArtifactSecurity(rawContent, fixture) {
   }
 
   // Premature production/deployment/dispatch/GitHub mutation claims
-  if (/production-ready|production ready|deployment enabled|dispatch enabled|enterprise-grade|production certified|ready for production|deploy to production/i.test(rawContent)) {
+  if (/production-ready|production ready|deployment enabled|dispatch enabled|enterprise-grade|production certified|ready for production|deploy to production|github mutation|github write|github api mutation|mutates github/i.test(rawContent)) {
     findings.push("premature production/deployment/dispatch claim detected");
   }
 
