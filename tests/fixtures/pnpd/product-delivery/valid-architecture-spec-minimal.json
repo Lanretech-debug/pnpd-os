@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.productDelivery",
+  "artifactId": "arch-spec-minimal-0001",
+  "artifactType": "architectureSpec",
+  "phase": "draft",
+  "createdAt": "2099-02-01T00:00:00.000Z",
+  "createdBy": "owner-example",
+  "repo": "example-saas",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "codexIsOwner": false,
+    "advisoryOnly": true
+  },
+  "evidence": {
+    "evidenceSummary": "Architecture decisions based on Product Spec requirements.",
+    "evidenceLabels": {
+      "knownFacts": ["Product Spec defines document upload and field extraction."],
+      "assumptions": ["A monolithic architecture is sufficient for the first 1,000 users."],
+      "unknowns": ["Scaling behaviour beyond 10,000 documents per day."],
+      "researchNeeded": ["Benchmark OCR throughput with the selected vendor."],
+      "ownerDecisions": ["Approved Product Spec, proceed to Architecture Spec."]
+    }
+  },
+  "architectureSpec": {
+    "overview": "Monolithic web application with a background job queue for OCR processing.",
+    "components": ["Web server (Node.js)", "Background worker", "PostgreSQL database", "Object storage (S3-compatible)"],
+    "dataModel": ["User (id, email, plan)", "Document (id, userId, status, originalFile, extractedFields)"],
+    "securityBoundaries": ["Authentication via OAuth2", "File uploads scanned for malware before processing"],
+    "ownerDecisionRequiredBeforeImplementation": true
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "pnpd.productDelivery",
+  "artifactId": "invalid-handoff-empty-forbidden-0001",
+  "artifactType": "implementationHandoff",
+  "phase": "owner_approved",
+  "createdAt": "2099-01-01T00:00:00.000Z",
+  "createdBy": "owner-example",
+  "repo": "example-saas",
+  "governance": {
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexAuditRequiredBeforeMerge": true,
+    "codexIsOwner": false,
+    "advisoryOnly": true
+  },
+  "evidence": {
+    "evidenceSummary": "Evidence summary.",
+    "evidenceLabels": {
+      "knownFacts": ["Fact one."],
+      "assumptions": ["Assumption one."],
+      "unknowns": ["Unknown one."],
+      "researchNeeded": ["Research item one."],
+      "ownerDecisions": ["Decision one."]
+    }
+  },
+  "implementationHandoff": {
+    "branchName": "deepseek/test-branch",
+    "taskScope": "A test task.",
+    "allowedFiles": ["src/test.ts"],
+    "forbiddenFiles": [],
+    "implementationSteps": ["Step one."],
+    "gatesToRun": ["npm test"],
+    "noPushUnlessAuthorized": true,
+    "noMergeUnlessAuthorized": true,
+    "noDeployUnlessAuthorized": true,
+    "ownerAuthorizationRequired": true,
+    "codexAuditRequired": true
+  }
+}
