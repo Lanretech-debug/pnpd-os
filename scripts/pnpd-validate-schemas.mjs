@@ -4349,6 +4349,42 @@ const REGISTRY_EXPECTED_FAILURES = new Map([
 
 const REGISTRY_SECRET_VALUE_PATTERN = /(sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9_]{12,}|xox[baprs]-[A-Za-z0-9-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|github_pat_[A-Za-z0-9_]+)/;
 
+const REGISTRY_ALLOWED_ROOT_FIELDS = new Set([
+  "schemaVersion", "recordType", "registryId", "createdAt", "createdBy",
+  "repo", "governance", "entries",
+]);
+
+const REGISTRY_ALLOWED_REPO_FIELDS = new Set([
+  "repoId", "name", "rootRelative", "branch", "commit",
+]);
+
+const REGISTRY_ALLOWED_GOVERNANCE_FIELDS = new Set([
+  "advisoryOnly", "authorizesImplementation", "authorizesMerge",
+  "authorizesDispatch", "authorizesDeployment", "authorizesGitHubMutation",
+  "authorizesApiMutation", "certifiesProductionReadiness",
+  "ownerFinalAuthority", "codexIsOwner", "agentBridgeCanApprove",
+  "agentBridgeCanMerge", "agentBridgeCanDispatch", "agentBridgeCanDeploy",
+  "runtimeConsumptionAllowed", "artifactGenerationAllowed",
+  "externalMutationAllowed",
+]);
+
+const REGISTRY_ALLOWED_ENTRY_FIELDS = new Set([
+  "artifactId", "artifactType", "phase", "path", "validation", "createdAt",
+  "createdBy", "source", "notes", "integrity",
+]);
+
+const REGISTRY_ALLOWED_VALIDATION_FIELDS = new Set([
+  "validator", "mode", "status", "validatedAt", "path", "exitCode",
+]);
+
+const REGISTRY_ALLOWED_SOURCE_FIELDS = new Set([
+  "sourceType", "sourceRef",
+]);
+
+const REGISTRY_ALLOWED_INTEGRITY_FIELDS = new Set([
+  "hashAlgorithm", "contentHash",
+]);
+
 // ── Phase 1O helper functions ───────────────────────────────────────────────────
 
 function resolveRegistryPath(pathArg) {
@@ -4412,6 +4448,15 @@ function scanRegistrySecretValues(rawContent) {
   return findings;
 }
 
+function checkRegistryAllowedFields(obj, allowedFields, pathLabel, failures) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return;
+  for (const key of Object.keys(obj)) {
+    if (!allowedFields.has(key)) {
+      failures.push(pathLabel + "." + key + " is not allowed");
+    }
+  }
+}
+
 function checkRegistryPositiveFixture(registry) {
   const failures = [];
 
@@ -4419,6 +4464,8 @@ function checkRegistryPositiveFixture(registry) {
     failures.push("registry is not an object");
     return failures;
   }
+
+  checkRegistryAllowedFields(registry, REGISTRY_ALLOWED_ROOT_FIELDS, "$", failures);
 
   if (registry.recordType !== "productDeliveryArtifactRegistry") {
     failures.push("recordType must be productDeliveryArtifactRegistry");
@@ -4442,6 +4489,8 @@ function checkRegistryPositiveFixture(registry) {
 
   if (!registry.repo || typeof registry.repo !== "object") {
     failures.push("repo missing or invalid");
+  } else {
+    checkRegistryAllowedFields(registry.repo, REGISTRY_ALLOWED_REPO_FIELDS, "repo", failures);
   }
 
   if (!registry.governance || typeof registry.governance !== "object") {
@@ -4455,6 +4504,8 @@ function checkRegistryPositiveFixture(registry) {
   // Governance checks
   if (registry.governance && typeof registry.governance === "object") {
     const g = registry.governance;
+    checkRegistryAllowedFields(g, REGISTRY_ALLOWED_GOVERNANCE_FIELDS, "governance", failures);
+
     if (g.advisoryOnly !== true) failures.push("governance.advisoryOnly must be true");
     if (g.ownerFinalAuthority !== true) failures.push("governance.ownerFinalAuthority must be true");
 
@@ -4476,6 +4527,8 @@ function checkRegistryPositiveFixture(registry) {
     for (let i = 0; i < registry.entries.length; i++) {
       const e = registry.entries[i];
       const prefix = "entries[" + i + "].";
+
+      checkRegistryAllowedFields(e, REGISTRY_ALLOWED_ENTRY_FIELDS, "entries[" + i + "]", failures);
 
       if (!e.artifactId) failures.push(prefix + "artifactId missing");
       if (!e.artifactType) {
@@ -4500,6 +4553,8 @@ function checkRegistryPositiveFixture(registry) {
         failures.push(prefix + "validation missing");
       } else {
         const v = e.validation;
+        checkRegistryAllowedFields(v, REGISTRY_ALLOWED_VALIDATION_FIELDS, prefix + "validation", failures);
+
         if (!REGISTRY_SUPPORTED_VALIDATION_STATUSES.has(v.status)) {
           failures.push(prefix + "validation.status unsupported: " + v.status);
         }
@@ -4515,6 +4570,8 @@ function checkRegistryPositiveFixture(registry) {
       if (!e.integrity) {
         failures.push(prefix + "integrity missing");
       } else {
+        checkRegistryAllowedFields(e.integrity, REGISTRY_ALLOWED_INTEGRITY_FIELDS, prefix + "integrity", failures);
+
         if (e.integrity.hashAlgorithm === "none" && e.integrity.contentHash !== null) {
           failures.push(prefix + "contentHash must be null when hashAlgorithm is none");
         }
@@ -4522,6 +4579,8 @@ function checkRegistryPositiveFixture(registry) {
 
       if (!e.source || !e.source.sourceType) {
         failures.push(prefix + "source missing or invalid");
+      } else {
+        checkRegistryAllowedFields(e.source, REGISTRY_ALLOWED_SOURCE_FIELDS, prefix + "source", failures);
       }
     }
   }
