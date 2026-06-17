@@ -1,0 +1,396 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pnpd-product-delivery-registry.schema.json",
+  "title": "PNPD Product Delivery Artifact Registry Schema",
+  "description": "Advisory-only, local-only, read-only registry of Product Delivery artifact metadata. The registry records what exists; it does not authorize implementation, merge, dispatch, deployment, GitHub/API mutation, release, or production readiness. Owner remains final human authority. Codex is auditor/reviewer, not Owner. AgentBridge has no authority to approve, merge, deploy, certify, or dispatch.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Schema version of the registry."
+    },
+    "recordType": {
+      "type": "string",
+      "const": "productDeliveryArtifactRegistry",
+      "description": "Identifies this as a Product Delivery artifact registry."
+    },
+    "registryId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$",
+      "description": "Unique identifier for this registry instance."
+    },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+      "description": "ISO 8601 timestamp when this registry was created."
+    },
+    "createdBy": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identity of the registry creator."
+    },
+    "repo": {
+      "$ref": "#/$defs/repo",
+      "description": "Repository metadata for this registry."
+    },
+    "governance": {
+      "$ref": "#/$defs/governance",
+      "description": "Governance constraints for this registry. All authorizing fields are locked to false."
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 500,
+      "items": {
+        "$ref": "#/$defs/entry"
+      },
+      "description": "Ordered list of Product Delivery artifact entries in this registry."
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "registryId",
+    "createdAt",
+    "createdBy",
+    "repo",
+    "governance",
+    "entries"
+  ],
+  "$defs": {
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Repository metadata. rootRelative is always '.' because the registry lives in the repo root.",
+      "properties": {
+        "repoId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$",
+          "description": "Unique repository identifier."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable repository name."
+        },
+        "rootRelative": {
+          "type": "string",
+          "const": ".",
+          "description": "Registry root is always relative to the repository root."
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Current branch name when the registry was created or updated."
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Full 40-character Git commit hash at registry creation or update time."
+        }
+      },
+      "required": [
+        "repoId",
+        "name",
+        "rootRelative",
+        "branch",
+        "commit"
+      ]
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Locked governance constraints. All authorizing fields are false. Owner remains final human authority. Codex is auditor/reviewer, not Owner.",
+      "properties": {
+        "advisoryOnly": {
+          "type": "boolean",
+          "const": true,
+          "description": "Registry is advisory-only."
+        },
+        "authorizesImplementation": {
+          "type": "boolean",
+          "const": false,
+          "description": "Registry does not authorize implementation."
+        },
+        "authorizesMerge": {
+          "type": "boolean",
+          "const": false,
+          "description": "Registry does not authorize merge."
+        },
+        "authorizesDispatch": {
+          "type": "boolean",
+          "const": false,
+          "description": "Registry does not authorize dispatch."
+        },
+        "authorizesDeployment": {
+          "type": "boolean",
+          "const": false,
+          "description": "Registry does not authorize deployment."
+        },
+        "authorizesGitHubMutation": {
+          "type": "boolean",
+          "const": false,
+          "description": "Registry does not authorize GitHub API mutation."
+        },
+        "authorizesApiMutation": {
+          "type": "boolean",
+          "const": false,
+          "description": "Registry does not authorize any API mutation."
+        },
+        "certifiesProductionReadiness": {
+          "type": "boolean",
+          "const": false,
+          "description": "Registry does not certify production readiness."
+        },
+        "ownerFinalAuthority": {
+          "type": "boolean",
+          "const": true,
+          "description": "Owner remains final human authority for all decisions."
+        },
+        "codexIsOwner": {
+          "type": "boolean",
+          "const": false,
+          "description": "Codex is auditor/reviewer, not Owner."
+        },
+        "agentBridgeCanApprove": {
+          "type": "boolean",
+          "const": false,
+          "description": "AgentBridge cannot approve."
+        },
+        "agentBridgeCanMerge": {
+          "type": "boolean",
+          "const": false,
+          "description": "AgentBridge cannot merge."
+        },
+        "agentBridgeCanDispatch": {
+          "type": "boolean",
+          "const": false,
+          "description": "AgentBridge cannot dispatch."
+        },
+        "agentBridgeCanDeploy": {
+          "type": "boolean",
+          "const": false,
+          "description": "AgentBridge cannot deploy."
+        },
+        "runtimeConsumptionAllowed": {
+          "type": "boolean",
+          "const": false,
+          "description": "Runtime/orchestrator must not consume registry data."
+        },
+        "artifactGenerationAllowed": {
+          "type": "boolean",
+          "const": false,
+          "description": "Automated artifact generation is not allowed."
+        },
+        "externalMutationAllowed": {
+          "type": "boolean",
+          "const": false,
+          "description": "External mutation (network, API, filesystem write) is not allowed."
+        }
+      },
+      "required": [
+        "advisoryOnly",
+        "authorizesImplementation",
+        "authorizesMerge",
+        "authorizesDispatch",
+        "authorizesDeployment",
+        "authorizesGitHubMutation",
+        "authorizesApiMutation",
+        "certifiesProductionReadiness",
+        "ownerFinalAuthority",
+        "codexIsOwner",
+        "agentBridgeCanApprove",
+        "agentBridgeCanMerge",
+        "agentBridgeCanDispatch",
+        "agentBridgeCanDeploy",
+        "runtimeConsumptionAllowed",
+        "artifactGenerationAllowed",
+        "externalMutationAllowed"
+      ]
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A single Product Delivery artifact entry in the registry.",
+      "properties": {
+        "artifactId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$",
+          "description": "Unique identifier for this artifact entry."
+        },
+        "artifactType": {
+          "type": "string",
+          "enum": [
+            "prd",
+            "productSpec",
+            "architectureSpec",
+            "implementationHandoff"
+          ],
+          "description": "Machine-validated Product Delivery artifact type. Only these four types have schemas, fixtures, and validators."
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Development phase this artifact belongs to (e.g., Phase 1N)."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^(?!/)(?!.*\\.\\.)(?!.*://)(?!.*~)(?!.*\\.env)(?![A-Za-z]:)(?!\\.pnpd/)[A-Za-z0-9_./-]+\\.json$",
+          "description": "Repo-relative path to the artifact JSON file. Rejects leading /, .. traversal, URL schemes, ~, .env, Windows drive prefixes, .pnpd/ prefix, and non-.json extensions. Symlink realpath containment is enforced by the validator at validation time."
+        },
+        "validation": {
+          "$ref": "#/$defs/validation",
+          "description": "Validation evidence for this artifact."
+        },
+        "createdAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+          "description": "ISO 8601 timestamp when this entry was created."
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identity of the entry creator."
+        },
+        "source": {
+          "$ref": "#/$defs/source",
+          "description": "Provenance of this artifact."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Free-form notes about this entry."
+        },
+        "integrity": {
+          "$ref": "#/$defs/integrity",
+          "description": "Content integrity evidence for the referenced artifact file."
+        }
+      },
+      "required": [
+        "artifactId",
+        "artifactType",
+        "phase",
+        "path",
+        "validation",
+        "createdAt",
+        "createdBy",
+        "source",
+        "notes",
+        "integrity"
+      ]
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Structured validation evidence. Does not include raw shell command strings. Semantic rules (validatedAt, exitCode expectations) are enforced by the Phase 1O-D validator.",
+      "properties": {
+        "validator": {
+          "type": "string",
+          "const": "pnpd-validate-schemas",
+          "description": "The validator tool used."
+        },
+        "mode": {
+          "type": "string",
+          "const": "product-delivery-artifact",
+          "description": "Validation mode. Always the standalone artifact mode."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "valid",
+            "invalid",
+            "notValidated",
+            "stale",
+            "unknown"
+          ],
+          "description": "Validation status. valid: artifact passed standalone validation. invalid: artifact failed validation. notValidated: no validation run recorded. stale: artifact changed after validation or timestamp no longer trusted. unknown: legacy/imported entry without enough evidence."
+        },
+        "validatedAt": {
+          "anyOf": [
+            { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+            { "type": "null" }
+          ],
+          "description": "Timestamp of last validation run, or null if never validated."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^(?!/)(?!.*\\.\\.)(?!.*://)(?!.*~)(?!.*\\.env)(?![A-Za-z]:)(?!\\.pnpd/)[A-Za-z0-9_./-]+\\.json$",
+          "description": "Repo-relative path to the validated artifact file."
+        },
+        "exitCode": {
+          "type": "integer",
+          "enum": [0, 1],
+          "description": "Exit code from the most recent validation run. 0 = passed, 1 = failed. Optional; not required."
+        }
+      },
+      "required": [
+        "validator",
+        "mode",
+        "status",
+        "path"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Provenance information for the artifact. Does not include approval or certification source types.",
+      "properties": {
+        "sourceType": {
+          "type": "string",
+          "enum": [
+            "ownerProvided",
+            "deepseekGenerated",
+            "humanAuthored",
+            "imported",
+            "unknown"
+          ],
+          "description": "Origin of the artifact. ownerProvided: created by the human owner. deepseekGenerated: created by DeepSeek agent. humanAuthored: created by a human contributor. imported: imported from another system. unknown: provenance not recorded."
+        },
+        "sourceRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference or identifier for the source (e.g., thread ID, document path, contributor name)."
+        }
+      },
+      "required": [
+        "sourceType",
+        "sourceRef"
+      ]
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Content integrity evidence. If hashAlgorithm is sha256, contentHash should be a 64-character hex string. If hashAlgorithm is none, contentHash should be null. Semantic rules enforced by future validator.",
+      "properties": {
+        "hashAlgorithm": {
+          "type": "string",
+          "enum": [
+            "sha256",
+            "none"
+          ],
+          "description": "Hash algorithm used. sha256 for SHA-256, none when no hash is recorded."
+        },
+        "contentHash": {
+          "anyOf": [
+            { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            { "type": "null" }
+          ],
+          "description": "Content hash of the referenced artifact file, or null when hashAlgorithm is none."
+        }
+      },
+      "required": [
+        "hashAlgorithm",
+        "contentHash"
+      ]
+    }
+  }
+}
