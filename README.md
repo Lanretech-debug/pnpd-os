@@ -68,7 +68,7 @@ See [`docs/quickstart-local.md`](docs/quickstart-local.md) for prerequisites, di
 
 | Command | What it does | What it does not authorize |
 |---------|-------------|---------------------------|
-| `npm run validate` | Validates all schemas and fixtures (phases 0, 1b, 1c, 1f, 1h, 1m, 1n) | Does not authorize dispatch, merge, deployment, or implementation |
+| `npm run validate` | Runs the repo validation script (phases 0, 1b, 1c, 1f, 1n; phases 1h and 1m remain explicit commands) | Does not authorize dispatch, merge, deployment, or implementation |
 | `npm run dry-run` | Runs orchestrator dry-run in text and JSON mode | Does not execute any external action |
 | `npm test` | Runs validate + dry-run | Does not authorize any gate bypass |
 | `node scripts/pnpd-validate-schemas.mjs --phase 1f` | Validates dispatch readiness schema and 12 fixtures | Does not authorize dispatch |

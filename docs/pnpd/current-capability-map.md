@@ -72,7 +72,8 @@ The following capabilities are **explicitly blocked** and not implemented:
 Copy-paste commands to verify current state locally:
 
 ```bash
-# Full validation (phases 0, 1b, 1c, 1f, 1h, 1m, 1n)
+# Repo validation script (phases 0, 1b, 1c, 1f, 1n)
+# Run phases 1h and 1m explicitly with the commands below.
 npm run validate
 
 # Dry-run orchestrator
