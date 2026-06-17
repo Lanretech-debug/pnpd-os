@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "validate": "node scripts/pnpd-validate-schemas.mjs && node scripts/pnpd-validate-schemas.mjs --phase 0 && node scripts/pnpd-validate-schemas.mjs --phase 1b && node scripts/pnpd-validate-schemas.mjs --phase 1c && node scripts/pnpd-validate-schemas.mjs --phase 1f && node scripts/pnpd-validate-schemas.mjs --phase 1n",
+    "validate": "node scripts/pnpd-validate-schemas.mjs && node scripts/pnpd-validate-schemas.mjs --phase 0 && node scripts/pnpd-validate-schemas.mjs --phase 1b && node scripts/pnpd-validate-schemas.mjs --phase 1c && node scripts/pnpd-validate-schemas.mjs --phase 1f && node scripts/pnpd-validate-schemas.mjs --phase 1n && node scripts/pnpd-validate-schemas.mjs --phase 1o",
     "dry-run": "node scripts/pnpd-orchestrator-dry-run.mjs && node scripts/pnpd-orchestrator-dry-run.mjs --json | node -e \"let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>JSON.parse(s))\"",
     "test": "npm run validate && npm run dry-run"
   }
