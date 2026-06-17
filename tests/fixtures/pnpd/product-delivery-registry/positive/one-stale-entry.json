@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "productDeliveryArtifactRegistry",
+  "registryId": "one-stale-entry",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "createdBy": "phase-1o-c-fixture",
+  "repo": {
+    "repoId": "pnpd-os",
+    "name": "pnpd-os",
+    "rootRelative": ".",
+    "branch": "main",
+    "commit": "cd220fd5e18e22e6f421d1f042ab43bbe4aa18e5"
+  },
+  "governance": {
+    "advisoryOnly": true,
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexIsOwner": false,
+    "agentBridgeCanApprove": false,
+    "agentBridgeCanMerge": false,
+    "agentBridgeCanDispatch": false,
+    "agentBridgeCanDeploy": false,
+    "runtimeConsumptionAllowed": false,
+    "artifactGenerationAllowed": false,
+    "externalMutationAllowed": false
+  },
+  "entries": [
+    {
+      "artifactId": "fixture-stale-prd-entry",
+      "artifactType": "prd",
+      "phase": "1O-C-fixture",
+      "path": "artifacts/product-delivery/prd/stale-prd.json",
+      "validation": {
+        "validator": "pnpd-validate-schemas",
+        "mode": "product-delivery-artifact",
+        "status": "stale",
+        "validatedAt": "2026-01-01T00:00:00.000Z",
+        "path": "artifacts/product-delivery/prd/stale-prd.json",
+        "exitCode": 0
+      },
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "createdBy": "phase-1o-c-fixture",
+      "source": {
+        "sourceType": "humanAuthored",
+        "sourceRef": "fixture-initial"
+      },
+      "notes": "Stale fixture for product delivery registry. Stale status is advisory only and does not authorize dispatch or implementation.",
+      "integrity": {
+        "hashAlgorithm": "none",
+        "contentHash": null
+      }
+    }
+  ]
+}

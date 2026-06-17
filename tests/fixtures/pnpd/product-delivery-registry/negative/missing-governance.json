@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "productDeliveryArtifactRegistry",
+  "registryId": "missing-governance",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "createdBy": "phase-1o-c-fixture",
+  "repo": {
+    "repoId": "pnpd-os",
+    "name": "pnpd-os",
+    "rootRelative": ".",
+    "branch": "main",
+    "commit": "cd220fd5e18e22e6f421d1f042ab43bbe4aa18e5"
+  },
+  "entries": []
+}
