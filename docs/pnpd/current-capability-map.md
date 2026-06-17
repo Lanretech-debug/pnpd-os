@@ -4,14 +4,14 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1J |
-| **Latest stable commit** | `f7eb3c1` |
+| **Phase** | Phase 1N-F |
+| **Latest stable commit** | `2b5093d` |
 | **Branch** | `main` |
 | **Node version** | `20` |
-| **Remote CI run** | `27508672848` |
+| **Remote CI run** | `27653676971` |
 | **Remote CI conclusion** | `success` |
-| **Remote CI duration** | `16s` |
-| **Remote CI commit** | `f7eb3c1b0370ee225b132d2f7c0816dceb936eaa` |
+| **Remote CI duration** | `22s` |
+| **Remote CI commit** | `2b5093d0a44d3da02928eb22ae40747c7d1b29ff` |
 
 ## Existing capabilities
 
@@ -30,6 +30,16 @@
 | Runtime readiness local write | ✅ Complete | `node scripts/pnpd-orchestrator-dry-run.mjs --write-runtime-readiness` |
 | Runtime readiness report file validation | ✅ Complete / local read-only validation | `node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>` |
 | Runtime readiness CI validation | ✅ Complete | `.github/workflows/pnpd-ci.yml` (Phase 1H-H) |
+| Research Discovery schema | ✅ Complete | `.pnpd/research-discovery.schema.json` |
+| Research Discovery fixtures (10 invalid, 6 valid) | ✅ Complete | Validated by `--phase 1m` |
+| Research Discovery validator | ✅ Complete | `node scripts/pnpd-validate-schemas.mjs --phase 1m` |
+| Research Discovery standalone artifact validation | ✅ Complete / local read-only | `node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>` |
+| Product Delivery framework docs | ✅ Complete | `docs/pnpd/memory-and-product-delivery-framework.md` |
+| Product Delivery templates | ✅ Complete | `templates/product/` (14 templates) |
+| Product Delivery schema | ✅ Complete | `.pnpd/product-delivery.schema.json` |
+| Product Delivery fixtures (10 invalid, 6 valid) | ✅ Complete | `tests/fixtures/pnpd/product-delivery/` (16 files) |
+| Product Delivery validator | ✅ Complete | `node scripts/pnpd-validate-schemas.mjs --phase 1n` |
+| Product Delivery standalone artifact validation | ✅ Complete / local read-only | `node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>` |
 | Scheduler scaffold | ✅ Complete | Present in orchestrator (Phase 0 scaffold) |
 | Ledger local writer | ✅ Complete | `--write-ledger` flag |
 | Handoff local writer | ✅ Complete | `--write-handoff` flag |
@@ -54,13 +64,16 @@ The following capabilities are **explicitly blocked** and not implemented:
 | Authority escalation | Blocked — AgentBridge cannot escalate |
 | AgentBridge approval authority | Blocked — AgentBridge coordinates only |
 | Owner/Codex bypass | Blocked — no gate bypass possible |
+| Runtime consumption of Product Delivery artifacts | Blocked — no runtime linking |
+| Automated Product Delivery artifact generation | Blocked — no automatic generation |
 
 ## Verification commands
 
 Copy-paste commands to verify current state locally:
 
 ```bash
-# Full validation (phases 0, 1b, 1c, 1f)
+# Repo validation script (phases 0, 1b, 1c, 1f, 1n)
+# Run phases 1h and 1m explicitly with the commands below.
 npm run validate
 
 # Dry-run orchestrator
@@ -68,6 +81,18 @@ npm run dry-run
 
 # Full test (validate + dry-run)
 npm test
+
+# Research Discovery fixture validation
+node scripts/pnpd-validate-schemas.mjs --phase 1m
+
+# Research Discovery standalone artifact validation
+node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
+
+# Product Delivery fixture validation
+node scripts/pnpd-validate-schemas.mjs --phase 1n
+
+# Product Delivery standalone artifact validation
+node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
 
 # Phase 1H runtime readiness validator
 node scripts/pnpd-validate-schemas.mjs --phase 1h
@@ -91,6 +116,10 @@ node scripts/pnpd-orchestrator-dry-run.mjs --write-runtime-readiness
 - **AgentBridge coordinates only.** It does not approve, merge, deploy, certify, dispatch, or bypass gates.
 - **Dispatch remains blocked.** The orchestrator dry-run classifies and recommends; it does not execute.
 - **Runtime readiness reports are advisory-only.** They provide evidence for review; they do not authorize any action.
+- **Product Delivery artifacts are advisory and planning artifacts.** They do not authorize implementation, merge, dispatch, deployment, GitHub/API mutation, release, production readiness, or gate bypass.
+- **Standalone artifact validation is read-only.** Research Discovery and Product Delivery standalone validators create no files.
+- **Codex remains auditor/reviewer, not Owner.**
+- **AgentBridge remains non-authorizing.**
 
 ## Remote CI evidence
 
@@ -108,3 +137,4 @@ All remote CI runs on `main` branch, all concluded `success`:
 | 1H-G | `27502151932` | `91d4ddd854fc0a8101e20fca0b4a2d002b2ffc56` | 19s |
 | 1H-H | `27503401073` | `e37b6867aabb138715ae6b52828165a128916ff9` | 19s |
 | 1J | `27508672848` | `f7eb3c1b0370ee225b132d2f7c0816dceb936eaa` | 16s |
+| 1N-E | `27653676971` | `2b5093d0a44d3da02928eb22ae40747c7d1b29ff` | 22s |
