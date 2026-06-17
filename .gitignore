@@ -3,3 +3,4 @@
 .pnpd/handoffs/
 .pnpd/locks/
 .pnpd/runtime-readiness/
+.pnpd/product-delivery-registry/
