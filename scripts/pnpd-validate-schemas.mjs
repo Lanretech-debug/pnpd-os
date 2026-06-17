@@ -124,7 +124,7 @@ const PHASE_1C_FIXTURES = [
 
 
 function parseArgs(argv) {
-  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null };
+  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -138,12 +138,15 @@ function parseArgs(argv) {
       if (args.productDeliveryArtifact) {
         throw new Error("--product-delivery-artifact is a standalone validator and cannot be combined with --phase.");
       }
+      if (args.productDeliveryRegistry) {
+        throw new Error("--product-delivery-registry is a standalone validator and cannot be combined with --phase.");
+      }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, or 1n).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, or 1o).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", or "1n".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", or "1o".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -207,14 +210,39 @@ function parseArgs(argv) {
       }
       args.productDeliveryArtifact = argv[i + 1];
       i += 1;
+    } else if (arg === "--product-delivery-registry") {
+      if (args.phase) {
+        throw new Error("--product-delivery-registry is a standalone validator and cannot be combined with --phase.");
+      }
+      if (args.runtimeReadinessReport) {
+        throw new Error("--product-delivery-registry is a standalone validator and cannot be combined with --runtime-readiness-report.");
+      }
+      if (args.researchDiscoveryArtifact) {
+        throw new Error("--product-delivery-registry is a standalone validator and cannot be combined with --research-discovery-artifact.");
+      }
+      if (args.productDeliveryArtifact) {
+        throw new Error("--product-delivery-registry is a standalone validator and cannot be combined with --product-delivery-artifact.");
+      }
+      if (!argv[i + 1]) {
+        throw new Error("--product-delivery-registry requires a file path argument.");
+      }
+      if (args.productDeliveryRegistry) {
+        throw new Error("--product-delivery-registry accepts exactly one file path.");
+      }
+      if (argv[i + 1].startsWith("-")) {
+        throw new Error("--product-delivery-registry requires a file path argument, got: " + argv[i + 1]);
+      }
+      args.productDeliveryRegistry = argv[i + 1];
+      i += 1;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
+  node scripts/pnpd-validate-schemas.mjs --product-delivery-registry <path>
 
 Options:
   --phase 0   Validate Phase 0 invariants only.
@@ -224,9 +252,11 @@ Options:
   --phase 1h  Validate PNPD runtime readiness schema and fixtures (explicit-only, not included in default).
   --phase 1m  Validate Research Discovery schema and fixtures (explicit-only, not included in default).
   --phase 1n  Validate Product Delivery schema and fixtures (explicit-only, not included in default).
+  --phase 1o  Validate Product Delivery registry schema and fixtures (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
   --product-delivery-artifact <path>  Validate a user-created Product Delivery artifact JSON file.
+  --product-delivery-registry <path>  Validate a Product Delivery registry JSON file.
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
     } else {
@@ -4216,6 +4246,750 @@ function validateProductDeliveryPhase1N() {
   process.exit(exitCode);
 }
 
+// ── Phase 1O: Product Delivery Registry Validation ──────────────────────────────
+
+const REGISTRY_SCHEMA_PATH = ".pnpd/product-delivery-registry.schema.json";
+const REGISTRY_FIXTURE_DIR = "tests/fixtures/pnpd/product-delivery-registry";
+
+const REGISTRY_SUPPORTED_ARTIFACT_TYPES = new Set([
+  "prd",
+  "productSpec",
+  "architectureSpec",
+  "implementationHandoff",
+]);
+
+const REGISTRY_SUPPORTED_VALIDATION_STATUSES = new Set([
+  "valid",
+  "invalid",
+  "notValidated",
+  "stale",
+  "unknown",
+]);
+
+const REGISTRY_POSITIVE_FIXTURES = new Set([
+  "empty-registry.json",
+  "one-prd-entry.json",
+  "one-product-spec-entry.json",
+  "one-architecture-spec-entry.json",
+  "one-implementation-handoff-entry.json",
+  "one-stale-entry.json",
+]);
+
+const REGISTRY_NEGATIVE_FIXTURES = new Set([
+  "missing-governance.json",
+  "authorizes-implementation-true.json",
+  "codex-is-owner-true.json",
+  "agentbridge-can-approve-true.json",
+  "runtime-consumption-allowed-true.json",
+  "absolute-path.json",
+  "traversal-path.json",
+  "url-path.json",
+  "unsupported-artifact-type.json",
+  "production-ready-claim.json",
+  "secret-like-field.json",
+  "extra-top-level-property.json",
+  "missing-entry-integrity.json",
+  "invalid-validation-status.json",
+  "schema-version-mismatch.json",
+]);
+
+const FORBIDDEN_REGISTRY_FIELDS = new Set([
+  "approvedForImplementation",
+  "implementationApproved",
+  "approvedForMerge",
+  "mergeApproved",
+  "mergeAuthorized",
+  "dispatchNow",
+  "executeDispatch",
+  "dispatchApproved",
+  "deployNow",
+  "deploymentApproved",
+  "releaseNow",
+  "releaseApproved",
+  "productionReady",
+  "productionCertified",
+  "certifiedForProduction",
+  "ownerBypassed",
+  "codexBypassed",
+  "codexApprovedAsOwner",
+  "agentBridgeApproved",
+  "agentBridgeApproves",
+  "runtimeConsumes",
+  "orchestratorConsumes",
+  "autoGenerate",
+  "generateImplementation",
+  "executeCommand",
+  "shellCommand",
+  "githubToken",
+  "githubMutationEnabled",
+  "apiKey",
+  "secret",
+  "privateKey",
+  "deployTarget",
+  "buildCommand",
+]);
+
+const REGISTRY_EXPECTED_FAILURES = new Map([
+  ["missing-governance.json", "missing top-level governance"],
+  ["authorizes-implementation-true.json", "governance.authorizesImplementation const false violated"],
+  ["codex-is-owner-true.json", "governance.codexIsOwner const false violated"],
+  ["agentbridge-can-approve-true.json", "governance.agentBridgeCanApprove const false violated"],
+  ["runtime-consumption-allowed-true.json", "governance.runtimeConsumptionAllowed const false violated"],
+  ["absolute-path.json", "entry path is absolute"],
+  ["traversal-path.json", "entry path contains traversal"],
+  ["url-path.json", "entry path is a URL"],
+  ["unsupported-artifact-type.json", "unsupported artifactType enum"],
+  ["production-ready-claim.json", "extra top-level property productionReady"],
+  ["secret-like-field.json", "extra top-level property apiKey"],
+  ["extra-top-level-property.json", "extra top-level property"],
+  ["missing-entry-integrity.json", "entry missing integrity"],
+  ["invalid-validation-status.json", "invalid validation.status enum"],
+  ["schema-version-mismatch.json", "schemaVersion const 1.0.0 violated"],
+]);
+
+const REGISTRY_SECRET_VALUE_PATTERN = /(sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9_]{12,}|xox[baprs]-[A-Za-z0-9-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|github_pat_[A-Za-z0-9_]+)/;
+
+const REGISTRY_ALLOWED_ROOT_FIELDS = new Set([
+  "schemaVersion", "recordType", "registryId", "createdAt", "createdBy",
+  "repo", "governance", "entries",
+]);
+
+const REGISTRY_ALLOWED_REPO_FIELDS = new Set([
+  "repoId", "name", "rootRelative", "branch", "commit",
+]);
+
+const REGISTRY_ALLOWED_GOVERNANCE_FIELDS = new Set([
+  "advisoryOnly", "authorizesImplementation", "authorizesMerge",
+  "authorizesDispatch", "authorizesDeployment", "authorizesGitHubMutation",
+  "authorizesApiMutation", "certifiesProductionReadiness",
+  "ownerFinalAuthority", "codexIsOwner", "agentBridgeCanApprove",
+  "agentBridgeCanMerge", "agentBridgeCanDispatch", "agentBridgeCanDeploy",
+  "runtimeConsumptionAllowed", "artifactGenerationAllowed",
+  "externalMutationAllowed",
+]);
+
+const REGISTRY_ALLOWED_ENTRY_FIELDS = new Set([
+  "artifactId", "artifactType", "phase", "path", "validation", "createdAt",
+  "createdBy", "source", "notes", "integrity",
+]);
+
+const REGISTRY_ALLOWED_VALIDATION_FIELDS = new Set([
+  "validator", "mode", "status", "validatedAt", "path", "exitCode",
+]);
+
+const REGISTRY_ALLOWED_SOURCE_FIELDS = new Set([
+  "sourceType", "sourceRef",
+]);
+
+const REGISTRY_ALLOWED_INTEGRITY_FIELDS = new Set([
+  "hashAlgorithm", "contentHash",
+]);
+
+// ── Phase 1O helper functions ───────────────────────────────────────────────────
+
+function resolveRegistryPath(pathArg) {
+  if (!pathArg || typeof pathArg !== "string") {
+    throw new Error("Registry path must be a non-empty string.");
+  }
+  if (path.isAbsolute(pathArg)) {
+    throw new Error("Absolute registry paths are not allowed: " + pathArg);
+  }
+  if (pathArg.includes("..")) {
+    throw new Error("Path traversal is not allowed: " + pathArg);
+  }
+  if (pathArg.includes("://")) {
+    throw new Error("URL paths are not allowed: " + pathArg);
+  }
+  const resolved = path.resolve(ROOT, pathArg);
+  if (!resolved.startsWith(path.resolve(ROOT) + path.sep) && resolved !== path.resolve(ROOT)) {
+    throw new Error("Registry path escapes repo root: " + pathArg);
+  }
+  try {
+    const real = fs.realpathSync(resolved);
+    if (!real.startsWith(path.resolve(ROOT) + path.sep) && real !== path.resolve(ROOT)) {
+      throw new Error("Resolved registry path escapes repo root: " + real);
+    }
+    return real;
+  } catch (e) {
+    if (e.code === "ENOENT") return resolved;
+    throw e;
+  }
+}
+
+function scanRegistryForbiddenFields(obj, currentPath, findings) {
+  if (!obj || typeof obj !== "object") return findings;
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      scanRegistryForbiddenFields(obj[i], currentPath + "[" + i + "]", findings);
+    }
+    return findings;
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (FORBIDDEN_REGISTRY_FIELDS.has(key)) {
+      findings.push(currentPath + "." + key);
+    }
+    if (value && typeof value === "object") {
+      scanRegistryForbiddenFields(value, currentPath + "." + key, findings);
+    }
+  }
+  return findings;
+}
+
+function scanRegistrySecretValues(rawContent) {
+  const findings = [];
+  if (REGISTRY_SECRET_VALUE_PATTERN.test(rawContent)) {
+    const matches = rawContent.match(new RegExp(REGISTRY_SECRET_VALUE_PATTERN.source, "g"));
+    if (matches) {
+      for (const m of matches) {
+        findings.push("secret-like value pattern: " + m.substring(0, 20) + "...");
+      }
+    }
+  }
+  return findings;
+}
+
+function checkRegistryAllowedFields(obj, allowedFields, pathLabel, failures) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return;
+  for (const key of Object.keys(obj)) {
+    if (!allowedFields.has(key)) {
+      failures.push(pathLabel + "." + key + " is not allowed");
+    }
+  }
+}
+
+function checkRegistryPositiveFixture(registry) {
+  const failures = [];
+
+  if (!registry || typeof registry !== "object") {
+    failures.push("registry is not an object");
+    return failures;
+  }
+
+  checkRegistryAllowedFields(registry, REGISTRY_ALLOWED_ROOT_FIELDS, "$", failures);
+
+  if (registry.recordType !== "productDeliveryArtifactRegistry") {
+    failures.push("recordType must be productDeliveryArtifactRegistry");
+  }
+
+  if (registry.schemaVersion !== "1.0.0") {
+    failures.push("schemaVersion must be 1.0.0");
+  }
+
+  if (!registry.registryId || typeof registry.registryId !== "string") {
+    failures.push("registryId missing or invalid");
+  }
+
+  if (!registry.createdAt) {
+    failures.push("createdAt missing");
+  }
+
+  if (!registry.createdBy || typeof registry.createdBy !== "string") {
+    failures.push("createdBy missing");
+  }
+
+  if (!registry.repo || typeof registry.repo !== "object") {
+    failures.push("repo missing or invalid");
+  } else {
+    checkRegistryAllowedFields(registry.repo, REGISTRY_ALLOWED_REPO_FIELDS, "repo", failures);
+  }
+
+  if (!registry.governance || typeof registry.governance !== "object") {
+    failures.push("governance missing or invalid");
+  }
+
+  if (!Array.isArray(registry.entries)) {
+    failures.push("entries must be an array");
+  }
+
+  // Governance checks
+  if (registry.governance && typeof registry.governance === "object") {
+    const g = registry.governance;
+    checkRegistryAllowedFields(g, REGISTRY_ALLOWED_GOVERNANCE_FIELDS, "governance", failures);
+
+    if (g.advisoryOnly !== true) failures.push("governance.advisoryOnly must be true");
+    if (g.ownerFinalAuthority !== true) failures.push("governance.ownerFinalAuthority must be true");
+
+    const mustBeFalse = [
+      "authorizesImplementation", "authorizesMerge", "authorizesDispatch",
+      "authorizesDeployment", "authorizesGitHubMutation", "authorizesApiMutation",
+      "certifiesProductionReadiness", "codexIsOwner",
+      "agentBridgeCanApprove", "agentBridgeCanMerge", "agentBridgeCanDispatch",
+      "agentBridgeCanDeploy", "runtimeConsumptionAllowed",
+      "artifactGenerationAllowed", "externalMutationAllowed",
+    ];
+    for (const f of mustBeFalse) {
+      if (g[f] !== false) failures.push("governance." + f + " must be false");
+    }
+  }
+
+  // Entry checks
+  if (Array.isArray(registry.entries)) {
+    for (let i = 0; i < registry.entries.length; i++) {
+      const e = registry.entries[i];
+      const prefix = "entries[" + i + "].";
+
+      checkRegistryAllowedFields(e, REGISTRY_ALLOWED_ENTRY_FIELDS, "entries[" + i + "]", failures);
+
+      if (!e.artifactId) failures.push(prefix + "artifactId missing");
+      if (!e.artifactType) {
+        failures.push(prefix + "artifactType missing");
+      } else if (!REGISTRY_SUPPORTED_ARTIFACT_TYPES.has(e.artifactType)) {
+        failures.push(prefix + "artifactType unsupported: " + e.artifactType);
+      }
+      if (!e.path) {
+        failures.push(prefix + "path missing");
+      } else {
+        if (e.path.startsWith("/")) failures.push(prefix + "path must not be absolute");
+        if (e.path.includes("..")) failures.push(prefix + "path must not contain traversal");
+        if (e.path.includes("://")) failures.push(prefix + "path must not be a URL");
+        if (e.path.includes(".env")) failures.push(prefix + "path must not reference .env");
+        if (e.path.includes("~")) failures.push(prefix + "path must not contain ~");
+        if (/^[A-Za-z]:[\\/]/.test(e.path)) failures.push(prefix + "path must not be a Windows drive path");
+        if (e.path.includes(".pnpd/")) failures.push(prefix + "path must not reference .pnpd/");
+        if (!e.path.endsWith(".json")) failures.push(prefix + "path must end with .json");
+      }
+
+      if (!e.validation) {
+        failures.push(prefix + "validation missing");
+      } else {
+        const v = e.validation;
+        checkRegistryAllowedFields(v, REGISTRY_ALLOWED_VALIDATION_FIELDS, prefix + "validation", failures);
+
+        if (!REGISTRY_SUPPORTED_VALIDATION_STATUSES.has(v.status)) {
+          failures.push(prefix + "validation.status unsupported: " + v.status);
+        }
+        if (v.status === "valid") {
+          if (!v.validatedAt) failures.push(prefix + "validation.validatedAt required when status is valid");
+          if (v.exitCode !== 0) failures.push(prefix + "validation.exitCode must be 0 when status is valid");
+        }
+        if (v.path !== e.path) {
+          failures.push(prefix + "validation.path must equal entry path");
+        }
+      }
+
+      if (!e.integrity) {
+        failures.push(prefix + "integrity missing");
+      } else {
+        checkRegistryAllowedFields(e.integrity, REGISTRY_ALLOWED_INTEGRITY_FIELDS, prefix + "integrity", failures);
+
+        if (e.integrity.hashAlgorithm === "none" && e.integrity.contentHash !== null) {
+          failures.push(prefix + "contentHash must be null when hashAlgorithm is none");
+        }
+      }
+
+      if (!e.source || !e.source.sourceType) {
+        failures.push(prefix + "source missing or invalid");
+      } else {
+        checkRegistryAllowedFields(e.source, REGISTRY_ALLOWED_SOURCE_FIELDS, prefix + "source", failures);
+      }
+    }
+  }
+
+  return failures;
+}
+
+function detectRegistryNegativeFailure(registry, filename) {
+  const reasons = [];
+  const expected = REGISTRY_EXPECTED_FAILURES.get(filename);
+
+  // Check structural failures
+  if (!registry.governance) {
+    reasons.push("missing governance");
+  }
+  if (registry.schemaVersion && registry.schemaVersion !== "1.0.0") {
+    reasons.push("schemaVersion mismatch: " + registry.schemaVersion);
+  }
+  if (registry.governance) {
+    const g = registry.governance;
+    if (g.authorizesImplementation === true) reasons.push("authorizesImplementation is true");
+    if (g.codexIsOwner === true) reasons.push("codexIsOwner is true");
+    if (g.agentBridgeCanApprove === true) reasons.push("agentBridgeCanApprove is true");
+    if (g.runtimeConsumptionAllowed === true) reasons.push("runtimeConsumptionAllowed is true");
+  }
+  if (Array.isArray(registry.entries) && registry.entries.length > 0) {
+    const e = registry.entries[0];
+    if (e.path) {
+      if (e.path.startsWith("/")) reasons.push("absolute path");
+      if (e.path.includes("..")) reasons.push("traversal path");
+      if (e.path.includes("://")) reasons.push("URL path");
+    }
+    if (e.artifactType && !REGISTRY_SUPPORTED_ARTIFACT_TYPES.has(e.artifactType)) {
+      reasons.push("unsupported artifactType: " + e.artifactType);
+    }
+    if (e.validation && !REGISTRY_SUPPORTED_VALIDATION_STATUSES.has(e.validation.status)) {
+      reasons.push("invalid validation status: " + e.validation.status);
+    }
+    if (!("integrity" in e)) reasons.push("missing entry integrity");
+  }
+  if (registry.productionReady === true) reasons.push("productionReady extra property");
+  if (registry.apiKey !== undefined) reasons.push("apiKey extra property");
+  if (registry.unexpectedField !== undefined) reasons.push("unexpectedField extra property");
+
+  return reasons;
+}
+
+// ── Standalone registry file validator ───────────────────────────────────────────
+
+function validateProductDeliveryRegistryFile(pathArg) {
+  console.log("PNPD Product Delivery Registry Validation");
+  console.log("Registry file: " + pathArg);
+  console.log("");
+
+  // 1. Path safety
+  let realPath;
+  try {
+    realPath = resolveRegistryPath(pathArg);
+  } catch (e) {
+    console.error("Path safety failure: " + e.message);
+    process.exit(1);
+  }
+
+  // 2. File exists and is regular file
+  let stat;
+  try {
+    stat = fs.statSync(realPath);
+    if (!stat.isFile()) {
+      console.error("Path is not a regular file: " + realPath);
+      process.exit(1);
+    }
+  } catch (e) {
+    console.error("File not found: " + realPath);
+    process.exit(1);
+  }
+
+  // 3. Must be .json extension
+  if (!realPath.endsWith(".json")) {
+    console.error("Registry file must have .json extension");
+    process.exit(1);
+  }
+
+  // 4. JSON parse
+  let rawContent;
+  let registry;
+  try {
+    rawContent = fs.readFileSync(realPath, "utf8");
+    registry = JSON.parse(rawContent);
+    console.log("[PASS] JSON parse");
+  } catch (e) {
+    console.error("JSON parse failure: " + e.message);
+    process.exit(1);
+  }
+
+  // 5. Schema validation
+  let schema;
+  try {
+    schema = JSON.parse(fs.readFileSync(path.join(ROOT, REGISTRY_SCHEMA_PATH), "utf8"));
+  } catch (e) {
+    console.error("Registry schema load failed: " + e.message);
+    process.exit(2);
+  }
+
+  // 6. Structural checks
+  let allFindings = [];
+  const structFails = checkRegistryPositiveFixture(registry);
+  if (structFails.length > 0) {
+    console.error("[FAIL] Structural checks: " + structFails.join("; "));
+    allFindings = allFindings.concat(structFails);
+  } else {
+    console.log("[PASS] Structural checks");
+  }
+
+  // 7. Forbidden-field scan
+  const forbiddenFields = [];
+  scanRegistryForbiddenFields(registry, "$", forbiddenFields);
+  if (forbiddenFields.length > 0) {
+    console.error("[FAIL] Forbidden-field scan: " + forbiddenFields.join(", "));
+    allFindings = allFindings.concat(forbiddenFields);
+  } else {
+    console.log("[PASS] Forbidden-field scan");
+  }
+
+  // 8. Secret value scan
+  const secFindings = scanRegistrySecretValues(rawContent);
+  if (secFindings.length > 0) {
+    console.error("[FAIL] Secret value scan: " + secFindings.join("; "));
+    allFindings = allFindings.concat(secFindings);
+  } else {
+    console.log("[PASS] Secret value scan");
+  }
+
+  if (allFindings.length > 0) {
+    console.log("");
+    console.log("Product Delivery registry invalid: " + allFindings.length + " violation(s).");
+    process.exit(1);
+  }
+
+  console.log("");
+  console.log("Product Delivery registry valid.");
+  process.exit(0);
+}
+
+// ── Phase 1O fixture validator ──────────────────────────────────────────────────
+
+function validateProductDeliveryRegistryPhase1O() {
+  let exitCode = 0;
+  let positivePassed = 0;
+  let positiveFailed = 0;
+  let negativeInvalid = 0;
+  let negativeUnexpectedPass = 0;
+  let forbiddenFieldPass = true;
+  let securityPass = true;
+
+  // ── Schema load checks ──
+  let schema;
+  try {
+    const schemaRaw = fs.readFileSync(path.join(ROOT, REGISTRY_SCHEMA_PATH), "utf8");
+    schema = JSON.parse(schemaRaw);
+  } catch (e) {
+    console.error("Product Delivery Registry schema load failed: " + e.message);
+    process.exit(2);
+  }
+
+  if (schema.$schema !== "https://json-schema.org/draft/2020-12/schema") {
+    console.error("Schema $schema must be https://json-schema.org/draft/2020-12/schema");
+    process.exit(2);
+  }
+  if (schema.$id !== "pnpd-product-delivery-registry.schema.json") {
+    console.error("Schema $id must be pnpd-product-delivery-registry.schema.json");
+    process.exit(2);
+  }
+  if (schema.title !== "PNPD Product Delivery Artifact Registry Schema") {
+    console.error("Schema title must be 'PNPD Product Delivery Artifact Registry Schema'");
+    process.exit(2);
+  }
+  if (schema.type !== "object") {
+    console.error("Schema top-level type must be object");
+    process.exit(2);
+  }
+  if (schema.additionalProperties !== false) {
+    console.error("Schema top-level additionalProperties must be false");
+    process.exit(2);
+  }
+
+  const props = schema.properties || {};
+  if (!props.recordType || props.recordType.const !== "productDeliveryArtifactRegistry") {
+    console.error("Schema recordType const must be productDeliveryArtifactRegistry");
+    process.exit(2);
+  }
+  if (!props.schemaVersion || props.schemaVersion.const !== "1.0.0") {
+    console.error("Schema schemaVersion const must be 1.0.0");
+    process.exit(2);
+  }
+
+  const requiredRoot = ["schemaVersion", "recordType", "registryId", "createdAt", "createdBy", "repo", "governance", "entries"];
+  for (const rp of requiredRoot) {
+    if (!props[rp]) {
+      console.error("Schema properties missing: " + rp);
+      process.exit(2);
+    }
+  }
+
+  if (!props.entries || props.entries.minItems !== 0) {
+    console.error("Schema entries.minItems must be 0");
+    process.exit(2);
+  }
+  if (!props.entries || props.entries.maxItems !== 500) {
+    console.error("Schema entries.maxItems must be 500");
+    process.exit(2);
+  }
+
+  // $defs checks
+  const defs = schema.$defs || {};
+  const expectedDefs = ["repo", "governance", "entry", "validation", "source", "integrity"];
+  for (const d of expectedDefs) {
+    if (!defs[d]) {
+      console.error("Schema $defs." + d + " missing");
+      process.exit(2);
+    }
+  }
+
+  // Entry artifactType enum
+  const entryDef = defs.entry;
+  if (entryDef && entryDef.properties) {
+    const atProp = entryDef.properties.artifactType;
+    if (atProp && atProp.enum) {
+      for (const at of REGISTRY_SUPPORTED_ARTIFACT_TYPES) {
+        if (!atProp.enum.includes(at)) {
+          console.error("Schema entry.artifactType enum missing: " + at);
+          process.exit(2);
+        }
+      }
+    }
+    // Validation status enum
+    const vsProp = entryDef.properties.validation;
+    if (vsProp && vsProp.$ref) {
+      // validation is a $ref to $defs.validation
+    }
+  }
+  const valDef = defs.validation;
+  if (valDef && valDef.properties && valDef.properties.status) {
+    const statusEnum = valDef.properties.status.enum;
+    if (statusEnum) {
+      for (const s of REGISTRY_SUPPORTED_VALIDATION_STATUSES) {
+        if (!statusEnum.includes(s)) {
+          console.error("Schema validation.status enum missing: " + s);
+          process.exit(2);
+        }
+      }
+    }
+  }
+
+  // Governance consts
+  const govDef = defs.governance;
+  if (govDef && govDef.properties) {
+    const gProps = govDef.properties;
+    if (gProps.advisoryOnly && gProps.advisoryOnly.const !== true) {
+      console.error("Schema governance.advisoryOnly const must be true");
+      process.exit(2);
+    }
+    if (gProps.ownerFinalAuthority && gProps.ownerFinalAuthority.const !== true) {
+      console.error("Schema governance.ownerFinalAuthority const must be true");
+      process.exit(2);
+    }
+    const mustBeFalse = [
+      "authorizesImplementation", "authorizesMerge", "authorizesDispatch",
+      "authorizesDeployment", "authorizesGitHubMutation", "authorizesApiMutation",
+      "certifiesProductionReadiness", "codexIsOwner",
+      "agentBridgeCanApprove", "agentBridgeCanMerge", "agentBridgeCanDispatch",
+      "agentBridgeCanDeploy", "runtimeConsumptionAllowed",
+      "artifactGenerationAllowed", "externalMutationAllowed",
+    ];
+    for (const f of mustBeFalse) {
+      if (gProps[f] && gProps[f].const !== false) {
+        console.error("Schema governance." + f + " const must be false");
+        process.exit(2);
+      }
+    }
+  }
+
+  // ── Fixture inventory enforcement ──
+  const fixturesDir = path.join(ROOT, REGISTRY_FIXTURE_DIR);
+  const posDir = path.join(fixturesDir, "positive");
+  const negDir = path.join(fixturesDir, "negative");
+
+  let fixtureFiles = [];
+  try {
+    const posFiles = fs.readdirSync(posDir).filter(f => f.endsWith(".json"));
+    const negFiles = fs.readdirSync(negDir).filter(f => f.endsWith(".json"));
+    fixtureFiles = [...posFiles.map(f => "positive/" + f), ...negFiles.map(f => "negative/" + f)];
+  } catch (e) {
+    console.error("Product Delivery Registry fixture directory not readable: " + e.message);
+    process.exit(2);
+  }
+
+  if (fixtureFiles.length !== 21) {
+    console.error("Expected exactly 21 product delivery registry fixture files, found: " + fixtureFiles.length);
+    process.exit(1);
+  }
+
+  const allExpected = new Set([
+    ...Array.from(REGISTRY_POSITIVE_FIXTURES).map(f => "positive/" + f),
+    ...Array.from(REGISTRY_NEGATIVE_FIXTURES).map(f => "negative/" + f),
+  ]);
+  for (const f of allExpected) {
+    if (!fixtureFiles.includes(f)) {
+      console.error("Missing expected fixture: " + f);
+      process.exit(1);
+    }
+  }
+  for (const f of fixtureFiles) {
+    if (!allExpected.has(f)) {
+      console.error("Unexpected fixture file: " + f);
+      process.exit(1);
+    }
+  }
+
+  // ── Process each fixture ──
+  console.log("PNPD Product Delivery Registry Validation");
+  console.log("Schema: " + REGISTRY_SCHEMA_PATH);
+  console.log("Fixtures: " + REGISTRY_FIXTURE_DIR);
+  console.log("");
+
+  for (const relPath of fixtureFiles) {
+    const filePath = path.join(fixturesDir, relPath);
+    const filename = path.basename(relPath);
+    let rawContent;
+    let fixture;
+
+    try {
+      rawContent = fs.readFileSync(filePath, "utf8");
+      fixture = JSON.parse(rawContent);
+    } catch (e) {
+      console.log("[FAIL] " + filename + " — JSON parse error: " + e.message);
+      exitCode = 1;
+      if (REGISTRY_POSITIVE_FIXTURES.has(filename)) positiveFailed++;
+      continue;
+    }
+
+    // ── Security scan (all fixtures) ──
+    const secFindings = scanRegistrySecretValues(rawContent);
+    if (secFindings.length > 0) {
+      console.log("[FAIL] " + filename + " — SECURITY VIOLATION: " + secFindings.join("; "));
+      securityPass = false;
+      exitCode = 1;
+      continue;
+    }
+
+    const isPositive = REGISTRY_POSITIVE_FIXTURES.has(filename);
+
+    if (isPositive) {
+      // ── Positive fixture validation ──
+      const structFails = checkRegistryPositiveFixture(fixture);
+
+      const forbiddenFields = [];
+      scanRegistryForbiddenFields(fixture, "$", forbiddenFields);
+
+      const allFailures = [];
+      if (structFails.length > 0) allFailures.push(structFails.join("; "));
+      if (forbiddenFields.length > 0) {
+        allFailures.push("forbidden field(s): " + forbiddenFields.join(", "));
+        forbiddenFieldPass = false;
+      }
+
+      if (allFailures.length > 0) {
+        console.log("[FAIL] " + filename + " — " + allFailures.join(" | "));
+        positiveFailed++;
+        exitCode = 1;
+      } else {
+        console.log("[PASS] " + filename + " — valid fixture accepted");
+        positivePassed++;
+      }
+    } else {
+      // ── Negative fixture validation ──
+      const expectedReasons = detectRegistryNegativeFailure(fixture, filename);
+
+      if (expectedReasons.length > 0) {
+        console.log("[INVALID-as-expected] " + filename + " — " + expectedReasons.join("; "));
+        negativeInvalid++;
+      } else {
+        const structFails = checkRegistryPositiveFixture(fixture);
+        if (structFails.length > 0) {
+          console.log("[INVALID-as-expected] " + filename + " — structural failure: " + structFails[0]);
+          negativeInvalid++;
+        } else {
+          console.log("[FAIL] " + filename + " — expected INVALID but passed all checks");
+          negativeUnexpectedPass++;
+          exitCode = 1;
+        }
+      }
+    }
+  }
+
+  // ── Summary ──
+  console.log("");
+  console.log("Product Delivery Registry schema: pass");
+  console.log("Product Delivery Registry positive fixtures: " + positivePassed + " passed, " + positiveFailed + " failed");
+  console.log("Product Delivery Registry negative fixtures: " + negativeInvalid + " invalid as expected, " + negativeUnexpectedPass + " unexpectedly passed");
+  console.log("Product Delivery Registry forbidden-field scan: " + (forbiddenFieldPass ? "pass" : "fail"));
+  console.log("Product Delivery Registry security scan: " + (securityPass ? "pass" : "fail"));
+
+  if (exitCode === 0) {
+    console.log("Phase 1O Product Delivery Registry validation passed");
+  }
+
+  process.exit(exitCode);
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
@@ -4239,6 +5013,12 @@ try {
     // validateProductDeliveryArtifact calls process.exit internally
   }
 
+  // Phase 1O-F: standalone Product Delivery registry validation
+  if (args.productDeliveryRegistry) {
+    validateProductDeliveryRegistryFile(args.productDeliveryRegistry);
+    // validateProductDeliveryRegistryFile calls process.exit internally
+  }
+
   const runPhase1f = args.phase === "1f";
   const runPhase1h = args.phase === "1h";
 
@@ -4260,6 +5040,12 @@ try {
 
   if (runPhase1n) {
     validateProductDeliveryPhase1N();
+  }
+
+  const runPhase1o = args.phase === "1o";
+
+  if (runPhase1o) {
+    validateProductDeliveryRegistryPhase1O();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
