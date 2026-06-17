@@ -265,6 +265,7 @@ Registry paths refer to local artifact files only. The registry index should not
 Registry entries must not contain:
 
 - no secrets (API keys, tokens, passwords)
+- no tokens
 - no private keys (`-----BEGIN ... PRIVATE KEY-----`)
 - no `.env` paths or references
 - no private workstation paths (`/Users/`, `/home/`, etc.)
@@ -304,8 +305,8 @@ Future relationship:
 - Runtime consumption remains blocked after 1O-A.
 - runtime consumption remains blocked pending separate design, audit, and approval.
 - Any future runtime consumption requires separate design, schema, fixtures, validator, Codex audit, and Owner approval.
-- Registry presence must not change dry-run behavior.
-- Registry presence must not affect dispatch status.
+- registry presence must not change dry-run behavior.
+- registry presence must not affect dispatch status.
 
 ---
 
@@ -326,14 +327,14 @@ This design proposes the following phased implementation path. Each phase must b
 
 | Phase | Scope | Description |
 |-------|-------|-------------|
-| **1O-A** | Design only | This document. Registry convention design. |
-| **1O-B** | Schema only | Registry JSON schema (`.pnpd/product-delivery-registry.schema.json`). |
-| **1O-C** | Fixtures only | Registry test fixtures (valid and invalid). |
-| **1O-D** | Validator mode | `--phase 1o` fixture validation in `scripts/pnpd-validate-schemas.mjs`. |
-| **1O-E** | Standalone validation | `--product-delivery-registry <path>` standalone registry file validation. |
-| **1O-F** | Docs update | README and capability map update to document registry capability. |
+| **Phase 1O-A** | Design only | This document. Registry convention design. |
+| **Phase 1O-B** | Schema only | Registry JSON schema (`.pnpd/product-delivery-registry.schema.json`). |
+| **Phase 1O-C** | Fixtures only | Registry test fixtures (valid and invalid). |
+| **Phase 1O-D** | Validator mode | `--phase 1o` fixture validation in `scripts/pnpd-validate-schemas.mjs`. |
+| **Phase 1O-E** | Standalone validation | `--product-delivery-registry <path>` standalone registry file validation. |
+| **Phase 1O-F** | Docs update | README and capability map update to document registry capability. |
 
-Runtime consumption of the registry remains deferred beyond 1O-F and requires a separate governed phase.
+Runtime consumption remains deferred beyond Phase 1O-F and requires a separate governed phase.
 
 ---
 
