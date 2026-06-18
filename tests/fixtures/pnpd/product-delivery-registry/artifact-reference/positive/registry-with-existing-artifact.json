@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "productDeliveryArtifactRegistry",
+  "registryId": "artifact-reference-existing",
+  "createdAt": "2026-06-18T00:00:00.000Z",
+  "createdBy": "phase-1o-i-fixture",
+  "repo": {
+    "repoId": "pnpd-os",
+    "name": "pnpd-os",
+    "rootRelative": ".",
+    "branch": "main",
+    "commit": "8c9ae96c1e5653d3ee0074be4675e4ddd64c078b"
+  },
+  "governance": {
+    "advisoryOnly": true,
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexIsOwner": false,
+    "agentBridgeCanApprove": false,
+    "agentBridgeCanMerge": false,
+    "agentBridgeCanDispatch": false,
+    "agentBridgeCanDeploy": false,
+    "runtimeConsumptionAllowed": false,
+    "artifactGenerationAllowed": false,
+    "externalMutationAllowed": false
+  },
+  "entries": [
+    {
+      "artifactId": "fixture-existing-artifact-entry",
+      "artifactType": "prd",
+      "phase": "1O-I-fixture",
+      "path": "tests/fixtures/pnpd/product-delivery-registry/positive/empty-registry.json",
+      "validation": {
+        "validator": "pnpd-validate-schemas",
+        "mode": "product-delivery-registry",
+        "status": "notValidated",
+        "validatedAt": null,
+        "path": "tests/fixtures/pnpd/product-delivery-registry/positive/empty-registry.json",
+        "exitCode": null
+      },
+      "createdAt": "2026-06-18T00:00:00.000Z",
+      "createdBy": "phase-1o-i-fixture",
+      "source": {
+        "sourceType": "humanAuthored",
+        "sourceRef": "fixture-initial"
+      },
+      "notes": "Positive fixture: entry.path points to an existing tracked file. Phase 1O-I checks existence only, not content validity.",
+      "integrity": {
+        "hashAlgorithm": "none",
+        "contentHash": null
+      }
+    }
+  ]
+}
