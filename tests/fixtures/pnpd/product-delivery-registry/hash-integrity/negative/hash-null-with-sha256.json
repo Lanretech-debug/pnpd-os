@@ -35,13 +35,13 @@
       "artifactId": "fixture-hash-null-with-sha256-entry",
       "artifactType": "prd",
       "phase": "1O-K-fixture",
-      "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.txt",
+      "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.json",
       "validation": {
         "validator": "pnpd-validate-schemas",
         "mode": "product-delivery-registry",
         "status": "notValidated",
         "validatedAt": null,
-        "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.txt",
+        "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.json",
         "exitCode": null
       },
       "createdAt": "2026-06-18T00:00:00.000Z",
@@ -50,7 +50,7 @@
         "sourceType": "humanAuthored",
         "sourceRef": "fixture-initial"
       },
-      "notes": "Negative fixture: entry.path points to known-content.txt, hashAlgorithm sha256, but contentHash is null. SHA-256 requires a non-null hash. The semantic rule is: sha256 requires a 64-character lowercase hex contentHash. Phase 1O-K must reject this combination.",
+      "notes": "Negative fixture: entry.path points to known-content.json, hashAlgorithm sha256, but contentHash is null. SHA-256 requires a non-null hash. The semantic rule is: sha256 requires a 64-character lowercase hex contentHash. Phase 1O-K must reject this combination.",
       "integrity": {
         "hashAlgorithm": "sha256",
         "contentHash": null

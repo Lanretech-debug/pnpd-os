@@ -35,13 +35,13 @@
       "artifactId": "fixture-hash-none-skipped-entry",
       "artifactType": "prd",
       "phase": "1O-K-fixture",
-      "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.txt",
+      "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.json",
       "validation": {
         "validator": "pnpd-validate-schemas",
         "mode": "product-delivery-registry",
         "status": "notValidated",
         "validatedAt": null,
-        "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.txt",
+        "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.json",
         "exitCode": null
       },
       "createdAt": "2026-06-18T00:00:00.000Z",
@@ -50,7 +50,7 @@
         "sourceType": "humanAuthored",
         "sourceRef": "fixture-initial"
       },
-      "notes": "Positive fixture: entry.path points to known-content.txt, hashAlgorithm none, contentHash null. Hash verification is skipped, not failed. Phase 1O-K treats hashAlgorithm none as intentional skip.",
+      "notes": "Positive fixture: entry.path points to known-content.json, hashAlgorithm none, contentHash null. Hash verification is skipped, not failed. Phase 1O-K treats hashAlgorithm none as intentional skip.",
       "integrity": {
         "hashAlgorithm": "none",
         "contentHash": null

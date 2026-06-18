@@ -35,13 +35,13 @@
       "artifactId": "fixture-hash-mismatch-entry",
       "artifactType": "prd",
       "phase": "1O-K-fixture",
-      "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.txt",
+      "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.json",
       "validation": {
         "validator": "pnpd-validate-schemas",
         "mode": "product-delivery-registry",
         "status": "notValidated",
         "validatedAt": null,
-        "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.txt",
+        "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.json",
         "exitCode": null
       },
       "createdAt": "2026-06-18T00:00:00.000Z",
@@ -50,7 +50,7 @@
         "sourceType": "humanAuthored",
         "sourceRef": "fixture-initial"
       },
-      "notes": "Negative fixture: entry.path points to known-content.txt, hashAlgorithm sha256, but contentHash is a valid 64-character hex string that does NOT match the actual raw-byte SHA-256 of the support file. Hash verification must report a mismatch. Phase 1O-K checks hash integrity only, not content validity.",
+      "notes": "Negative fixture: entry.path points to known-content.json, hashAlgorithm sha256, but contentHash is a valid 64-character hex string that does NOT match the actual raw-byte SHA-256 of the support file. Hash verification must report a mismatch. Phase 1O-K checks hash integrity only, not content validity.",
       "integrity": {
         "hashAlgorithm": "sha256",
         "contentHash": "0000000000000000000000000000000000000000000000000000000000000000"
