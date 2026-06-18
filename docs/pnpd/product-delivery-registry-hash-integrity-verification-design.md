@@ -91,7 +91,7 @@ The future hash model for artifact integrity verification is:
 - **No content validation**: hash computation does not inspect, validate, or interpret the file content.
 - **Byte-level determinism**: if the file bytes change in any way (including whitespace, line endings, or encoding), the hash changes. This is by design.
 
-This model is intentionally simple. It answers one narrow question: "Do the bytes on disk match the hash recorded in the registry entry?" It does not answer whether the artifact is valid, correct, or ready for any purpose.
+This model is intentionally simple. It answers one narrow question: "Do the bytes on disk match the hash recorded in the registry entry?" It does not answer whether the artifact satisfies schema, quality, or readiness expectations.
 
 ## Canonicalization Policy
 
@@ -104,7 +104,7 @@ This model is intentionally simple. It answers one narrow question: "Do the byte
 
 This policy avoids silent hash mismatches caused by unexpected canonicalization behavior. If two files differ by even a single byte, they produce different hashes. If an artifact has been re-serialized, reformatted, or had its line endings changed, the recorded `contentHash` must be updated to match.
 
-## hashAlgorithm `none` Policy
+## hashAlgorithm none Policy
 
 When an entry declares `hashAlgorithm: "none"`:
 
@@ -283,7 +283,7 @@ This boundary must be preserved in the future implementation. Hash verification 
 - No registry data is created by hash verification.
 - No `.pnpd/product-delivery-registry/registry.json` is created or modified.
 - Hash verification is read-only: it reads the registry file, reads referenced artifacts, computes hashes, and reports results. It writes nothing.
-- A future registry writer must be separately designed, governed, and approved. It is not part of Phase 1O-J or the future 1O-K hash verification implementation.
+- A future registry-writing capability must be separately designed, governed, and approved. It is not part of Phase 1O-J or the future 1O-K hash verification implementation.
 
 ## Runtime, Dispatch, Deployment, GitHub/API, And Production Boundaries
 
@@ -341,7 +341,7 @@ This phase (1O-J) explicitly does **not**:
 - Change or create any fixture files.
 - Change `package.json`, CI workflows, `.gitignore`, or npm scripts.
 - Create the registry directory (`.pnpd/product-delivery-registry/`).
-- Create the registry data file (`.pnpd/product-delivery-registry/registry.json`).
+- Add the registry data file (`.pnpd/product-delivery-registry/registry.json`).
 - Create or design a registry writer.
 - Implement referenced artifact content validation.
 - Authorize or implement runtime consumption.
