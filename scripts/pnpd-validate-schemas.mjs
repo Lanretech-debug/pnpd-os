@@ -4768,12 +4768,12 @@ function validateProductDeliveryRegistryFile(pathArg, checkArtifacts) {
       try {
         realArtifactPath = fs.realpathSync(resolved);
         if (!realArtifactPath.startsWith(path.resolve(ROOT) + path.sep) && realArtifactPath !== path.resolve(ROOT)) {
-          missingFailures.push({ artifactId: entry.artifactId, reason: "resolved path escapes repo root: " + realArtifactPath });
+          missingFailures.push({ artifactId: entry.artifactId, reason: "resolved path escapes repo root: " + artifactPath });
           continue;
         }
       } catch (e) {
         if (e.code === "ENOENT") {
-          missingFailures.push({ artifactId: entry.artifactId, reason: "missing artifact: " + resolved });
+          missingFailures.push({ artifactId: entry.artifactId, reason: "missing artifact: " + artifactPath });
           continue;
         }
         missingFailures.push({ artifactId: entry.artifactId, reason: "artifact path error: " + e.message });
@@ -4785,12 +4785,12 @@ function validateProductDeliveryRegistryFile(pathArg, checkArtifacts) {
       try {
         artStat = fs.statSync(realArtifactPath);
       } catch (e) {
-        missingFailures.push({ artifactId: entry.artifactId, reason: "missing artifact: " + resolved });
+        missingFailures.push({ artifactId: entry.artifactId, reason: "missing artifact: " + artifactPath });
         continue;
       }
 
       if (!artStat.isFile()) {
-        directoryFailures.push({ artifactId: entry.artifactId, reason: "path is a directory, not a file: " + resolved });
+        directoryFailures.push({ artifactId: entry.artifactId, reason: "path is a directory, not a file: " + artifactPath });
         continue;
       }
 
