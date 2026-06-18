@@ -5199,6 +5199,19 @@ function validateProductDeliveryRegistryPhase1O() {
 try {
   const args = parseArgs(process.argv);
 
+  // Phase 1O-K: --verify-registry-artifact-hashes requires --product-delivery-registry AND --check-registry-artifacts
+  if (args.verifyRegistryArtifactHashes) {
+    if (args.phase) {
+      throw new Error("--verify-registry-artifact-hashes cannot be combined with --phase.");
+    }
+    if (!args.productDeliveryRegistry) {
+      throw new Error("--verify-registry-artifact-hashes requires --product-delivery-registry <path>.");
+    }
+    if (!args.checkRegistryArtifacts) {
+      throw new Error("--verify-registry-artifact-hashes requires --check-registry-artifacts.");
+    }
+  }
+
   // Phase 1J: runtime readiness report file validation (standalone)
   if (args.runtimeReadinessReport) {
     validateRuntimeReadinessReportFile(args.runtimeReadinessReport);
@@ -5215,19 +5228,6 @@ try {
   if (args.productDeliveryArtifact) {
     validateProductDeliveryArtifact(args.productDeliveryArtifact);
     // validateProductDeliveryArtifact calls process.exit internally
-  }
-
-  // Phase 1O-K: --verify-registry-artifact-hashes requires --product-delivery-registry AND --check-registry-artifacts
-  if (args.verifyRegistryArtifactHashes) {
-    if (args.phase) {
-      throw new Error("--verify-registry-artifact-hashes cannot be combined with --phase.");
-    }
-    if (!args.productDeliveryRegistry) {
-      throw new Error("--verify-registry-artifact-hashes requires --product-delivery-registry <path>.");
-    }
-    if (!args.checkRegistryArtifacts) {
-      throw new Error("--verify-registry-artifact-hashes requires --check-registry-artifacts.");
-    }
   }
 
   // Phase 1O-F: standalone Product Delivery registry validation
