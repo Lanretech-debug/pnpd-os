@@ -1,0 +1,4 @@
+# Placeholder file so git tracks the directory. The directory name ends with .json
+# to satisfy registry schema path-pattern requirements while allowing the
+# directory-artifact negative fixture to test that directory paths are rejected
+# by the optional --check-registry-artifacts flag.

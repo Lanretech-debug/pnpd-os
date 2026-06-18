@@ -124,7 +124,7 @@ const PHASE_1C_FIXTURES = [
 
 
 function parseArgs(argv) {
-  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null };
+  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null, checkRegistryArtifacts: false };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -140,6 +140,9 @@ function parseArgs(argv) {
       }
       if (args.productDeliveryRegistry) {
         throw new Error("--product-delivery-registry is a standalone validator and cannot be combined with --phase.");
+      }
+      if (args.checkRegistryArtifacts) {
+        throw new Error("--check-registry-artifacts cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
         throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, or 1o).");
@@ -234,6 +237,8 @@ function parseArgs(argv) {
       }
       args.productDeliveryRegistry = argv[i + 1];
       i += 1;
+    } else if (arg === "--check-registry-artifacts") {
+      args.checkRegistryArtifacts = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`PNPD Schema Validator
 
@@ -257,6 +262,7 @@ Options:
   --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
   --product-delivery-artifact <path>  Validate a user-created Product Delivery artifact JSON file.
   --product-delivery-registry <path>  Validate a Product Delivery registry JSON file.
+  --check-registry-artifacts          With --product-delivery-registry: check each entry path points to an existing regular file.
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
     } else {
@@ -4630,9 +4636,12 @@ function detectRegistryNegativeFailure(registry, filename) {
 
 // ── Standalone registry file validator ───────────────────────────────────────────
 
-function validateProductDeliveryRegistryFile(pathArg) {
+function validateProductDeliveryRegistryFile(pathArg, checkArtifacts) {
   console.log("PNPD Product Delivery Registry Validation");
   console.log("Registry file: " + pathArg);
+  if (checkArtifacts) {
+    console.log("Artifact reference check: enabled (--check-registry-artifacts)");
+  }
   console.log("");
 
   // 1. Path safety
@@ -4721,6 +4730,102 @@ function validateProductDeliveryRegistryFile(pathArg) {
 
   console.log("");
   console.log("Product Delivery registry valid.");
+
+  // ── Optional artifact reference check ─────────────────────────────────────────
+  if (checkArtifacts) {
+    const entries = registry.entries || [];
+    let totalChecked = 0;
+    let totalExists = 0;
+    const missingFailures = [];
+    const directoryFailures = [];
+
+    for (const entry of entries) {
+      totalChecked += 1;
+      const artifactPath = entry.path;
+
+      // Validate path safety using same rules as resolveRegistryPath
+      if (path.isAbsolute(artifactPath)) {
+        missingFailures.push({ artifactId: entry.artifactId, reason: "absolute path not allowed: " + artifactPath });
+        continue;
+      }
+      if (artifactPath.includes("..")) {
+        missingFailures.push({ artifactId: entry.artifactId, reason: "path traversal not allowed: " + artifactPath });
+        continue;
+      }
+      if (artifactPath.includes("://")) {
+        missingFailures.push({ artifactId: entry.artifactId, reason: "URL path not allowed: " + artifactPath });
+        continue;
+      }
+
+      const resolved = path.resolve(ROOT, artifactPath);
+      if (!resolved.startsWith(path.resolve(ROOT) + path.sep) && resolved !== path.resolve(ROOT)) {
+        missingFailures.push({ artifactId: entry.artifactId, reason: "path escapes repo root: " + artifactPath });
+        continue;
+      }
+
+      // Realpath containment
+      let realArtifactPath;
+      try {
+        realArtifactPath = fs.realpathSync(resolved);
+        if (!realArtifactPath.startsWith(path.resolve(ROOT) + path.sep) && realArtifactPath !== path.resolve(ROOT)) {
+          missingFailures.push({ artifactId: entry.artifactId, reason: "resolved path escapes repo root: " + artifactPath });
+          continue;
+        }
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          missingFailures.push({ artifactId: entry.artifactId, reason: "missing artifact: " + artifactPath });
+          continue;
+        }
+        missingFailures.push({ artifactId: entry.artifactId, reason: "artifact path error: " + e.message });
+        continue;
+      }
+
+      // Check it is a regular file, not a directory
+      let artStat;
+      try {
+        artStat = fs.statSync(realArtifactPath);
+      } catch (e) {
+        missingFailures.push({ artifactId: entry.artifactId, reason: "missing artifact: " + artifactPath });
+        continue;
+      }
+
+      if (!artStat.isFile()) {
+        directoryFailures.push({ artifactId: entry.artifactId, reason: "path is a directory, not a file: " + artifactPath });
+        continue;
+      }
+
+      totalExists += 1;
+    }
+
+    // Report results
+    console.log("");
+    console.log("Artifact reference check: " + totalChecked + " checked, " + totalExists + " exists");
+
+    let artifactExitCode = 0;
+    if (missingFailures.length > 0) {
+      console.log("");
+      for (const f of missingFailures) {
+        console.log("[FAIL] entry \"" + f.artifactId + "\": " + f.reason);
+      }
+      artifactExitCode = 1;
+    }
+    if (directoryFailures.length > 0) {
+      for (const f of directoryFailures) {
+        console.log("[FAIL] entry \"" + f.artifactId + "\": " + f.reason);
+      }
+      artifactExitCode = 1;
+    }
+
+    if (artifactExitCode === 0) {
+      console.log("[PASS] Artifact reference check: " + totalChecked + " checked, " + totalExists + " exists");
+      process.exit(0);
+    } else {
+      console.log("");
+      console.log("Artifact reference check failed: " + (missingFailures.length + directoryFailures.length) + " artifact(s) missing or invalid.");
+      process.exit(1);
+    }
+  }
+
   process.exit(0);
 }
 
@@ -5015,8 +5120,16 @@ try {
 
   // Phase 1O-F: standalone Product Delivery registry validation
   if (args.productDeliveryRegistry) {
-    validateProductDeliveryRegistryFile(args.productDeliveryRegistry);
+    validateProductDeliveryRegistryFile(args.productDeliveryRegistry, args.checkRegistryArtifacts);
     // validateProductDeliveryRegistryFile calls process.exit internally
+  }
+
+  // Phase 1O-I: --check-registry-artifacts requires --product-delivery-registry
+  if (args.checkRegistryArtifacts && !args.productDeliveryRegistry) {
+    if (args.phase) {
+      throw new Error("--check-registry-artifacts cannot be combined with --phase.");
+    }
+    throw new Error("--check-registry-artifacts requires --product-delivery-registry <path>.");
   }
 
   const runPhase1f = args.phase === "1f";
