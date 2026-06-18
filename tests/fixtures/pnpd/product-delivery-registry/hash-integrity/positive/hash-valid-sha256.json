@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "productDeliveryArtifactRegistry",
+  "registryId": "hash-valid-sha256",
+  "createdAt": "2026-06-18T00:00:00.000Z",
+  "createdBy": "phase-1o-k-fixture",
+  "repo": {
+    "repoId": "pnpd-os",
+    "name": "pnpd-os",
+    "rootRelative": ".",
+    "branch": "main",
+    "commit": "887c12f375695026967defefafba64295524cf0b"
+  },
+  "governance": {
+    "advisoryOnly": true,
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexIsOwner": false,
+    "agentBridgeCanApprove": false,
+    "agentBridgeCanMerge": false,
+    "agentBridgeCanDispatch": false,
+    "agentBridgeCanDeploy": false,
+    "runtimeConsumptionAllowed": false,
+    "artifactGenerationAllowed": false,
+    "externalMutationAllowed": false
+  },
+  "entries": [
+    {
+      "artifactId": "fixture-hash-valid-sha256-entry",
+      "artifactType": "prd",
+      "phase": "1O-K-fixture",
+      "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.txt",
+      "validation": {
+        "validator": "pnpd-validate-schemas",
+        "mode": "product-delivery-registry",
+        "status": "notValidated",
+        "validatedAt": null,
+        "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.txt",
+        "exitCode": null
+      },
+      "createdAt": "2026-06-18T00:00:00.000Z",
+      "createdBy": "phase-1o-k-fixture",
+      "source": {
+        "sourceType": "humanAuthored",
+        "sourceRef": "fixture-initial"
+      },
+      "notes": "Positive fixture: entry.path points to known-content.txt, hashAlgorithm sha256, contentHash matches the actual raw-byte SHA-256 of the support file. Phase 1O-K checks hash integrity only, not content validity.",
+      "integrity": {
+        "hashAlgorithm": "sha256",
+        "contentHash": "1048b957cad0a56992e6ba64c3c0f3a029cc595551b7676ae6134a57234cd629"
+      }
+    }
+  ]
+}

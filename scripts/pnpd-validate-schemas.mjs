@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -124,7 +125,7 @@ const PHASE_1C_FIXTURES = [
 
 
 function parseArgs(argv) {
-  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null, checkRegistryArtifacts: false };
+  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null, checkRegistryArtifacts: false, verifyRegistryArtifactHashes: false };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -239,6 +240,8 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg === "--check-registry-artifacts") {
       args.checkRegistryArtifacts = true;
+    } else if (arg === "--verify-registry-artifact-hashes") {
+      args.verifyRegistryArtifactHashes = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`PNPD Schema Validator
 
@@ -263,6 +266,7 @@ Options:
   --product-delivery-artifact <path>  Validate a user-created Product Delivery artifact JSON file.
   --product-delivery-registry <path>  Validate a Product Delivery registry JSON file.
   --check-registry-artifacts          With --product-delivery-registry: check each entry path points to an existing regular file.
+  --verify-registry-artifact-hashes   With --product-delivery-registry AND --check-registry-artifacts: verify sha256 contentHash against file bytes.
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
       process.exit(0);
     } else {
@@ -4636,11 +4640,14 @@ function detectRegistryNegativeFailure(registry, filename) {
 
 // ── Standalone registry file validator ───────────────────────────────────────────
 
-function validateProductDeliveryRegistryFile(pathArg, checkArtifacts) {
+function validateProductDeliveryRegistryFile(pathArg, checkArtifacts, verifyHashes) {
   console.log("PNPD Product Delivery Registry Validation");
   console.log("Registry file: " + pathArg);
   if (checkArtifacts) {
     console.log("Artifact reference check: enabled (--check-registry-artifacts)");
+  }
+  if (verifyHashes) {
+    console.log("Hash verification: enabled (--verify-registry-artifact-hashes)");
   }
   console.log("");
 
@@ -4818,6 +4825,98 @@ function validateProductDeliveryRegistryFile(pathArg, checkArtifacts) {
 
     if (artifactExitCode === 0) {
       console.log("[PASS] Artifact reference check: " + totalChecked + " checked, " + totalExists + " exists");
+
+      // ── Hash verification (Phase 1O-K) ──────────────────────────────────────────
+      if (verifyHashes) {
+        console.log("");
+        let hashChecked = 0;
+        let hashMatched = 0;
+        let hashMismatches = [];
+        let hashSkipped = 0;
+        let hashFailures = [];
+
+        for (const entry of entries) {
+          const integrity = entry.integrity;
+          if (!integrity) {
+            // Should already be schema-rejected, but defensive check
+            hashFailures.push({ artifactId: entry.artifactId, reason: "missing integrity object" });
+            continue;
+          }
+
+          const algorithm = integrity.hashAlgorithm;
+          const contentHash = integrity.contentHash;
+
+          if (algorithm === "none") {
+            // already validated: none must have null contentHash
+            hashSkipped += 1;
+            continue;
+          }
+
+          if (algorithm === "sha256") {
+            if (contentHash === null) {
+              hashFailures.push({ artifactId: entry.artifactId, reason: "sha256 requires non-null contentHash" });
+              continue;
+            }
+
+            // Resolve the artifact path (same safety rules as artifact check)
+            const artifactPath = entry.path;
+            const resolved = path.resolve(ROOT, artifactPath);
+            let fileBytes;
+            try {
+              fileBytes = fs.readFileSync(resolved);
+            } catch (e) {
+              hashFailures.push({ artifactId: entry.artifactId, reason: "cannot read artifact for hash: " + e.message });
+              continue;
+            }
+
+            const computedHash = crypto.createHash("sha256").update(fileBytes).digest("hex");
+            hashChecked += 1;
+
+            if (computedHash === contentHash) {
+              hashMatched += 1;
+            } else {
+              hashMismatches.push({
+                artifactId: entry.artifactId,
+                entryPath: artifactPath,
+                expected: contentHash,
+                computed: computedHash
+              });
+            }
+            continue;
+          }
+
+          // Defensive: algorithm should be schema-rejected
+          hashFailures.push({ artifactId: entry.artifactId, reason: "unsupported hashAlgorithm: " + algorithm });
+        }
+
+        // Report hash verification results
+        console.log("Hash verification: " + hashChecked + " checked, " + hashMatched + " matched, " + hashSkipped + " skipped");
+
+        let hashExitCode = 0;
+        if (hashFailures.length > 0) {
+          console.log("");
+          for (const f of hashFailures) {
+            console.log("[FAIL] entry \"" + f.artifactId + "\": " + f.reason);
+          }
+          hashExitCode = 1;
+        }
+        if (hashMismatches.length > 0) {
+          for (const m of hashMismatches) {
+            console.log("[FAIL] entry \"" + m.artifactId + "\": hash mismatch for " + m.entryPath + ": expected " + m.expected + ", computed " + m.computed);
+          }
+          hashExitCode = 1;
+        }
+
+        if (hashExitCode === 0) {
+          console.log("[PASS] registry artifact hash verification: " + hashChecked + " checked, " + hashMatched + " matched, " + hashSkipped + " skipped");
+          process.exit(0);
+        } else {
+          console.log("");
+          console.log("Hash verification failed: " + (hashFailures.length + hashMismatches.length) + " hash check(s) failed.");
+          process.exit(1);
+        }
+      }
+
       process.exit(0);
     } else {
       console.log("");
@@ -5120,7 +5219,7 @@ try {
 
   // Phase 1O-F: standalone Product Delivery registry validation
   if (args.productDeliveryRegistry) {
-    validateProductDeliveryRegistryFile(args.productDeliveryRegistry, args.checkRegistryArtifacts);
+    validateProductDeliveryRegistryFile(args.productDeliveryRegistry, args.checkRegistryArtifacts, args.verifyRegistryArtifactHashes);
     // validateProductDeliveryRegistryFile calls process.exit internally
   }
 
@@ -5130,6 +5229,19 @@ try {
       throw new Error("--check-registry-artifacts cannot be combined with --phase.");
     }
     throw new Error("--check-registry-artifacts requires --product-delivery-registry <path>.");
+  }
+
+  // Phase 1O-K: --verify-registry-artifact-hashes requires --product-delivery-registry AND --check-registry-artifacts
+  if (args.verifyRegistryArtifactHashes) {
+    if (args.phase) {
+      throw new Error("--verify-registry-artifact-hashes cannot be combined with --phase.");
+    }
+    if (!args.productDeliveryRegistry) {
+      throw new Error("--verify-registry-artifact-hashes requires --product-delivery-registry <path>.");
+    }
+    if (!args.checkRegistryArtifacts) {
+      throw new Error("--verify-registry-artifact-hashes requires --check-registry-artifacts.");
+    }
   }
 
   const runPhase1f = args.phase === "1f";
