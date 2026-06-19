@@ -69,7 +69,7 @@ The future writer is a **dedicated standalone script**:
 - **Script path**: `scripts/pnpd-product-delivery-registry-write.mjs`
 - **Role**: creates a `.pnpd/product-delivery-registry/registry.json` from a provided entry JSON file.
 - **Separation from validator**: the validator reads and checks; the writer creates. These concerns are kept in separate scripts to avoid accidental write paths through validation commands.
-- **Separation from orchestrator**: the orchestrator (`scripts/pnpd-orchestrator-dry-run.mjs`) consumes registry data. The writer creates it. The orchestrator remains read-only and dispatch-blocked.
+- **Separation from orchestrator**: the writer creates registry data for local operational evidence only. The orchestrator does not consume Product Delivery registry data in Phase 1O-L, and any future runtime consumption path requires a separate design and audit phase.
 - **No extension of existing scripts**: `pnpd-validate-schemas.mjs` and `pnpd-orchestrator-dry-run.mjs` are not modified for write behavior.
 
 ## Future Writer Script Path
