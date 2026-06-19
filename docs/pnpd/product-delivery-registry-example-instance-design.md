@@ -6,6 +6,7 @@
 |---|---|
 | Phase | `PHASE_1O_G_PRODUCT_DELIVERY_REGISTRY_EXAMPLE_INSTANCE_DESIGN` |
 | Revisited after | `PHASE_1O_O_PRODUCT_DELIVERY_REGISTRY_APPEND_MODE_PUSHED_REMOTE_CI_PASS` |
+| Source reconciliation | `HERMES_PHASE_1O_P_PRODUCT_DELIVERY_REGISTRY_NEXT_STEP_RECONCILIATION_READY` |
 | Status | design-only |
 | Implementation | not started |
 | Registry fixture | not created in this phase |
@@ -15,7 +16,7 @@
 
 ## Purpose
 
-This document defines the design for a future governed Product Delivery Registry example instance. A concrete multi-entry registry example is now useful because the full registry toolchain — schema, validator, artifact-reference validation, hash integrity verification, create-only writer, and append-only writer — is complete through Phase 1O-O. An example instance demonstrates how the toolchain composes a realistic multi-entry registry from individual entries and validates the result end-to-end. It serves as a reference for future runtime consumers without authorizing consumption, dispatch, deployment, or production certification.
+This document defines the design for a future governed Product Delivery Registry example instance. A concrete multi-entry registry example is now useful because the full registry toolchain — schema, validator, artifact-reference validation, hash integrity verification, create-only writer, and append-only writer — is complete through Phase 1O-O. An example instance demonstrates for human review and validation-time toolchain understanding how a realistic multi-entry registry is composed from individual entries and validated end-to-end. It does not authorize runtime consumption, dispatch, deployment, or production certification.
 
 ## Why 1O-G Was Originally Deferred
 
@@ -27,7 +28,7 @@ The following capabilities have been completed since 1O-G was deferred:
 
 - **Schema** (1O-B): `.pnpd/product-delivery-registry.schema.json` defines the valid shape of a registry.
 - **Fixtures** (1O-C): Positive and negative shape fixtures exercise the schema.
-- **Validator** (1O-D): `scripts/pnpd-validate-schemas.mjs` validates registries against the schema.
+- **Validator** (1O-D): `scripts/pnpd-validate-schemas.mjs` validates the fixed Phase 1O shape fixtures and applies standalone registry structural, semantic, governance, and security checks. Arbitrary registry schema-instance validation remains a separate future gate.
 - **Artifact-reference validation** (1O-I): The validator confirms referenced artifact files exist and are regular files.
 - **Hash integrity verification** (1O-K): The validator confirms `contentHash` matches referenced file bytes.
 - **Create-only writer** (1O-M): `scripts/pnpd-product-delivery-registry-write.mjs` creates a new registry from a single entry.
@@ -58,7 +59,7 @@ With these capabilities in place, a future example instance can be generated thr
 The Product Delivery Registry toolchain as of baseline `4f33cec` includes:
 
 - **Schema**: `.pnpd/product-delivery-registry.schema.json` — defines the valid shape of a registry and its entries.
-- **Validator**: `scripts/pnpd-validate-schemas.mjs` — validates registry JSON against the schema; supports `--phase 1o`, `--product-delivery-registry <path>`, `--check-registry-artifacts`, and `--verify-registry-artifact-hashes`.
+- **Validator**: `scripts/pnpd-validate-schemas.mjs` — validates the Phase 1O schema contract and fixed shape fixtures, and provides standalone structural, semantic, governance, security, artifact-reference, and hash checks; supports `--phase 1o`, `--product-delivery-registry <path>`, `--check-registry-artifacts`, and `--verify-registry-artifact-hashes`. It does not currently apply the JSON Schema to an arbitrary standalone registry file.
 - **Fixtures**: `tests/fixtures/pnpd/product-delivery-registry/` — shape, artifact-reference, hash-integrity, writer, and append fixture families.
 - **Artifact-reference validation**: Confirms referenced artifact files exist and are regular files (Phase 1O-I).
 - **Hash integrity verification**: Computes SHA-256 of referenced files and compares to recorded `contentHash` (Phase 1O-K).
@@ -84,16 +85,16 @@ In summary: 21 shape fixtures (6 positive, 15 negative), 3 artifact-reference fi
 
 ## Example Instance Goal
 
-The future example instance should demonstrate a realistic multi-entry registry containing entries for each of the four canonical product delivery artifact types. It should show how the create-only writer initializes the registry with the first entry and how the append-only writer adds subsequent entries. After generation, the composed registry should pass full validation: registry schema validation, artifact reference validation, and hash integrity verification.
+The future example instance should demonstrate a realistic multi-entry registry containing entries for each of the four canonical product delivery artifact types. It should show how the create-only writer initializes the registry with the first entry and how the append-only writer adds subsequent entries. After generation, the composed registry should pass the future explicit registry schema-instance gate plus the current standalone, artifact-reference, and hash-integrity checks.
 
 The example should include:
 
-- **PRD entry**: A product requirements document entry with governance constants set to advisory-only defaults, artifact references pointing to a tracked PRD file, and hash integrity recorded via SHA-256.
-- **Product Spec entry**: A product specification entry with acceptance criteria and out-of-scope behaviors, artifact references pointing to a tracked product spec file.
-- **Architecture Spec entry**: An architecture specification entry with security boundaries, artifact references pointing to a tracked architecture spec file.
-- **Implementation Handoff entry**: An implementation handoff entry with forbidden files, artifact references pointing to a tracked handoff file.
+- **PRD entry**: Registry metadata for a tracked Product Delivery PRD JSON artifact, with validation evidence and SHA-256 integrity recorded by the entry.
+- **Product Spec entry**: Registry metadata for a tracked Product Delivery Product Spec JSON artifact.
+- **Architecture Spec entry**: Registry metadata for a tracked Product Delivery Architecture Spec JSON artifact.
+- **Implementation Handoff entry**: Registry metadata for a tracked Product Delivery Implementation Handoff JSON artifact.
 
-The multi-entry registry demonstrates that different artifact types coexist in the same registry, that entry ordering is stable, and that governance constants are preserved across all entries.
+The multi-entry registry demonstrates that different artifact types coexist in the same registry, that entry ordering is stable, and that the registry's single top-level governance contract applies to the complete entry set.
 
 ## Example Instance Non-Goals
 
@@ -114,15 +115,15 @@ The future example instance is explicitly not:
 
 The recommended future example registry is a JSON file conforming to the Product Delivery Registry schema. When generated through the toolchain, it should have the following structure:
 
-- Top-level object with `$schema`, `schemaVersion`, `registryId`, `createdAt`, `updatedAt`, `entries`, and `governance`.
+- Top-level object with `schemaVersion`, `recordType`, `registryId`, `createdAt`, `createdBy`, `repo`, `governance`, and `entries`. The current schema does not allow top-level `$schema` or `updatedAt` fields.
 - `entries` array containing four entry objects, ordered by creation time:
   1. PRD entry (first, created via create-only writer)
   2. Product Spec entry (second, appended)
   3. Architecture Spec entry (third, appended)
   4. Implementation Handoff entry (fourth, appended)
-- Each entry object containing `artifactId`, `artifactType`, `createdAt`, `updatedAt`, `artifactReferences`, `entryIntegrity`, and type-specific fields.
-- `governance` section with all advisory authority constants set to `false` or appropriate safe defaults.
-- Each `entryIntegrity` using `hashAlgorithm: "sha256"` with valid `contentHash` values for entries pointing to real tracked files, or `hashAlgorithm: "none"` where appropriate.
+- Each entry object containing exactly `artifactId`, `artifactType`, `phase`, `path`, `validation`, `createdAt`, `createdBy`, `source`, `notes`, and `integrity`. The registry stores metadata only; type-specific Product Delivery payloads remain in the referenced artifact JSON files.
+- Top-level `governance` section with `advisoryOnly` and `ownerFinalAuthority` set to `true`, and all authorizing, AgentBridge authority, runtime-consumption, artifact-generation, and external-mutation fields set to `false` as required by the schema.
+- Each entry `integrity` object using `hashAlgorithm: "sha256"` with a valid `contentHash` for the referenced tracked JSON file. The schema also permits `hashAlgorithm: "none"` with `contentHash: null`, but the complete hash-verification example should use SHA-256 for all four entries.
 
 This shape is a design recommendation only. No JSON file is created in this phase.
 
@@ -130,23 +131,23 @@ This shape is a design recommendation only. No JSON file is created in this phas
 
 The future example should include entries for these four artifact types:
 
-- `prd`: Product Requirements Document. Includes `prd` object with `objectives`, `nonGoals`, `stakeholders`, and `acceptanceCriteria`.
-- `product_spec`: Product Specification. Includes `productSpec` object with `functionalRequirements`, `acceptanceCriteria`, `outOfScopeBehaviors`, and `dependencies`.
-- `architecture_spec`: Architecture Specification. Includes `architectureSpec` object with `components`, `dataFlow`, `securityBoundaries`, and `deploymentView`.
-- `implementation_handoff`: Implementation Handoff. Includes `implementationHandoff` object with `sourceArtifactId`, `targetRepo`, `forbiddenFiles`, `noPushUnlessAuthorized`, and `noMergeUnlessAuthorized`.
+- `prd`: Registry entry whose `path` references a Product Requirements Document artifact.
+- `productSpec`: Registry entry whose `path` references a Product Specification artifact.
+- `architectureSpec`: Registry entry whose `path` references an Architecture Specification artifact.
+- `implementationHandoff`: Registry entry whose `path` references an Implementation Handoff artifact.
 
-These four types cover the complete Product Delivery artifact lifecycle and demonstrate that the registry schema, writer, and validator handle all supported entry types correctly.
+These names match the registry schema's `artifactType` enum exactly. The referenced standalone Product Delivery artifacts contain the corresponding type-specific payload objects; those payloads are not duplicated inside registry entries.
 
 ## Future Artifact Reference Strategy
 
-Future example entry artifact references should point to tracked, safe, repo-relative file paths. References must:
+Each future example entry's `path` field is its artifact reference and should point to a tracked, safe, repo-relative JSON file. References must:
 
 - Use relative paths (no absolute paths, no traversal sequences such as `../`).
 - Point to files that actually exist in the repository and are tracked by git.
-- Point only to safe file types appropriate for the artifact type (e.g., markdown documents).
+- End in `.json`, as required by the registry schema, and point to a Product Delivery artifact appropriate for the entry's `artifactType`.
 - Be validated by artifact reference validation (`--check-registry-artifacts`).
 
-The recommended reference targets for example entries are the existing tracked design documents within `docs/pnpd/`, which are versioned, stable, and already subject to CI validation.
+Suitable existing reference targets are the four tracked valid Product Delivery JSON fixtures under `tests/fixtures/pnpd/product-delivery/`, one for each supported artifact type. Markdown design documents under `docs/pnpd/` are not valid registry entry paths because the schema requires `.json`. Referenced artifact content validation remains outside this design phase; the future example should use artifacts already covered by the Product Delivery validation suite.
 
 ## Future Integrity Strategy
 
@@ -160,32 +161,35 @@ No new hash algorithm or verification path is needed. The existing Phase 1O-K in
 
 ## Future Writer Strategy
 
-A future implementation phase may generate the example using the existing writer toolchain:
+A future implementation phase may generate the example using the existing writer toolchain. The current writer can write only a file named `registry.json` beneath `.pnpd/product-delivery-registry/`, so generation begins as ignored local registry state:
 
 1. Create the initial registry with the first entry (PRD) using the create-only writer:
    ```
    node scripts/pnpd-product-delivery-registry-write.mjs \
      --entry-file <path-to-prd-entry.json> \
+     --registry .pnpd/product-delivery-registry/registry.json \
      --write
    ```
 2. Append subsequent entries (Product Spec, Architecture Spec, Implementation Handoff) using the append-only writer:
    ```
    node scripts/pnpd-product-delivery-registry-write.mjs \
      --entry-file <path-to-product-spec-entry.json> \
+     --registry .pnpd/product-delivery-registry/registry.json \
      --append --write
    ```
 
-This strategy ensures the example registry has the same provenance as any operational registry: every entry was added through the governed writer path. No manual JSON editing is needed.
+Repeat the append command for the Architecture Spec and Implementation Handoff entries. This produces the four-entry registry through the governed writer path without hand-editing registry JSON. The writer does not currently write directly to `tests/fixtures/pnpd/product-delivery-registry/examples/`; any promotion from ignored local state to a tracked example and any associated cleanup must be explicitly designed and authorized in the future implementation phase.
 
 ## Future Validation Strategy
 
 After generation, the future example must pass the complete validation suite:
 
-- **Registry schema validation**: `node scripts/pnpd-validate-schemas.mjs --product-delivery-registry <path>` confirms the example conforms to the schema.
-- **Artifact reference validation**: `--check-registry-artifacts` confirms all referenced artifact files exist and are regular files.
-- **Hash integrity verification**: `--verify-registry-artifact-hashes` confirms all recorded hashes match the actual file bytes.
+- **Current standalone registry validation**: `node scripts/pnpd-validate-schemas.mjs --product-delivery-registry <path>` applies the validator's current structural, semantic, governance, and security checks. It does not by itself prove that an arbitrary registry instance fully conforms to `.pnpd/product-delivery-registry.schema.json`.
+- **Explicit schema-instance validation**: The future implementation must use or add an explicit validation path that evaluates the candidate example against `.pnpd/product-delivery-registry.schema.json`. The existing `--phase 1o` gate validates the schema contract and the 21 positive/negative shape fixtures; it does not validate an arbitrary example file.
+- **Artifact reference validation**: Add `--check-registry-artifacts` to confirm every entry `path` points to an existing regular file.
+- **Hash integrity verification**: Add `--verify-registry-artifact-hashes` together with `--check-registry-artifacts` to confirm all SHA-256 `contentHash` values match the referenced file bytes.
 
-Only when all three validation steps pass is the example considered complete and trustworthy.
+The strongest current standalone command is `node scripts/pnpd-validate-schemas.mjs --product-delivery-registry <path> --check-registry-artifacts --verify-registry-artifact-hashes`. Passing it establishes only the validator's current checks, artifact existence, and hash integrity. Full schema conformance remains unverified until the future implementation supplies the explicit schema-instance gate; none of these checks certifies production readiness or referenced artifact content.
 
 ## Future Tracking Location Options
 
@@ -193,18 +197,21 @@ Two options exist for where a future example instance should live in the reposit
 
 1. **Docs-only description file**: The example is described but not stored as a tracked JSON fixture. The description lives in a design document. This option keeps the example purely advisory and prevents accidental consumption as a fixture or runtime input.
 
-2. **Tracked fixture under `tests/fixtures/pnpd/product-delivery-registry/examples/`**: The example is a committed JSON fixture in the test fixture tree. This option makes the example available for automated validation in CI, ensures it stays in sync with schema changes, and provides a concrete reference for toolchain consumers.
+2. **Tracked fixture under `tests/fixtures/pnpd/product-delivery-registry/examples/`**: The example is a committed JSON fixture in the test fixture tree. The current Phase 1O validator discovers only the 21 shape fixtures under `positive/` and `negative/`; it does not discover an `examples/` directory. A future implementation choosing this option must add explicit automated validation coverage before claiming the example is checked by CI.
 
 This design phase does not choose between these options. The choice is an owner decision for the future implementation phase.
 
 ## Recommended Future Implementation Scope
 
-This design recommends a future implementation phase that:
+This design recommends that a future implementation phase, if the Owner chooses the tracked-fixture option:
 
-- Creates only the tracked example fixture (option 2 above), or
-- Creates both the tracked example fixture and a companion description document if explicitly authorized by the owner.
+- Creates the four entry-input JSON files or explicitly reuses existing tracked, valid entry inputs.
+- Generates the registry first under `.pnpd/product-delivery-registry/registry.json` with the create-only and append-only writer modes.
+- Defines an explicit, reviewable promotion step for the generated result into `tests/fixtures/pnpd/product-delivery-registry/examples/`; the current writer cannot target that location.
+- Adds explicit validator and CI coverage for the tracked example rather than assuming recursive fixture discovery.
+- Optionally creates a companion description document only if the Owner authorizes the additional scope.
 
-The minimum viable future phase creates the example fixture only. A doc-plus-fixture approach is acceptable only with explicit authorization, because it introduces a second file into the change scope.
+This section is a future design recommendation only. It does not authorize fixture creation, writer or validator changes, CI changes, local registry state creation, or implementation in this phase.
 
 ## Allowed Files For This Design Phase
 
@@ -239,7 +246,7 @@ The following files and directories must not be created, modified, or deleted:
 
 ## Governance Boundary
 
-The Product Delivery Registry is advisory-only. This design phase does not grant, expand, or imply:
+The Product Delivery Registry and this example instance design are advisory-only. Owner remains final human authority. Codex audits only and is not Owner. AgentBridge coordinates only and cannot approve, merge, dispatch, deploy, or certify. This design phase does not grant, expand, or imply:
 
 - Implementation authority
 - Merge authority
@@ -248,7 +255,7 @@ The Product Delivery Registry is advisory-only. This design phase does not grant
 - GitHub/API mutation authority
 - Production certification authority
 
-All governance constants (`authorizesImplementation`, `codexIsOwner`, `agentBridgeCanApprove`, `runtimeConsumptionAllowed`, `authorizesDeployment`) remain set to `false` in all registry entries, and this design does not relax any of them.
+The future registry's top-level `governance` object must preserve every schema constant: `advisoryOnly` and `ownerFinalAuthority` remain `true`; all authorizing, AgentBridge authority, runtime-consumption, artifact-generation, and external-mutation fields remain `false`. Registry entries do not duplicate those top-level governance fields, and this design does not relax them.
 
 ## Runtime Consumption Boundary
 
@@ -288,10 +295,10 @@ This is a design recommendation only. No implementation is performed in this pha
 When Codex audits a future example instance implementation, the following should be verified:
 
 1. The example registry was generated through the writer toolchain (not hand-edited).
-2. The example passes schema validation.
+2. The example passes an explicit registry schema-instance validation gate rather than relying on the current standalone command alone.
 3. The example passes artifact reference validation.
 4. The example passes hash integrity verification.
-5. All entry types (`prd`, `product_spec`, `architecture_spec`, `implementation_handoff`) are represented.
+5. All entry types (`prd`, `productSpec`, `architectureSpec`, `implementationHandoff`) are represented.
 6. Governance constants are preserved (`false` for all authority fields).
 7. No production data, secrets, or credentials appear in the example.
 8. Artifact references point to tracked, safe, repo-relative files.
@@ -314,9 +321,12 @@ The following gates apply to this design phase only:
 
 Phase 1O-G is a docs-only change. The existing CI workflow (`pnpd-ci.yml`) validates:
 
-- Schema and fixture validation (`npm run validate`)
-- Dry-run orchestration (`npm run dry-run`)
-- Phase 1O validation (`node scripts/pnpd-validate-schemas.mjs --phase 1o`)
+- Schema and fixture validation (`npm run validate`), including Phase 1O validation.
+- Dry-run orchestration (`npm run dry-run`).
+- Phase 1H runtime-readiness schema and fixture validation.
+- Runtime-readiness stdout mode, including confirmation that it creates no local state.
+- Runtime-readiness local-write mode, its report shape and hash-prefix checks, and incompatible-flag rejection.
+- Generated-state cleanup and absence checks for `.pnpd/runtime-readiness`, `.pnpd/ledger`, `.pnpd/handoffs`, and `.pnpd/locks`, plus a clean tracked working tree. The current workflow does not check `.pnpd/product-delivery-registry/`; absence of registry local state remains a separate gate for this phase.
 
 Since no scripts, fixtures, or schemas change, CI should remain green after merge and push, identical to the baseline commit `4f33cec`.
 
@@ -326,8 +336,8 @@ Since no scripts, fixtures, or schemas change, CI should remain green after merg
 |---|---|
 | Example mistaken for production baseline | Document explicitly labels the example as advisory-only; governance constants block all authority |
 | Scope creep into runtime consumption | Runtime consumption boundary documented and gated; any runtime work requires a separate phase |
-| Fixture drift (example diverges from schema) | CI validation runs on every push; schema changes break the example, forcing sync |
-| Hash mismatch after referenced files change | Hash verification in CI catches drift; example must be regenerated after referenced file changes |
+| Fixture drift (example diverges from schema) | A future tracked example must receive explicit validator and CI coverage; current Phase 1O fixture discovery does not scan `examples/` |
+| Hash mismatch after referenced files change | A future tracked example must run hash verification in CI or an equivalent explicit gate and be regenerated after referenced file changes |
 | Downstream over-reliance on example | Document states example is illustrative, not normative; the schema and fixtures remain the authoritative contracts |
 
 ## Owner Decisions Required
@@ -344,7 +354,7 @@ The following decisions are encoded in this design and require owner acknowledgm
 
 ## Recommended Next Action
 
-Codex formal audit of the docs-only Phase 1O-G example instance design branch `deepseek/phase1o-g-product-delivery-registry-example-instance-design`. After Codex passes, the branch may be merged to `main` and the future example instance implementation phase may begin with explicit owner authorization.
+Codex formal audit of the docs-only Phase 1O-G example instance design branch `deepseek/phase1o-g-product-delivery-registry-example-instance-design`. After Codex passes, the branch may be merged locally to `main` only with explicit Owner authorization. Any future example instance implementation phase also requires separate explicit Owner authorization.
 
 ---
 
