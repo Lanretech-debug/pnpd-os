@@ -435,8 +435,9 @@ function main() {
     const validated = validateRegistryTemp(tmpPath);
     console.log(validated.trim());
   } catch (e) {
-    // Validation failed — delete temp and exit
+    // Validation failed — delete temp and parent dir if empty
     try { fs.unlinkSync(tmpPath); } catch (_) {}
+    try { fs.rmdirSync(parentDir); } catch (_) {}
     console.error("Registry validation failed. Temp file deleted. No registry data left.");
     throw e;
   }
