@@ -306,10 +306,12 @@ function composeRegistry(entry, repoInfo, timestamp) {
 // ── Registry validation ───────────────────────────────────────────────────────────
 
 function validateRegistryTemp(tmpPath) {
+  // Pass repo-relative path to the validator (it rejects absolute paths)
+  const relativePath = path.relative(ROOT, tmpPath);
   const result = spawnSync("node", [
     "scripts/pnpd-validate-schemas.mjs",
     "--product-delivery-registry",
-    tmpPath
+    relativePath
   ], {
     cwd: ROOT,
     encoding: "utf8",
