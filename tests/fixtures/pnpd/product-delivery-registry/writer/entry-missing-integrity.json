@@ -1,0 +1,21 @@
+{
+  "artifactId": "writer-missing-integrity-entry",
+  "artifactType": "prd",
+  "phase": "1O-M-fixture",
+  "path": "tests/fixtures/pnpd/product-delivery-registry/positive/empty-registry.json",
+  "validation": {
+    "validator": "pnpd-validate-schemas",
+    "mode": "product-delivery-registry",
+    "status": "notValidated",
+    "validatedAt": null,
+    "path": "tests/fixtures/pnpd/product-delivery-registry/positive/empty-registry.json",
+    "exitCode": null
+  },
+  "createdAt": "2026-06-19T00:00:00.000Z",
+  "createdBy": "phase-1o-m-fixture",
+  "source": {
+    "sourceType": "humanAuthored",
+    "sourceRef": "fixture-initial"
+  },
+  "notes": "Writer negative fixture: missing integrity field. Must be rejected by writer/validator."
+}
