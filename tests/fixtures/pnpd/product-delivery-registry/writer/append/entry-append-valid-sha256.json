@@ -1,0 +1,25 @@
+{
+  "artifactId": "writer-append-valid-sha256",
+  "artifactType": "prd",
+  "phase": "1O-O-fixture",
+  "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.json",
+  "validation": {
+    "validator": "pnpd-validate-schemas",
+    "mode": "product-delivery-registry",
+    "status": "notValidated",
+    "validatedAt": null,
+    "path": "tests/fixtures/pnpd/product-delivery-registry/hash-integrity/support/known-content.json",
+    "exitCode": null
+  },
+  "createdAt": "2026-06-19T00:00:00.000Z",
+  "createdBy": "phase-1o-o-fixture",
+  "source": {
+    "sourceType": "humanAuthored",
+    "sourceRef": "fixture-initial"
+  },
+  "notes": "Append fixture: valid sha256 entry referencing known-content.json. Entry JSON only — no top-level registry scaffolding.",
+  "integrity": {
+    "hashAlgorithm": "sha256",
+    "contentHash": "1048b957cad0a56992e6ba64c3c0f3a029cc595551b7676ae6134a57234cd629"
+  }
+}
