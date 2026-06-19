@@ -354,10 +354,10 @@ A future implementation phase that adds schema-instance validation and example d
 
 | Field | Value |
 |---|---|
-| Phase | `PHASE_1O_R_PRODUCT_DELIVERY_REGISTRY_EXAMPLE_INSTANCE_VALIDATION` |
-| Branch | `deepseek/phase1o-r-product-delivery-registry-example-instance-validation` |
-| Expected verdict | `DEEPSEEK_PHASE_1O_R_PRODUCT_DELIVERY_REGISTRY_EXAMPLE_INSTANCE_VALIDATION_COMMITTED_AMBER_NOT_CODEX_AUDITED` |
-| Expected commit message | `feat: add product delivery registry example instance validation` |
+| Phase | `PHASE_1O_R_PRODUCT_DELIVERY_REGISTRY_VALIDATOR_SCHEMA_INSTANCE_AND_DISCOVERY` |
+| Branch | `deepseek/phase1o-r-product-delivery-registry-validator-schema-instance-and-discovery` |
+| Expected verdict | `DEEPSEEK_PHASE_1O_R_PRODUCT_DELIVERY_REGISTRY_VALIDATOR_SCHEMA_INSTANCE_AND_DISCOVERY_COMMITTED_AMBER_NOT_CODEX_AUDITED` |
+| Expected commit message | `feat: add product delivery registry validator schema-instance validation and discovery` |
 | Allowed files | `scripts/pnpd-validate-schemas.mjs` |
 | Forbidden files | fixtures, schema, writer, CI, package.json, registry local state, daemon/control harness |
 | Scope | Add `--phase 1o-example` flag, example discovery, JSON Schema instance validation, and explicit gate command |
@@ -370,10 +370,10 @@ A future implementation phase that creates the tracked multi-entry example regis
 
 | Field | Value |
 |---|---|
-| Phase | `PHASE_1O_S_PRODUCT_DELIVERY_REGISTRY_EXAMPLE_INSTANCE` |
-| Branch | `deepseek/phase1o-s-product-delivery-registry-example-instance` |
-| Expected verdict | `DEEPSEEK_PHASE_1O_S_PRODUCT_DELIVERY_REGISTRY_EXAMPLE_INSTANCE_COMMITTED_AMBER_NOT_CODEX_AUDITED` |
-| Expected commit message | `test: add product delivery registry example instance fixture` |
+| Phase | `PHASE_1O_S_PRODUCT_DELIVERY_REGISTRY_EXAMPLE_FIXTURE` |
+| Branch | `deepseek/phase1o-s-product-delivery-registry-example-fixture` |
+| Expected verdict | `DEEPSEEK_PHASE_1O_S_PRODUCT_DELIVERY_REGISTRY_EXAMPLE_FIXTURE_COMMITTED_AMBER_NOT_CODEX_AUDITED` |
+| Expected commit message | `test: add product delivery registry example fixture` |
 | Allowed files | `tests/fixtures/pnpd/product-delivery-registry/examples/example-multi-entry-registry.json` |
 | Forbidden files | scripts, schema, writer, CI, package.json, registry local state, daemon/control harness |
 | Scope | Generate and commit a multi-entry registry example via create+append writer; validate with `--phase 1o-example` |
@@ -487,7 +487,7 @@ git diff --name-status main...HEAD
 
 # Content grep checks (see post-document gate script)
 # No format noise: no emoji, pagination markers, banners
-# No stale wording: no "24 shape fixtures", "4 append entry fixtures", etc.
+# No stale fixture inventory wording from older registry phases
 
 # Registry state absent
 test ! -d .pnpd/product-delivery-registry
@@ -533,7 +533,7 @@ Since no scripts, fixtures, or schemas change, CI should remain green after merg
 | Changing the 21 fixture count accidentally | Fixture count strategy keeps example fixtures in a separate `examples/` directory with separate discovery and count enforcement |
 | Adding `ajv` dependency without audit | JSON Schema instance validation strategy flags the dependency gap; dependency choice is deferred to 1O-R with explicit audit requirement |
 | Validating examples outside CI | CI discovery strategy defines an explicit CI step (`--phase 1o-example`) ensuring CI coverage |
-| Implying runtime consumption is enabled | Runtime consumption boundary is explicitly stated as blocked; no-drift section restates it |
+| Implying runtime availability | Runtime consumption boundary is explicitly stated as blocked; no-drift section restates it |
 | Implying production readiness is achieved | Production certification boundary is explicitly stated as blocked; governance constants remain `false` |
 
 ## Owner Decisions Required
