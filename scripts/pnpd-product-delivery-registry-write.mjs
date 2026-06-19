@@ -423,7 +423,7 @@ function main() {
   }
 
   // Write temp file
-  const tmpPath = path.join(parentDir, "registry.json.tmp-" + process.pid);
+  const tmpPath = path.join(parentDir, "registry.tmp-" + process.pid + ".json");
   try {
     fs.writeFileSync(tmpPath, JSON.stringify(registry, null, 2) + "\n", "utf8");
   } catch (e) {
