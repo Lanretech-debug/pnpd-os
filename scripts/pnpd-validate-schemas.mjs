@@ -278,6 +278,10 @@ Options:
     }
   }
 
+  if (args.validateSchemaInstance && !args.productDeliveryRegistry) {
+    throw new Error("--validate-schema-instance requires --product-delivery-registry <path>.");
+  }
+
   return args;
 }
 
@@ -4647,6 +4651,82 @@ function detectRegistryNegativeFailure(registry, filename) {
 function validateSchemaInstance(schema, instance, instancePath) {
   const errors = [];
   const $defs = schema.$defs || schema.definitions || {};
+
+  const SUPPORTED_SCHEMA_KEYWORDS = new Set([
+    "$schema",
+    "$id",
+    "$defs",
+    "$ref",
+    "additionalProperties",
+    "anyOf",
+    "const",
+    "definitions",
+    "description",
+    "enum",
+    "items",
+    "maxItems",
+    "maxLength",
+    "minItems",
+    "minLength",
+    "pattern",
+    "properties",
+    "required",
+    "title",
+    "type"
+  ]);
+
+  function collectUnsupportedSchemaKeywords(sch, path, collector) {
+    if (!sch || typeof sch !== "object" || Array.isArray(sch)) {
+      return;
+    }
+
+    for (const key of Object.keys(sch)) {
+      if (!SUPPORTED_SCHEMA_KEYWORDS.has(key)) {
+        collector.push(path + ": unsupported schema keyword " + key);
+      }
+    }
+
+    if (typeof sch.additionalProperties === "object" && sch.additionalProperties !== null) {
+      collector.push(path + ".additionalProperties: object schemas are unsupported");
+    }
+
+    if (Array.isArray(sch.type)) {
+      collector.push(path + ".type: array type declarations are unsupported");
+    }
+
+    if (sch.properties && typeof sch.properties === "object" && !Array.isArray(sch.properties)) {
+      for (const [propName, propSch] of Object.entries(sch.properties)) {
+        collectUnsupportedSchemaKeywords(propSch, path + ".properties." + propName, collector);
+      }
+    }
+
+    if (sch.$defs && typeof sch.$defs === "object" && !Array.isArray(sch.$defs)) {
+      for (const [defName, defSch] of Object.entries(sch.$defs)) {
+        collectUnsupportedSchemaKeywords(defSch, path + ".$defs." + defName, collector);
+      }
+    }
+
+    if (sch.definitions && typeof sch.definitions === "object" && !Array.isArray(sch.definitions)) {
+      for (const [defName, defSch] of Object.entries(sch.definitions)) {
+        collectUnsupportedSchemaKeywords(defSch, path + ".definitions." + defName, collector);
+      }
+    }
+
+    if (sch.items && typeof sch.items === "object") {
+      collectUnsupportedSchemaKeywords(sch.items, path + ".items", collector);
+    }
+
+    if (Array.isArray(sch.anyOf)) {
+      for (let i = 0; i < sch.anyOf.length; i++) {
+        collectUnsupportedSchemaKeywords(sch.anyOf[i], path + ".anyOf[" + i + "]", collector);
+      }
+    }
+  }
+
+  collectUnsupportedSchemaKeywords(schema, "$schema", errors);
+  if (errors.length > 0) {
+    return errors;
+  }
 
   function validate(inst, sch, path) {
     if (sch === undefined || sch === null) {
