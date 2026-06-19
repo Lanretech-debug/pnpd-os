@@ -109,7 +109,7 @@ The create-only writer is implemented at `scripts/pnpd-product-delivery-registry
 - **Registry path is guarded.** The writer rejects any registry filename other than `registry.json`. It rejects unsafe paths (absolute, traversal, URL).
 - **Rejects existing registry.** If `.pnpd/product-delivery-registry/registry.json` exists, the writer fails with a message stating the writer is create-only.
 - **No hash computation.** The writer reads `contentHash` from the entry fixture but does not compute or verify hashes.
-- **No artifact content validation.** The writer does not inspect, parse, or validate referenced artifact bodies.
+- **No referenced artifact body checks.** The writer records references but does not examine referenced artifact files.
 - **No network, GitHub/API, or shell calls.** The writer invokes only local `git` metadata and the local `node` validator through `spawnSync` with argument arrays (no shell execution).
 - **Atomic temp-file write.** The writer composes the registry into a temp file inside `.pnpd/product-delivery-registry/`, validates it, then atomically renames it to `registry.json`. Temp files are cleaned on failure.
 - **Governance constants are preserved.** The writer copies governance defaults from the schema and never sets authority claims to `true`.
@@ -310,7 +310,7 @@ The complete behavior matrix for the writer with `--append`:
 
 ---
 
-## `--append` Flag Policy
+## --append Flag Policy
 
 - `--append` is a boolean flag. Its presence indicates append mode.
 - `--append` cannot be used with create-only semantics. When `--append` is present and no registry exists, the writer fails.
@@ -320,7 +320,7 @@ The complete behavior matrix for the writer with `--append`:
 
 ---
 
-## `--write` / `--no-write` Interaction
+## --write / --no-write Interaction
 
 - `--write` is required for filesystem mutation in both create-only and append modes.
 - `--no-write` overrides `--write` in both modes.
@@ -348,7 +348,7 @@ The new entry is composed into the registry (appended to `entries[]`) and the re
 
 ---
 
-## Duplicate `artifactId` Policy
+## Duplicate artifactId Policy
 
 - The writer checks the new entry's `artifactId` against all existing `entries[].artifactId`.
 - If a match is found, the writer fails with a message identifying the duplicate.
@@ -492,7 +492,7 @@ After Phase 1O-O append implementation, local gating scripts may run:
 
 ---
 
-## Hash / `contentHash` Policy
+## Hash / contentHash Policy
 
 - The writer does not compute `contentHash`.
 - The writer does not verify `contentHash` against artifact bytes.
@@ -689,9 +689,9 @@ When Codex audits this design, the following should be verified:
 13. The design defers merge, upsert, replace, overwrite, and delete.
 14. The design blocks runtime consumption, dispatch, deployment, GitHub/API mutation, and production certification.
 15. The design defers Product Design Integrity and Asset Decisioning.
-16. The design references the correct fixture inventory (33 files, not 24 shape fixtures).
+16. The design references the correct fixture inventory and avoids stale fixture-count wording.
 17. The design identifies the correct future phase (`PHASE_1O_O_PRODUCT_DELIVERY_REGISTRY_APPEND_MODE`).
-18. The design does not contain deprecated workflow or verdict language (no `CODEX_PHASE_1O_N_AUDITED_AMBER_AWAITING_OWNER`, no "Squash and merge").
+18. The design does not contain deprecated workflow or verdict language listed in the audit request.
 19. The design is plain markdown without emoji, banners, or pagination artifacts.
 
 ---
