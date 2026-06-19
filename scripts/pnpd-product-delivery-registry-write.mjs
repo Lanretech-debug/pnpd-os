@@ -142,6 +142,11 @@ function validateRegistryPath(registryPathArg) {
     throw new Error("Registry path must not be a URL: " + registryPathArg);
   }
 
+  // The first writer reserves exactly registry.json as the target filename.
+  if (path.basename(registryPathArg) !== "registry.json") {
+    throw new Error("Registry path must end with registry.json: " + registryPathArg);
+  }
+
   // Reject characters that enable symlink/shell escapes
   if (registryPathArg.includes("~")) {
     throw new Error("Registry path must not contain ~: " + registryPathArg);
@@ -326,6 +331,23 @@ function validateRegistryTemp(tmpPath) {
   return result.stdout;
 }
 
+function validateRegistryWithoutRetainedState(registry, finalRegPath) {
+  const parentDir = path.dirname(finalRegPath);
+  const parentDirPreexisted = fs.existsSync(parentDir);
+  const tmpPath = path.join(parentDir, "registry.dry-run.tmp-" + process.pid + ".json");
+
+  try {
+    fs.mkdirSync(parentDir, { recursive: true });
+    fs.writeFileSync(tmpPath, JSON.stringify(registry, null, 2) + "\n", "utf8");
+    return validateRegistryTemp(tmpPath);
+  } finally {
+    try { fs.unlinkSync(tmpPath); } catch (_) {}
+    if (!parentDirPreexisted) {
+      try { fs.rmdirSync(parentDir); } catch (_) {}
+    }
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────────
 
 function main() {
@@ -376,6 +398,9 @@ function main() {
 
   // ── If not writing, print dry-run plan and exit ──
   if (!effectiveWrite) {
+    const validated = validateRegistryWithoutRetainedState(registry, finalRegPath);
+    console.log(validated.trim());
+    console.log("");
     console.log("Registry writer dry-run");
     console.log("Entry file: " + args.entryFile);
     console.log("Target registry: " + registryPathArg);
@@ -400,6 +425,7 @@ function main() {
 
   // Create parent directory
   const parentDir = path.dirname(finalRegPath);
+  const parentDirPreexisted = fs.existsSync(parentDir);
   try {
     fs.mkdirSync(parentDir, { recursive: true });
   } catch (e) {
@@ -437,7 +463,9 @@ function main() {
   } catch (e) {
     // Validation failed — delete temp and parent dir if empty
     try { fs.unlinkSync(tmpPath); } catch (_) {}
-    try { fs.rmdirSync(parentDir); } catch (_) {}
+    if (!parentDirPreexisted) {
+      try { fs.rmdirSync(parentDir); } catch (_) {}
+    }
     console.error("Registry validation failed. Temp file deleted. No registry data left.");
     throw e;
   }
