@@ -125,7 +125,7 @@ const PHASE_1C_FIXTURES = [
 
 
 function parseArgs(argv) {
-  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null, checkRegistryArtifacts: false, verifyRegistryArtifactHashes: false };
+  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null, checkRegistryArtifacts: false, verifyRegistryArtifactHashes: false, validateSchemaInstance: false };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -146,11 +146,11 @@ function parseArgs(argv) {
         throw new Error("--check-registry-artifacts cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, or 1o).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, or 1o-example).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", or "1o".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", or "1o-example".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -242,15 +242,17 @@ function parseArgs(argv) {
       args.checkRegistryArtifacts = true;
     } else if (arg === "--verify-registry-artifact-hashes") {
       args.verifyRegistryArtifactHashes = true;
+    } else if (arg === "--validate-schema-instance") {
+      args.validateSchemaInstance = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
-  node scripts/pnpd-validate-schemas.mjs --product-delivery-registry <path>
+  node scripts/pnpd-validate-schemas.mjs --product-delivery-registry <path> [--validate-schema-instance] [--check-registry-artifacts] [--verify-registry-artifact-hashes]
 
 Options:
   --phase 0   Validate Phase 0 invariants only.
@@ -260,11 +262,13 @@ Options:
   --phase 1h  Validate PNPD runtime readiness schema and fixtures (explicit-only, not included in default).
   --phase 1m  Validate Research Discovery schema and fixtures (explicit-only, not included in default).
   --phase 1n  Validate Product Delivery schema and fixtures (explicit-only, not included in default).
-  --phase 1o  Validate Product Delivery registry schema and fixtures (explicit-only, not included in default).
+  --phase 1o  Validate Product Delivery registry schema and shape fixtures (explicit-only, not included in default).
+  --phase 1o-example  Validate Product Delivery registry example fixtures (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
   --product-delivery-artifact <path>  Validate a user-created Product Delivery artifact JSON file.
   --product-delivery-registry <path>  Validate a Product Delivery registry JSON file.
+  --validate-schema-instance           With --product-delivery-registry: validate registry JSON against the registry schema.
   --check-registry-artifacts          With --product-delivery-registry: check each entry path points to an existing regular file.
   --verify-registry-artifact-hashes   With --product-delivery-registry AND --check-registry-artifacts: verify sha256 contentHash against file bytes.
   (default)   Validate all invariants (Phase 0 + 1B + 1C).`);
@@ -4638,9 +4642,320 @@ function detectRegistryNegativeFailure(registry, filename) {
   return reasons;
 }
 
+// ── Schema-instance validator ────────────────────────────────────────────────────
+
+function validateSchemaInstance(schema, instance, instancePath) {
+  const errors = [];
+  const $defs = schema.$defs || schema.definitions || {};
+
+  function validate(inst, sch, path) {
+    if (sch === undefined || sch === null) {
+      errors.push(path + ": schema is null or undefined");
+      return;
+    }
+
+    // ── anyOf ──
+    if (Array.isArray(sch.anyOf)) {
+      let anyMatch = false;
+      const subErrors = [];
+      for (const subSch of sch.anyOf) {
+        const nested = [];
+        const saved = errors.length;
+        // Temporarily redirect errors to nested
+        const origErrors = errors;
+        const fake = [];
+        // Use a collector
+        validateWithCollector(inst, subSch, path, fake, $defs);
+        if (fake.length === 0) {
+          anyMatch = true;
+          break;
+        }
+        subErrors.push(fake);
+      }
+      if (!anyMatch) {
+        const reasons = subErrors.map(e => e.length > 0 ? e[0] : "no match").join("; ");
+        errors.push(path + ": no anyOf alternative matched: " + reasons);
+      }
+      return;
+    }
+
+    // ── $ref ──
+    if (typeof sch.$ref === "string") {
+      const refPath = sch.$ref;
+      if (refPath.startsWith("#/$defs/") || refPath.startsWith("#/definitions/")) {
+        const parts = refPath.split("/");
+        const defName = parts[parts.length - 1];
+        const defSch = $defs[defName];
+        if (!defSch) {
+          errors.push(path + ": unresolved $ref: " + refPath);
+          return;
+        }
+        // Merge any sibling constraints from the referencing schema with the resolved def
+        const merged = { ...defSch };
+        // If the referencing schema has properties/required/additionalProperties on top of $ref, merge them
+        // But in our schema, $ref is used standalone - just validate against the resolved schema
+        validate(inst, defSch, path);
+        return;
+      }
+      errors.push(path + ": unsupported $ref target: " + sch.$ref);
+      return;
+    }
+
+    // ── type ──
+    if (typeof sch.type === "string") {
+      const instType = Array.isArray(inst) ? "array" : (inst === null ? "null" : typeof inst);
+      if (sch.type === "integer") {
+        if (typeof inst !== "number" || !Number.isInteger(inst)) {
+          errors.push(path + ": expected type integer, got " + instType);
+          return;
+        }
+      } else if (instType !== sch.type) {
+        errors.push(path + ": expected type " + sch.type + ", got " + instType);
+        return;
+      }
+    }
+
+    if (inst === null) {
+      // null is valid if we reached here (anyOf null case)
+      return;
+    }
+
+    // ── object-specific ──
+    if (typeof inst === "object" && !Array.isArray(inst)) {
+      // additionalProperties
+      if (sch.additionalProperties === false && typeof sch.properties === "object") {
+        const allowedKeys = new Set(Object.keys(sch.properties));
+        for (const key of Object.keys(inst)) {
+          if (!allowedKeys.has(key)) {
+            errors.push(path + "." + key + ": additional property not allowed");
+          }
+        }
+      }
+
+      // properties
+      if (typeof sch.properties === "object") {
+        for (const [propName, propSch] of Object.entries(sch.properties)) {
+          if (inst.hasOwnProperty(propName) || propName in inst) {
+            validate(inst[propName], propSch, path + "." + propName);
+          }
+        }
+      }
+
+      // required
+      if (Array.isArray(sch.required)) {
+        for (const req of sch.required) {
+          if (!(req in inst)) {
+            errors.push(path + ": missing required property " + req);
+          }
+        }
+      }
+    }
+
+    // ── array-specific ──
+    if (Array.isArray(inst)) {
+      if (typeof sch.minItems === "number" && inst.length < sch.minItems) {
+        errors.push(path + ": expected at least " + sch.minItems + " items, got " + inst.length);
+      }
+      if (typeof sch.maxItems === "number" && inst.length > sch.maxItems) {
+        errors.push(path + ": expected at most " + sch.maxItems + " items, got " + inst.length);
+      }
+      if (sch.items && typeof sch.items === "object") {
+        for (let i = 0; i < inst.length; i++) {
+          validate(inst[i], sch.items, path + "[" + i + "]");
+        }
+      }
+    }
+
+    // ── string-specific ──
+    if (typeof inst === "string") {
+      if (sch.hasOwnProperty("const")) {
+        if (inst !== sch.const) {
+          errors.push(path + ": expected const " + JSON.stringify(sch.const) + ", got " + JSON.stringify(inst));
+        }
+      }
+      if (Array.isArray(sch.enum)) {
+        if (!sch.enum.includes(inst)) {
+          errors.push(path + ": value " + JSON.stringify(inst) + " not in enum [" + sch.enum.join(", ") + "]");
+        }
+      }
+      if (typeof sch.pattern === "string") {
+        try {
+          const re = new RegExp(sch.pattern);
+          if (!re.test(inst)) {
+            errors.push(path + ": pattern " + sch.pattern + " does not match " + JSON.stringify(inst));
+          }
+        } catch (e) {
+          errors.push(path + ": invalid pattern " + sch.pattern + ": " + e.message);
+        }
+      }
+      if (typeof sch.minLength === "number" && inst.length < sch.minLength) {
+        errors.push(path + ": expected minLength " + sch.minLength + ", got " + inst.length);
+      }
+      if (typeof sch.maxLength === "number" && inst.length > sch.maxLength) {
+        errors.push(path + ": expected maxLength " + sch.maxLength + ", got " + inst.length);
+      }
+    }
+
+    // ── integer-specific ──
+    if (typeof inst === "number" && Number.isInteger(inst)) {
+      if (Array.isArray(sch.enum)) {
+        if (!sch.enum.includes(inst)) {
+          errors.push(path + ": value " + inst + " not in enum [" + sch.enum.join(", ") + "]");
+        }
+      }
+    }
+
+    // ── const (non-string) ──
+    if (sch.hasOwnProperty("const")) {
+      // Only check const for non-strings (strings handled above)
+      if (typeof inst !== "string") {
+        if (inst !== sch.const) {
+          errors.push(path + ": expected const " + JSON.stringify(sch.const) + ", got " + JSON.stringify(inst));
+        }
+      }
+    }
+
+    // ── enum (non-string, non-integer) ──
+    if (Array.isArray(sch.enum)) {
+      if (typeof inst !== "string" && !(typeof inst === "number" && Number.isInteger(inst))) {
+        errors.push(path + ": unsupported enum context for type " + typeof inst);
+      }
+    }
+  }
+
+  function validateWithCollector(inst, sch, path, collector, defs) {
+    // Simplified recursive validation that collects into the given array
+    if (sch === undefined || sch === null) {
+      collector.push(path + ": schema is null or undefined");
+      return;
+    }
+
+    if (Array.isArray(sch.anyOf)) {
+      let anyMatch = false;
+      for (const subSch of sch.anyOf) {
+        const nested = [];
+        validateWithCollector(inst, subSch, path, nested, defs);
+        if (nested.length === 0) {
+          anyMatch = true;
+          break;
+        }
+      }
+      if (!anyMatch) {
+        collector.push(path + ": no anyOf alternative matched");
+      }
+      return;
+    }
+
+    if (typeof sch.$ref === "string") {
+      const refPath = sch.$ref;
+      if (refPath.startsWith("#/$defs/") || refPath.startsWith("#/definitions/")) {
+        const parts = refPath.split("/");
+        const defName = parts[parts.length - 1];
+        const defSch = defs[defName];
+        if (!defSch) {
+          collector.push(path + ": unresolved $ref: " + refPath);
+          return;
+        }
+        validateWithCollector(inst, defSch, path, collector, defs);
+        return;
+      }
+      collector.push(path + ": unsupported $ref target: " + sch.$ref);
+      return;
+    }
+
+    if (typeof sch.type === "string") {
+      const instType = Array.isArray(inst) ? "array" : (inst === null ? "null" : typeof inst);
+      if (sch.type === "integer") {
+        if (typeof inst !== "number" || !Number.isInteger(inst)) {
+          collector.push(path + ": expected type integer, got " + instType);
+          return;
+        }
+      } else if (instType !== sch.type) {
+        collector.push(path + ": expected type " + sch.type + ", got " + instType);
+        return;
+      }
+    }
+
+    if (inst === null) return;
+
+    if (typeof inst === "object" && !Array.isArray(inst)) {
+      if (sch.additionalProperties === false && typeof sch.properties === "object") {
+        const allowedKeys = new Set(Object.keys(sch.properties));
+        for (const key of Object.keys(inst)) {
+          if (!allowedKeys.has(key)) {
+            collector.push(path + "." + key + ": additional property not allowed");
+          }
+        }
+      }
+      if (typeof sch.properties === "object") {
+        for (const [propName, propSch] of Object.entries(sch.properties)) {
+          if (inst.hasOwnProperty(propName) || propName in inst) {
+            validateWithCollector(inst[propName], propSch, path + "." + propName, collector, defs);
+          }
+        }
+      }
+      if (Array.isArray(sch.required)) {
+        for (const req of sch.required) {
+          if (!(req in inst)) {
+            collector.push(path + ": missing required property " + req);
+          }
+        }
+      }
+    }
+
+    if (Array.isArray(inst)) {
+      if (typeof sch.minItems === "number" && inst.length < sch.minItems) {
+        collector.push(path + ": expected at least " + sch.minItems + " items, got " + inst.length);
+      }
+      if (typeof sch.maxItems === "number" && inst.length > sch.maxItems) {
+        collector.push(path + ": expected at most " + sch.maxItems + " items, got " + inst.length);
+      }
+      if (sch.items && typeof sch.items === "object") {
+        for (let i = 0; i < inst.length; i++) {
+          validateWithCollector(inst[i], sch.items, path + "[" + i + "]", collector, defs);
+        }
+      }
+    }
+
+    if (typeof inst === "string") {
+      if (sch.hasOwnProperty("const") && inst !== sch.const) {
+        collector.push(path + ": expected const " + JSON.stringify(sch.const) + ", got " + JSON.stringify(inst));
+      }
+      if (Array.isArray(sch.enum) && !sch.enum.includes(inst)) {
+        collector.push(path + ": value " + JSON.stringify(inst) + " not in enum [" + sch.enum.join(", ") + "]");
+      }
+      if (typeof sch.pattern === "string") {
+        try {
+          const re = new RegExp(sch.pattern);
+          if (!re.test(inst)) {
+            collector.push(path + ": pattern " + sch.pattern + " does not match " + JSON.stringify(inst));
+          }
+        } catch (e) {
+          collector.push(path + ": invalid pattern " + sch.pattern);
+        }
+      }
+      if (typeof sch.minLength === "number" && inst.length < sch.minLength) {
+        collector.push(path + ": expected minLength " + sch.minLength + ", got " + inst.length);
+      }
+      if (typeof sch.maxLength === "number" && inst.length > sch.maxLength) {
+        collector.push(path + ": expected maxLength " + sch.maxLength + ", got " + inst.length);
+      }
+    }
+
+    if (typeof inst === "number" && Number.isInteger(inst) && Array.isArray(sch.enum)) {
+      if (!sch.enum.includes(inst)) {
+        collector.push(path + ": value " + inst + " not in enum [" + sch.enum.join(", ") + "]");
+      }
+    }
+  }
+
+  validate(instance, schema, "$");
+  return errors;
+}
+
 // ── Standalone registry file validator ───────────────────────────────────────────
 
-function validateProductDeliveryRegistryFile(pathArg, checkArtifacts, verifyHashes) {
+function validateProductDeliveryRegistryFile(pathArg, checkArtifacts, verifyHashes, validateSchema) {
   console.log("PNPD Product Delivery Registry Validation");
   console.log("Registry file: " + pathArg);
   if (checkArtifacts) {
@@ -4700,8 +5015,23 @@ function validateProductDeliveryRegistryFile(pathArg, checkArtifacts, verifyHash
     process.exit(2);
   }
 
-  // 6. Structural checks
+  // 5. Schema-instance validation (when requested)
   let allFindings = [];
+  if (validateSchema) {
+    console.log("Schema-instance validation: enabled (--validate-schema-instance)");
+    const schemaErrors = validateSchemaInstance(schema, registry, realPath);
+    if (schemaErrors.length > 0) {
+      console.log("[FAIL] Schema-instance validation: " + schemaErrors.length + " error(s)");
+      for (const err of schemaErrors) {
+        console.log("  " + err);
+      }
+      allFindings = allFindings.concat(schemaErrors);
+    } else {
+      console.log("[PASS] Schema-instance validation");
+    }
+  }
+
+  // 6. Structural checks
   const structFails = checkRegistryPositiveFixture(registry);
   if (structFails.length > 0) {
     console.error("[FAIL] Structural checks: " + structFails.join("; "));
@@ -5194,6 +5524,131 @@ function validateProductDeliveryRegistryPhase1O() {
   process.exit(exitCode);
 }
 
+// ── Phase 1O-R: Example fixture discovery ────────────────────────────────────────
+
+const REGISTRY_EXAMPLES_DIR = "tests/fixtures/pnpd/product-delivery-registry/examples";
+
+function validateProductDeliveryRegistryPhase1OExample() {
+  console.log("PNPD Product Delivery Registry Example Validation");
+  console.log("Examples path: " + REGISTRY_EXAMPLES_DIR);
+  console.log("Schema: " + REGISTRY_SCHEMA_PATH);
+  console.log("");
+
+  const examplesDir = path.join(ROOT, REGISTRY_EXAMPLES_DIR);
+
+  // Load schema
+  let schema;
+  try {
+    schema = JSON.parse(fs.readFileSync(path.join(ROOT, REGISTRY_SCHEMA_PATH), "utf8"));
+  } catch (e) {
+    console.error("Registry schema load failed: " + e.message);
+    process.exit(2);
+  }
+
+  // Check if examples directory exists
+  if (!fs.existsSync(examplesDir)) {
+    console.log("Example fixtures: 0 discovered (examples/ directory does not exist)");
+    console.log("");
+    console.log("Phase 1O-example Product Delivery Registry example validation passed");
+    console.log("(Example fixture implementation is future Phase 1O-S)");
+    process.exit(0);
+  }
+
+  if (!fs.statSync(examplesDir).isDirectory()) {
+    console.error("Examples path is not a directory: " + examplesDir);
+    process.exit(1);
+  }
+
+  // Discover .json files
+  let exampleFiles = [];
+  try {
+    exampleFiles = fs.readdirSync(examplesDir).filter(f => f.endsWith(".json")).sort();
+  } catch (e) {
+    console.error("Examples directory not readable: " + e.message);
+    process.exit(2);
+  }
+
+  if (exampleFiles.length === 0) {
+    console.log("Example fixtures: 0 discovered (examples/ directory exists but contains no .json files)");
+    console.log("");
+    console.log("Phase 1O-example Product Delivery Registry example validation passed");
+    console.log("(Example fixture implementation is future Phase 1O-S)");
+    process.exit(0);
+  }
+
+  console.log("Example fixtures: " + exampleFiles.length + " discovered");
+  console.log("");
+
+  let passed = 0;
+  let failed = 0;
+  let exitCode = 0;
+
+  for (const filename of exampleFiles) {
+    const filePath = path.join(examplesDir, filename);
+    let rawContent;
+    let registry;
+
+    try {
+      rawContent = fs.readFileSync(filePath, "utf8");
+      registry = JSON.parse(rawContent);
+    } catch (e) {
+      console.log("[FAIL] " + filename + " — JSON parse error: " + e.message);
+      failed++;
+      exitCode = 1;
+      continue;
+    }
+
+    // Security scan
+    const secFindings = scanRegistrySecretValues(rawContent);
+    if (secFindings.length > 0) {
+      console.log("[FAIL] " + filename + " — SECURITY VIOLATION: " + secFindings.join("; "));
+      failed++;
+      exitCode = 1;
+      continue;
+    }
+
+    // Schema-instance validation
+    const schemaErrors = validateSchemaInstance(schema, registry, filePath);
+    if (schemaErrors.length > 0) {
+      console.log("[FAIL] " + filename + " — schema-instance: " + schemaErrors.length + " error(s)");
+      for (const err of schemaErrors) {
+        console.log("  " + err);
+      }
+      failed++;
+      exitCode = 1;
+      continue;
+    }
+
+    // Inline structural/governance/security checks
+    const structFails = checkRegistryPositiveFixture(registry);
+
+    const forbiddenFields = [];
+    scanRegistryForbiddenFields(registry, "$", forbiddenFields);
+
+    const allFailures = [];
+    if (structFails.length > 0) allFailures.push("structural: " + structFails.join("; "));
+    if (forbiddenFields.length > 0) allFailures.push("forbidden field(s): " + forbiddenFields.join(", "));
+
+    if (allFailures.length > 0) {
+      console.log("[FAIL] " + filename + " — " + allFailures.join(" | "));
+      failed++;
+      exitCode = 1;
+    } else {
+      console.log("[PASS] " + filename + " — valid example fixture");
+      passed++;
+    }
+  }
+
+  console.log("");
+  console.log("Example fixtures: " + passed + " passed, " + failed + " failed");
+
+  if (exitCode === 0) {
+    console.log("Phase 1O-example Product Delivery Registry example validation passed");
+  }
+
+  process.exit(exitCode);
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
@@ -5232,7 +5687,7 @@ try {
 
   // Phase 1O-F: standalone Product Delivery registry validation
   if (args.productDeliveryRegistry) {
-    validateProductDeliveryRegistryFile(args.productDeliveryRegistry, args.checkRegistryArtifacts, args.verifyRegistryArtifactHashes);
+    validateProductDeliveryRegistryFile(args.productDeliveryRegistry, args.checkRegistryArtifacts, args.verifyRegistryArtifactHashes, args.validateSchemaInstance);
     // validateProductDeliveryRegistryFile calls process.exit internally
   }
 
@@ -5271,6 +5726,12 @@ try {
 
   if (runPhase1o) {
     validateProductDeliveryRegistryPhase1O();
+  }
+
+  const runPhase1oExample = args.phase === "1o-example";
+
+  if (runPhase1oExample) {
+    validateProductDeliveryRegistryPhase1OExample();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
