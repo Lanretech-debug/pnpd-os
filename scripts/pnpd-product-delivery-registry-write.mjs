@@ -14,13 +14,14 @@ const DEFAULT_REGISTRY_PATH = path.join(REGISTRY_DIR, "registry.json");
 const HELP = `PNPD Product Delivery Registry Writer
 
 Usage:
-  node scripts/pnpd-product-delivery-registry-write.mjs --entry-file <path> [--registry <path>] [--write] [--no-write]
+  node scripts/pnpd-product-delivery-registry-write.mjs --entry-file <path> [--registry <path>] [--write] [--no-write] [--append]
 
 Options:
   --entry-file <path>   Required. Path to a JSON file containing one registry entry object.
   --registry <path>     Optional. Target registry path under .pnpd/product-delivery-registry/. Default: ${DEFAULT_REGISTRY_PATH}
   --write               Optional. Required for filesystem mutation. Without this, dry-run only.
   --no-write            Optional. Overrides --write. Forces dry-run mode.
+  --append              Optional. Append mode: add one unique entry to an existing registry.
   --help, -h            Show this help.
 
 Description:
@@ -28,8 +29,9 @@ Description:
   The writer composes a full registry object, validates it with the existing
   validator, and writes it atomically.
 
-  Create-only: fails if the target registry already exists.
-  No append, merge, upsert, update, or delete modes.
+  Create-only (default): fails if the target registry already exists.
+  Append mode (--append): requires existing registry, appends one unique entry.
+  No merge, upsert, replace, update, or delete modes.
 
   Without --write (dry-run): validates inputs, composes registry, prints plan.
   With --write --no-write: --no-write wins, dry-run only.`;
@@ -37,7 +39,7 @@ Description:
 // ── Argument parsing ─────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const args = { registry: null, entryFile: null, write: false, noWrite: false };
+  const args = { registry: null, entryFile: null, write: false, noWrite: false, append: false };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -69,6 +71,8 @@ function parseArgs(argv) {
       args.write = true;
     } else if (arg === "--no-write") {
       args.noWrite = true;
+    } else if (arg === "--append") {
+      args.append = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(HELP);
       process.exit(0);
@@ -248,6 +252,7 @@ function validateEntryFilePath(entryPathArg) {
   } catch (e) {
     throw new Error("Entry file realpath error: " + e.message);
   }
+
   if (!realPath.startsWith(rootResolved + path.sep) && realPath !== rootResolved) {
     throw new Error("Entry file realpath escapes repo root: " + entryPathArg);
   }
@@ -308,6 +313,21 @@ function composeRegistry(entry, repoInfo, timestamp) {
   };
 }
 
+function composeAppendRegistry(existingRegistry, newEntry) {
+  // Preserve all top-level metadata from the existing registry.
+  // Only the entries array changes: existing order preserved, new entry appended.
+  return {
+    schemaVersion: existingRegistry.schemaVersion,
+    recordType: existingRegistry.recordType,
+    registryId: existingRegistry.registryId,
+    createdAt: existingRegistry.createdAt,
+    createdBy: existingRegistry.createdBy,
+    repo: existingRegistry.repo,
+    governance: existingRegistry.governance,
+    entries: [...existingRegistry.entries, newEntry]
+  };
+}
+
 // ── Registry validation ───────────────────────────────────────────────────────────
 
 function validateRegistryTemp(tmpPath) {
@@ -348,6 +368,67 @@ function validateRegistryWithoutRetainedState(registry, finalRegPath) {
   }
 }
 
+// ── Existing registry operations ──────────────────────────────────────────────────
+
+function readExistingRegistry(registryPath) {
+  let raw;
+  try {
+    raw = fs.readFileSync(registryPath, "utf8");
+  } catch (e) {
+    throw new Error("Failed to read existing registry at " + registryPath + ": " + e.message);
+  }
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    throw new Error("Failed to parse existing registry at " + registryPath + ": " + e.message);
+  }
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("Existing registry must contain a JSON object: " + registryPath);
+  }
+
+  return data;
+}
+
+function validateExistingRegistry(registryPath) {
+  const relativePath = path.relative(ROOT, registryPath);
+  const result = spawnSync("node", [
+    "scripts/pnpd-validate-schemas.mjs",
+    "--product-delivery-registry",
+    relativePath
+  ], {
+    cwd: ROOT,
+    encoding: "utf8",
+    timeout: 30000
+  });
+
+  if (result.status !== 0) {
+    const output = (result.stdout || "") + (result.stderr || "");
+    throw new Error("Existing registry validation failed:\n" + output.trim());
+  }
+
+  return result.stdout;
+}
+
+function checkDuplicateArtifactId(existingRegistry, newEntry) {
+  if (!newEntry.artifactId) return;
+
+  const newId = newEntry.artifactId;
+  const entries = existingRegistry.entries;
+  if (!Array.isArray(entries)) return;
+
+  for (const existing of entries) {
+    if (existing && existing.artifactId === newId) {
+      throw new Error(
+        "Duplicate artifactId '" + newId + "': an entry with this artifactId already exists in the registry. " +
+        "Append mode does not overwrite, merge, upsert, or resolve duplicates automatically."
+      );
+    }
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────────
 
 function main() {
@@ -377,7 +458,7 @@ function main() {
   const registryPathArg = args.registry || DEFAULT_REGISTRY_PATH;
   const regInfo = validateRegistryPath(registryPathArg);
 
-  // ── Resolve final registry path for existing-file check ──
+  // ── Resolve final registry path ──
   const finalRegPath = regInfo.resolved;
 
   // ── Get git metadata ──
@@ -392,7 +473,102 @@ function main() {
     throw new Error("Failed to read git repository metadata: " + e.message);
   }
 
-  // ── Compose registry ──
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // APPEND MODE
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  if (args.append) {
+    // ── Append mode requires existing registry ──
+    if (!fs.existsSync(finalRegPath)) {
+      throw new Error(
+        "Append mode requires an existing registry at " + registryPathArg + ". " +
+        "Use create-only mode (without --append) to create a new registry first."
+      );
+    }
+
+    // ── Validate existing registry ──
+    const existingValidationOutput = validateExistingRegistry(finalRegPath);
+
+    // ── Read existing registry ──
+    const existingRegistry = readExistingRegistry(finalRegPath);
+
+    // ── Check duplicate artifactId ──
+    checkDuplicateArtifactId(existingRegistry, entry);
+
+    // ── Compose appended registry ──
+    const appendedRegistry = composeAppendRegistry(existingRegistry, entry);
+
+    // ── If not writing, print dry-run plan and exit ──
+    if (!effectiveWrite) {
+      const validated = validateRegistryWithoutRetainedState(appendedRegistry, finalRegPath);
+      console.log(validated.trim());
+      console.log("");
+      console.log("Registry writer append mode — dry run");
+      console.log("Existing registry: " + registryPathArg);
+      console.log("Entry file: " + args.entryFile);
+      console.log("New entry artifactId: " + (entry.artifactId || "(missing)"));
+      console.log("Mode: append dry-run (use --write to append entry)");
+      console.log("");
+      console.log("Registry would contain:");
+      console.log("  schemaVersion: " + appendedRegistry.schemaVersion);
+      console.log("  registryId: " + appendedRegistry.registryId);
+      console.log("  repo: " + appendedRegistry.repo.name + " @" + appendedRegistry.repo.branch + " (" + appendedRegistry.repo.commit.slice(0, 8) + ")");
+      console.log("  entries: " + existingRegistry.entries.length + " existing + 1 new = " + appendedRegistry.entries.length);
+      console.log("Append dry-run complete. No files changed.");
+      process.exit(0);
+    }
+
+    // ── APPEND WRITE MODE ──
+
+    const parentDir = path.dirname(finalRegPath);
+    const parentDirPreexisted = fs.existsSync(parentDir);
+
+    // Write temp file with appended registry
+    const tmpPath = path.join(parentDir, "registry.tmp-" + process.pid + ".json");
+    try {
+      fs.writeFileSync(tmpPath, JSON.stringify(appendedRegistry, null, 2) + "\n", "utf8");
+    } catch (e) {
+      throw new Error("Failed to write temp registry file: " + e.message);
+    }
+
+    // Validate temp (composed) registry
+    try {
+      const validated = validateRegistryTemp(tmpPath);
+      console.log(validated.trim());
+    } catch (e) {
+      // Validation failed — delete temp
+      try { fs.unlinkSync(tmpPath); } catch (_) {}
+      console.error("Registry validation failed. Temp file deleted. Existing registry unchanged.");
+      throw e;
+    }
+
+    // Atomic rename
+    try {
+      fs.renameSync(tmpPath, finalRegPath);
+    } catch (e) {
+      // Try to clean up temp
+      try { fs.unlinkSync(tmpPath); } catch (_) {}
+      throw new Error("Failed to rename temp registry to " + registryPathArg + ": " + e.message);
+    }
+
+    // Report success
+    console.log("");
+    console.log("Entry appended to registry: " + registryPathArg);
+    console.log("  schemaVersion: " + appendedRegistry.schemaVersion);
+    console.log("  registryId: " + appendedRegistry.registryId);
+    console.log("  new entry artifactId: " + (entry.artifactId || "(missing)"));
+    console.log("  entries: " + appendedRegistry.entries.length + " (" + existingRegistry.entries.length + " existing + 1 new)");
+    console.log("  repo: " + appendedRegistry.repo.name + " @" + appendedRegistry.repo.branch);
+    console.log("Verification: node scripts/pnpd-validate-schemas.mjs --product-delivery-registry " + registryPathArg);
+    console.log("Full check: node scripts/pnpd-validate-schemas.mjs --product-delivery-registry " + registryPathArg + " --check-registry-artifacts --verify-registry-artifact-hashes");
+
+    process.exit(0);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // CREATE-ONLY MODE (existing behavior — unchanged when --append is absent)
+  // ═══════════════════════════════════════════════════════════════════════════════
+
   const timestamp = makeTimestamp();
   const registry = composeRegistry(entry, repoInfo, timestamp);
 
