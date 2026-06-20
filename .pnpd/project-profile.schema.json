@@ -1,0 +1,1342 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pnpd-project-profile.schema.json",
+  "title": "PNPD Project Profile",
+  "description": "The schema validates the structure of a PNPD project profile. It does not authorize implementation, merge, dispatch, deployment, GitHub/API mutation, release, production readiness, AgentBridge approval authority, Obsidian integration, Teach Skills implementation, Teach Skill Studio, daemon/dashboard behavior, or project adoption dry-run behavior. Owner remains final human authority. Codex is auditor/reviewer when explicitly authorized. GitHub App is verification only.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Schema version. Constrained to 1.0.0 for Phase 1P-D."
+    },
+    "profileId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$",
+      "description": "Stable profile identifier. Uniquely identifies this project profile within PNPD-OS."
+    },
+    "projectName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable project name. Should match the canonical project name."
+    },
+    "projectSlug": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "URL-safe / path-safe project slug. Lowercase alphanumeric with optional hyphens between segments."
+    },
+    "projectAliases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Optional alternative or historical project names."
+    },
+    "projectOwner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Real project owner identity. Must not be placeholder ownership, agent identity, or role-based proxy."
+    },
+    "repo": {
+      "$ref": "#/$defs/repo"
+    },
+    "product": {
+      "$ref": "#/$defs/product"
+    },
+    "lifecycle": {
+      "$ref": "#/$defs/lifecycle"
+    },
+    "pnpdAdoption": {
+      "$ref": "#/$defs/pnpdAdoption"
+    },
+    "authority": {
+      "$ref": "#/$defs/authority"
+    },
+    "agents": {
+      "$ref": "#/$defs/agents"
+    },
+    "automation": {
+      "$ref": "#/$defs/automation"
+    },
+    "validation": {
+      "$ref": "#/$defs/validation"
+    },
+    "productDelivery": {
+      "$ref": "#/$defs/productDelivery"
+    },
+    "productDeliveryRegistry": {
+      "$ref": "#/$defs/productDeliveryRegistry"
+    },
+    "memoryAndKnowledge": {
+      "$ref": "#/$defs/memoryAndKnowledge"
+    },
+    "teachSkills": {
+      "$ref": "#/$defs/teachSkills"
+    },
+    "riskAndCompliance": {
+      "$ref": "#/$defs/riskAndCompliance"
+    },
+    "adoptionRecommendations": {
+      "$ref": "#/$defs/adoptionRecommendations"
+    },
+    "controlledUnlocks": {
+      "$ref": "#/$defs/controlledUnlocks"
+    },
+    "audit": {
+      "$ref": "#/$defs/audit"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "profileId",
+    "projectName",
+    "projectSlug",
+    "projectOwner",
+    "repo",
+    "product",
+    "lifecycle",
+    "pnpdAdoption",
+    "authority",
+    "agents",
+    "automation",
+    "validation",
+    "controlledUnlocks",
+    "audit"
+  ],
+  "$defs": {
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Repo metadata records source location only. It does not prove repo existence, validate GitHub access, inspect CI, deploy, dispatch, or authorize mutation.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["github", "gitlab", "local", "unknown"],
+          "description": "Source control provider."
+        },
+        "repoFullName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Full repository name including owner/org, e.g. Lanretech-debug/pnpd-os."
+        },
+        "defaultBranch": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Default branch name for the repository."
+        },
+        "localPath": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Local filesystem path to the checked-out repository."
+        },
+        "remoteUrl": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Remote URL for the repository."
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["private", "public", "internal", "unknown"],
+          "description": "Repository visibility level."
+        },
+        "primaryLanguage": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Primary programming language of the project."
+        },
+        "packageManager": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Package manager used by the project."
+        },
+        "ciProvider": {
+          "type": "string",
+          "minLength": 1,
+          "description": "CI provider name."
+        },
+        "productionEnvironment": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Production environment identifier. Optional in first version."
+        },
+        "stagingEnvironment": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Staging environment identifier. Optional in first version."
+        }
+      },
+      "required": [
+        "provider",
+        "repoFullName",
+        "defaultBranch",
+        "localPath",
+        "remoteUrl",
+        "visibility"
+      ]
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Product classification is advisory. It does not create a real project profile for JobToCash, Lernova AI, Pokedex, Briclab Kids, Yoruba.com, or any other project. It does not certify product type, compliance, data sensitivity, revenue model, or market readiness.",
+      "properties": {
+        "productType": {
+          "type": "string",
+          "enum": [
+            "saas",
+            "internal_tool",
+            "learning_app",
+            "marketplace",
+            "content_platform",
+            "automation_tool",
+            "data_ai_system",
+            "unknown"
+          ],
+          "description": "Product system type classification."
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Business domain or vertical the product serves."
+        },
+        "targetUsers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Target user personas or groups."
+        },
+        "targetMarket": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target market or geography."
+        },
+        "complianceContext": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Relevant compliance frameworks or contexts."
+        },
+        "dataSensitivity": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "unknown"],
+          "description": "Data sensitivity classification for the product."
+        },
+        "revenueModel": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Revenue model description."
+        },
+        "criticality": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical", "unknown"],
+          "description": "System criticality classification."
+        },
+        "userImpact": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Description of user impact if the system is unavailable or compromised."
+        }
+      },
+      "required": [
+        "productType",
+        "dataSensitivity",
+        "criticality"
+      ]
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Lifecycle records the project stage, maturity, and verification baselines. The schema validates structure only; it does not verify CI runs, inspect commit history, or certify production readiness.",
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": ["idea", "prototyping", "alpha", "beta", "production", "deprecated"],
+          "description": "Current lifecycle stage of the project."
+        },
+        "maturity": {
+          "type": "string",
+          "enum": ["exploratory", "development", "stable", "maintenance"],
+          "description": "Maturity classification of the project."
+        },
+        "releaseStatus": {
+          "type": "string",
+          "enum": ["unreleased", "internal", "beta", "public", "unknown"],
+          "description": "Current release status."
+        },
+        "productionReadinessClaim": {
+          "type": "boolean",
+          "default": false,
+          "description": "true is reserved for future certification-gated profiles after the production-readiness certification framework exists and passes. Must be false unless a future certification framework explicitly verifies production readiness."
+        },
+        "lastVerifiedBaseline": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Last verified delivery baseline verdict string."
+        },
+        "lastVerifiedCiRun": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifier of the last verified CI run."
+        },
+        "lastVerifiedCommit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Full SHA of the last verified commit."
+        },
+        "currentKnownRisks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Currently known lifecycle risks."
+        }
+      },
+      "required": [
+        "stage",
+        "maturity",
+        "productionReadinessClaim",
+        "lastVerifiedBaseline",
+        "lastVerifiedCommit"
+      ]
+    },
+    "pnpdAdoption": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "PNPD adoption status records what PNPD-OS capabilities the project has adopted and what gaps remain. certified is future-only until production-readiness certification framework exists. Adoption evidence must substantiate claims above discovery. Schema validates shape only and does not certify adoption.",
+      "properties": {
+        "adoptionStatus": {
+          "type": "string",
+          "enum": [
+            "not_started",
+            "discovery",
+            "profile_created",
+            "validation_ready",
+            "product_delivery_ready",
+            "registry_ready",
+            "governed",
+            "controlled_unlock_pending",
+            "certified"
+          ],
+          "description": "Current PNPD adoption status."
+        },
+        "adoptedLayers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "PNPD capability layers that have been adopted."
+        },
+        "missingLayers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "PNPD capability layers not yet adopted."
+        },
+        "activePhase": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Currently active PNPD adoption phase identifier."
+        },
+        "nextRecommendedPhase": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Next recommended PNPD adoption phase."
+        },
+        "adoptionMode": {
+          "type": "string",
+          "enum": ["greenfield", "brownfield", "migration", "integration", "eval"],
+          "description": "Adoption mode describing how the project entered PNPD-OS."
+        },
+        "adoptionBlockers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Explicit blockers preventing further PNPD adoption."
+        },
+        "adoptionEvidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          },
+          "description": "Evidence links substantiating adoption claims."
+        }
+      },
+      "required": [
+        "adoptionStatus",
+        "adoptedLayers",
+        "missingLayers",
+        "adoptionMode",
+        "adoptionBlockers",
+        "adoptionEvidence"
+      ]
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Authority model records governance boundaries for the project. Schema existence does not authorize GitHub/API mutation, deployment, dispatch, or certification. Owner is final human authority. Codex is auditor/reviewer only when explicitly authorized.",
+      "properties": {
+        "ownerRequired": {
+          "type": "boolean",
+          "const": true,
+          "description": "Owner authority is always required. Must be true."
+        },
+        "ownerApprovalRequiredFor": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Actions that require explicit owner approval."
+        },
+        "codexAuditRequiredFor": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Actions that require Codex audit before owner approval."
+        },
+        "allowedAgentRoles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Agent roles permitted to act on this project."
+        },
+        "delegatedAuthorityStatus": {
+          "type": "string",
+          "enum": ["none", "pending_design", "approved_limited", "approved_controlled"],
+          "default": "none",
+          "description": "Status of any delegated authority arrangements."
+        },
+        "agentBridgeAuthority": {
+          "type": "boolean",
+          "const": false,
+          "description": "AgentBridge approval authority. Must be false in this schema version."
+        },
+        "githubMutationPolicy": {
+          "type": "string",
+          "enum": [
+            "blocked",
+            "blocked_except_explicit_codex_finalization",
+            "controlled_mutation_pending",
+            "controlled_mutation_allowed"
+          ],
+          "default": "blocked_except_explicit_codex_finalization",
+          "description": "Policy governing GitHub/API mutation actions."
+        },
+        "deploymentPolicy": {
+          "type": "string",
+          "enum": ["blocked", "controlled_unlock_pending", "deployment_enabled"],
+          "default": "blocked",
+          "description": "Policy governing deployment actions."
+        },
+        "dispatchPolicy": {
+          "type": "string",
+          "enum": ["blocked", "controlled_unlock_pending", "dispatch_enabled"],
+          "default": "blocked",
+          "description": "Policy governing dispatch actions."
+        }
+      },
+      "required": [
+        "ownerRequired",
+        "ownerApprovalRequiredFor",
+        "codexAuditRequiredFor",
+        "allowedAgentRoles",
+        "delegatedAuthorityStatus",
+        "agentBridgeAuthority",
+        "githubMutationPolicy",
+        "deploymentPolicy",
+        "dispatchPolicy"
+      ]
+    },
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Automation model records allowed automation boundaries. Higher automation levels are Controlled Unlock only. dispatch_enabled and deployment_enabled are not active in the current baseline. Schema records policy shape only; it does not execute automation.",
+      "properties": {
+        "automationLevel": {
+          "type": "string",
+          "enum": [
+            "none",
+            "advisory_only",
+            "local_validation_only",
+            "docs_generation_only",
+            "branch_commit_only",
+            "codex_finalize_only",
+            "controlled_mutation",
+            "dispatch_enabled",
+            "deployment_enabled"
+          ],
+          "default": "advisory_only",
+          "description": "Current automation level for the project."
+        },
+        "allowedAutomationActions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Automation actions currently allowed."
+        },
+        "blockedAutomationActions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Automation actions explicitly blocked."
+        },
+        "requiresOwnerApproval": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Automation actions requiring owner approval before execution."
+        },
+        "requiresCodexAudit": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Automation actions requiring Codex audit before execution."
+        },
+        "requiresGithubVerification": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Automation actions requiring GitHub App verification before execution."
+        }
+      },
+      "required": [
+        "automationLevel",
+        "allowedAutomationActions",
+        "blockedAutomationActions",
+        "requiresOwnerApproval",
+        "requiresCodexAudit",
+        "requiresGithubVerification"
+      ]
+    },
+    "agents": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Agent entries record the policy boundaries for each PNPD agent surface. Agent roles are constrained by the project profile and control loop. The schema records policy shape only; it does not grant authority.",
+      "properties": {
+        "hermes": {
+          "$ref": "#/$defs/agentSurface",
+          "description": "Hermes agent surface. Design/recommendation only."
+        },
+        "deepseekGui": {
+          "$ref": "#/$defs/agentSurface",
+          "description": "DeepSeek GUI agent surface. Implementation only for approved scope."
+        },
+        "codex": {
+          "$ref": "#/$defs/agentSurface",
+          "description": "Codex agent surface. Audit/finalize only when explicitly authorized."
+        },
+        "githubApp": {
+          "$ref": "#/$defs/agentSurface",
+          "description": "GitHub App agent surface. External verification only."
+        },
+        "agentBridge": {
+          "$ref": "#/$defs/agentSurface",
+          "description": "AgentBridge surface. Coordinate only in current state."
+        },
+        "futureDashboard": {
+          "$ref": "#/$defs/agentSurface",
+          "description": "Future dashboard surface. Planned, internal-use only, no current authority."
+        }
+      },
+      "required": [
+        "hermes",
+        "deepseekGui",
+        "codex",
+        "githubApp",
+        "agentBridge",
+        "futureDashboard"
+      ]
+    },
+    "agentSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Policy surface for a single PNPD agent. Records what the agent is allowed to do, what it is forbidden from doing, what evidence it must provide, and what conditions cause it to stop.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this agent surface is enabled for the project."
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Role description for this agent surface."
+        },
+        "allowedActions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Actions this agent is allowed to perform."
+        },
+        "forbiddenActions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Actions this agent is explicitly forbidden from performing."
+        },
+        "evidenceRequired": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Evidence types this agent must provide for its actions."
+        },
+        "stopConditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Conditions under which this agent must stop and hand off."
+        }
+      },
+      "required": [
+        "enabled",
+        "role",
+        "allowedActions",
+        "forbiddenActions",
+        "evidenceRequired",
+        "stopConditions"
+      ]
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Validation model records validation commands, results, and caveats. Dry-run results must surface caveats explicitly. The schema does not run commands, inspect local state, or validate CI live.",
+      "properties": {
+        "requiredCommands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Validation commands required for this project profile."
+        },
+        "lastLocalValidation": {
+          "$ref": "#/$defs/validationResult",
+          "description": "Result of the most recent local validation run."
+        },
+        "lastRemoteCi": {
+          "$ref": "#/$defs/ciResult",
+          "description": "Result of the most recent remote CI run."
+        },
+        "schemaValidationStatus": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_applicable", "pending_future_validator"],
+          "description": "Schema validation status for this project profile."
+        },
+        "fixtureValidationStatus": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_applicable", "pending_future_validator"],
+          "description": "Fixture validation status for this project profile."
+        },
+        "dryRunStatus": {
+          "type": "string",
+          "enum": ["PASS", "PASS_WITH_KNOWN_LOCAL_NEEDS_TRIAGE_CAVEAT", "FAIL"],
+          "description": "Dry-run result status. PASS_WITH_KNOWN_LOCAL_NEEDS_TRIAGE_CAVEAT is used when the dry-run exits zero but reports NEEDS_TRIAGE only because of known local untracked files or a protected main branch."
+        },
+        "testStatus": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_applicable", "needs_triage"],
+          "description": "Test run status for this project profile."
+        },
+        "knownLocalCaveats": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Known local caveats that affect validation results."
+        }
+      },
+      "required": [
+        "requiredCommands",
+        "dryRunStatus",
+        "knownLocalCaveats"
+      ]
+    },
+    "validationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Record of a single validation command execution.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_run", "needs_triage"],
+          "description": "Exit status of the validation command."
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The validation command that was executed."
+        },
+        "recordedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the validation was recorded."
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable notes about the validation result."
+        }
+      },
+      "required": ["status"]
+    },
+    "ciResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Record of a remote CI run result.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "description": "CI provider name."
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "CI run identifier."
+        },
+        "conclusion": {
+          "type": "string",
+          "enum": ["success", "failure", "cancelled", "skipped", "timed_out", "unknown"],
+          "description": "Conclusion of the CI run."
+        },
+        "headSha": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Full commit SHA the CI run executed against."
+        },
+        "url": {
+          "type": "string",
+          "description": "URL to the CI run details."
+        },
+        "recordedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the CI result was recorded."
+        }
+      },
+      "required": ["provider", "conclusion"]
+    },
+    "productDelivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Tracks Product Delivery adoption status only. Does not generate artifacts, validate artifacts, or certify delivery readiness.",
+      "properties": {
+        "frameworkDocsPresent": {
+          "type": "boolean",
+          "description": "Whether Product Delivery framework documentation is present."
+        },
+        "templatesPresent": {
+          "type": "boolean",
+          "description": "Whether Product Delivery templates are present."
+        },
+        "schemaPresent": {
+          "type": "boolean",
+          "description": "Whether Product Delivery schemas are present."
+        },
+        "fixturesPresent": {
+          "type": "boolean",
+          "description": "Whether Product Delivery fixtures are present."
+        },
+        "validatorPresent": {
+          "type": "boolean",
+          "description": "Whether a Product Delivery validator is present."
+        },
+        "artifactValidationStatus": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_applicable", "needs_triage", "not_implemented"],
+          "description": "Validation status of Product Delivery artifacts."
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Product Delivery artifact identifiers that are present."
+        },
+        "missingArtifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Product Delivery artifact identifiers that are missing."
+        },
+        "recommendedArtifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Product Delivery artifact identifiers recommended for this project."
+        }
+      },
+      "required": [
+        "frameworkDocsPresent",
+        "templatesPresent",
+        "schemaPresent",
+        "fixturesPresent",
+        "validatorPresent",
+        "artifacts",
+        "missingArtifacts"
+      ]
+    },
+    "productDeliveryRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Tracks Product Delivery Registry relationship only. No live writer or hash validation is implemented in the current baseline. Schema records relationship only and does not write registry state.",
+      "properties": {
+        "registryMode": {
+          "type": "string",
+          "enum": ["none", "example_only", "local_read_only", "controlled_writer_pending"],
+          "description": "Current mode of the Product Delivery Registry."
+        },
+        "registryPresent": {
+          "type": "boolean",
+          "description": "Whether a Product Delivery Registry instance is present."
+        },
+        "registryPath": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Filesystem path to the registry instance."
+        },
+        "schemaInstanceValidation": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_applicable", "pending_future_validator"],
+          "description": "Schema instance validation status."
+        },
+        "exampleDiscovery": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_applicable", "not_run"],
+          "description": "Example discovery status."
+        },
+        "artifactReferences": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Artifact references recorded in the registry."
+        },
+        "hashValidationStatus": {
+          "type": "string",
+          "enum": ["pending_path_design", "not_applicable", "pass", "fail"],
+          "default": "pending_path_design",
+          "description": "Hash integrity validation status."
+        },
+        "liveWriterStatus": {
+          "type": "string",
+          "enum": ["not_implemented", "controlled_writer_pending", "implemented_after_unlock"],
+          "default": "not_implemented",
+          "description": "Live writer implementation status."
+        }
+      },
+      "required": [
+        "registryMode",
+        "registryPresent",
+        "hashValidationStatus",
+        "liveWriterStatus"
+      ]
+    },
+    "memoryAndKnowledge": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Memory and knowledge policy for the project. Obsidian integration is not implemented by this schema. Sensitive context must be governed deliberately and should not be assumed safe for every agent.",
+      "properties": {
+        "obsidianPolicy": {
+          "type": "string",
+          "enum": ["not_implemented", "policy_required", "policy_defined", "integration_pending", "integration_enabled"],
+          "description": "Obsidian integration policy status."
+        },
+        "memorySources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Canonical memory sources for the project."
+        },
+        "canonicalContextSources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Canonical context sources for the project."
+        },
+        "sensitiveContextPolicy": {
+          "type": "string",
+          "enum": ["unspecified", "restricted", "owner_only", "approved_agents_only"],
+          "description": "Policy governing access to sensitive project context."
+        },
+        "projectNotesPath": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Filesystem path to project notes."
+        },
+        "skillReferences": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "References to skill definitions used by this project."
+        }
+      },
+      "required": [
+        "obsidianPolicy",
+        "memorySources",
+        "canonicalContextSources",
+        "sensitiveContextPolicy"
+      ]
+    },
+    "teachSkills": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Teach Skills and Teach Skill Studio are active future categories but not implemented in Phase 1P-D. This schema records categorisation policy only; it does not implement skills or the studio.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether Teach Skills is enabled for this project."
+        },
+        "categoryStatus": {
+          "type": "string",
+          "enum": ["active_roadmap", "planned", "not_applicable"],
+          "default": "active_roadmap",
+          "description": "Teach Skills category status for this project."
+        },
+        "requiredSkills": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Skills required for this project."
+        },
+        "availableSkills": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Skills currently available for this project."
+        },
+        "missingSkills": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Skills missing but required for this project."
+        },
+        "skillStudioStatus": {
+          "type": "string",
+          "enum": ["not_implemented", "design_pending", "implementation_pending", "implemented_after_unlock"],
+          "default": "not_implemented",
+          "description": "Teach Skill Studio implementation status."
+        },
+        "validationPolicy": {
+          "type": "string",
+          "enum": ["future", "not_applicable", "defined"],
+          "default": "future",
+          "description": "Policy for validating Teach Skills."
+        }
+      },
+      "required": [
+        "enabled",
+        "categoryStatus",
+        "skillStudioStatus",
+        "validationPolicy"
+      ]
+    },
+    "riskAndCompliance": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Risk classification is advisory. It does not certify safety, compliance, deployment readiness, or production readiness. It helps classify projects but must not be treated as a compliance audit or certification.",
+      "properties": {
+        "complianceContexts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Compliance frameworks or contexts applicable to this project."
+        },
+        "dataSensitivity": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "unknown"],
+          "description": "Data sensitivity classification."
+        },
+        "safetyRisks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Identified safety risks."
+        },
+        "operationalRisks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Identified operational risks."
+        },
+        "aiRisks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Identified AI-related risks."
+        },
+        "deploymentRisks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Identified deployment risks."
+        },
+        "mitigationNotes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Notes on risk mitigation strategies."
+        }
+      },
+      "required": ["dataSensitivity"]
+    },
+    "adoptionRecommendations": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Recommendations are advisory and do not authorize implementation, mutation, dispatch, deployment, or certification. They guide human decision-making only.",
+      "properties": {
+        "recommendedNextPhase": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Recommended next PNPD adoption phase."
+        },
+        "missingPnpdFiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "PNPD files that are missing and recommended for creation."
+        },
+        "recommendedTemplates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Templates recommended for this project."
+        },
+        "recommendedValidationCommands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Validation commands recommended for this project."
+        },
+        "controlledUnlockWarnings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Warnings about Controlled Unlock implications."
+        },
+        "humanReviewNotes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Notes for human reviewers."
+        }
+      },
+      "required": [
+        "recommendedNextPhase",
+        "missingPnpdFiles",
+        "controlledUnlockWarnings"
+      ]
+    },
+    "controlledUnlocks": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Controlled Unlock tracking is advisory only until each unlock phase is designed, approved, audited, verified, and baselined. This schema records unlock requests and statuses; it does not authorize any unlock.",
+      "properties": {
+        "requestedUnlocks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Unlocks that have been requested."
+        },
+        "allowedUnlocks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Unlocks that are currently allowed."
+        },
+        "blockedUntilPhase": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/blockedUnlock"
+          },
+          "description": "Unlocks blocked until a specified phase."
+        },
+        "dependencyNotes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Notes on dependencies between unlocks."
+        },
+        "ownerApprovalStatus": {
+          "$ref": "#/$defs/unlockStatusMap",
+          "description": "Owner approval status for each unlock."
+        },
+        "codexAuditStatus": {
+          "$ref": "#/$defs/unlockStatusMap",
+          "description": "Codex audit status for each unlock."
+        },
+        "githubVerificationStatus": {
+          "$ref": "#/$defs/unlockStatusMap",
+          "description": "GitHub verification status for each unlock."
+        }
+      },
+      "required": [
+        "requestedUnlocks",
+        "allowedUnlocks",
+        "blockedUntilPhase",
+        "ownerApprovalStatus",
+        "codexAuditStatus",
+        "githubVerificationStatus"
+      ]
+    },
+    "blockedUnlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A single unlock that is blocked until a required phase.",
+      "properties": {
+        "unlock": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The unlock identifier."
+        },
+        "requiredPhase": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The phase that must be completed before this unlock."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reason the unlock is blocked."
+        }
+      },
+      "required": ["unlock", "requiredPhase", "reason"]
+    },
+    "unlockStatusMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["not_requested", "pending", "approved", "rejected", "not_applicable"]
+      },
+      "description": "Map of unlock identifier to its current status. Keys are unlock identifiers; values are one of: not_requested, pending, approved, rejected, not_applicable."
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Audit fields support traceability without inventing evidence. Schema does not generate timestamps, verify commits, or validate evidence links live.",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when this profile was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when this profile was last updated."
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identity of the profile creator."
+        },
+        "lastReviewedBy": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identity of the last reviewer."
+        },
+        "lastReviewedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when this profile was last reviewed."
+        },
+        "baselineCommit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Full commit SHA of the baseline this profile was checked against."
+        },
+        "baselineVerdict": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Verdict string from the baseline check."
+        },
+        "evidenceLinks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          },
+          "description": "Evidence links supporting audit claims."
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Audit notes."
+        }
+      },
+      "required": [
+        "createdAt",
+        "updatedAt",
+        "createdBy",
+        "lastReviewedBy",
+        "lastReviewedAt",
+        "baselineCommit",
+        "baselineVerdict"
+      ]
+    },
+    "evidenceLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Evidence references are recorded, not verified live by the schema. They provide traceability to supporting artifacts.",
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable label for this evidence link."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Filesystem path to the evidence artifact."
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "description": "URL to the evidence artifact."
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Commit SHA associated with this evidence."
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Additional notes about this evidence link."
+        }
+      },
+      "required": ["label"]
+    }
+  }
+}
