@@ -28,6 +28,12 @@ jobs:
       - name: Verify schemas and fixtures
         run: npm run validate
 
+      - name: Validate Product Delivery Registry fixtures
+        run: npm run validate:pdr:fixtures
+
+      - name: Validate Product Delivery Registry examples
+        run: npm run validate:pdr:examples
+
       - name: Run local dry-run
         run: npm run dry-run
 
