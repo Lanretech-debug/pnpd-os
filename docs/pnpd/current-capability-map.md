@@ -4,14 +4,13 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1N-F |
-| **Latest stable commit** | `2b5093d` |
+| **Phase** | Phase 1O-Y |
+| **Latest stable commit** | `8b541a143b125940a7392d346e4de612ccee5340` |
 | **Branch** | `main` |
-| **Node version** | `20` |
-| **Remote CI run** | `27653676971` |
+| **Node version** | `22` (see `.github/workflows/pnpd-ci.yml`) |
+| **Remote CI run** | `27871552548` |
 | **Remote CI conclusion** | `success` |
-| **Remote CI duration** | `22s` |
-| **Remote CI commit** | `2b5093d0a44d3da02928eb22ae40747c7d1b29ff` |
+| **Current CI commit** | `8b541a143b125940a7392d346e4de612ccee5340` |
 
 ## Existing capabilities
 
@@ -45,35 +44,136 @@
 | Handoff local writer | ✅ Complete | `--write-handoff` flag |
 | Lockfile support | ✅ Complete | Lockfile validation in orchestrator |
 | Quickstart local verification | ✅ Complete | `npm run validate`, `npm run dry-run`, `npm test` |
+| Product Delivery Registry schema-instance validation (Phase 1O-R) | ✅ Complete | `node scripts/pnpd-validate-schemas.mjs --product-delivery-registry <path> --validate-schema-instance` |
+| Product Delivery Registry example discovery (Phase 1O-R) | ✅ Complete | `node scripts/pnpd-validate-schemas.mjs --phase 1o-example` |
+| Product Delivery Registry minimal example fixture (Phase 1O-S) | ✅ Complete | `tests/fixtures/pnpd/product-delivery-registry/examples/example-minimal-registry.json` |
+| Product Delivery Registry reconciliation/governance docs (Phase 1O-T) | ✅ Complete | `docs/pnpd/phase-1o-product-delivery-registry-reconciliation.md` |
+| Product Delivery Registry validation usage guide (Phase 1O-U) | ✅ Complete | `docs/pnpd/product-delivery-registry-validation-usage.md` |
+| Product Delivery Registry package script wrapper design (Phase 1O-V) | ✅ Complete | `docs/pnpd/phase-1o-v-package-script-wrapper-design.md` |
+| Product Delivery Registry local package scripts (Phase 1O-W): `validate:pdr`, `validate:pdr:fixtures`, `validate:pdr:examples` | ✅ Complete | `npm run validate:pdr`, `npm run validate:pdr:fixtures`, `npm run validate:pdr:examples` |
+| Product Delivery Registry CI integration design (Phase 1O-X) | ✅ Complete | `docs/pnpd/phase-1o-x-ci-integration-design.md` |
+| Product Delivery Registry CI validation (Phase 1O-Y): separate `validate:pdr:fixtures` and `validate:pdr:examples` steps | ✅ Complete | `.github/workflows/pnpd-ci.yml` |
+| GitHub-app-verified CI green baseline for Phase 1O-Y | ✅ Complete | PNPD CI run `27871552548`, conclusion `success` |
 
 **Note:** Runtime readiness report file validation (Phase 1J) uses filename-prefix validation only; it does not recompute the full report content hash yet.
 
-## Blocked capabilities
+## Controlled Unlock capabilities
 
-The following capabilities are **explicitly blocked** and not implemented:
+The following capabilities are planned for future implementation through a gated, sequenced roadmap. They are not authorized for immediate implementation by this document. Each unlock requires explicit phase scope, dependency resolution, safety-boundary review, Owner approval, implementation, Codex audit, and GitHub verification before becoming canonical.
 
-| Blocked capability | Status |
-|--------------------|--------|
-| dispatch execution | Blocked — no runtime dispatch |
-| GitHub/API mutation | Blocked — no GitHub API calls |
-| deployment | Blocked — no deploy behavior |
-| Daemon/watcher | Blocked — no persistent process |
-| Installer | Blocked — no installation package |
-| Packaging | Blocked — no release packaging |
-| production-readiness certification | Blocked — no production certification |
-| Authority escalation | Blocked — AgentBridge cannot escalate |
-| AgentBridge approval authority | Blocked — AgentBridge coordinates only |
-| Owner/Codex bypass | Blocked — no gate bypass possible |
-| Runtime consumption of Product Delivery artifacts | Blocked — no runtime linking |
-| Automated Product Delivery artifact generation | Blocked — no automatic generation |
+| Capability | Status |
+|------------|--------|
+| Dispatch execution | Controlled Unlock — gated behind Phase 1V-A |
+| GitHub/API mutation outside authorized Codex finalization | Controlled Unlock — gated behind Phase 1S-B |
+| Deployment | Controlled Unlock — gated behind Phase 1V-B |
+| Release packaging | Controlled Unlock — gated behind Phase 1U-B |
+| Daemon/watcher | Controlled Unlock — gated behind Phase 1T-A |
+| Installer | Controlled Unlock — gated behind Phase 1U-A |
+| Production-readiness certification | Controlled Unlock — gated behind Phase 1W-A |
+| Runtime consumption of Product Delivery artifacts | Controlled Unlock — gated behind Phase 1R-A |
+| Automated Product Delivery artifact generation | Controlled Unlock — gated behind Phase 1R-B |
+| Writer mutation of live Product Delivery Registry state | Controlled Unlock — gated behind Phase 1Q-A |
+| Artifact hash validation after path-design | Controlled Unlock — gated behind Phase 1Q-B |
+| Owner/Codex bypass through delegated-authority design only | Controlled Unlock — gated behind Phase 1S-A |
+| AgentBridge approval authority through delegated-authority design only | Controlled Unlock — gated behind Phase 1S-A |
+
+### Internal daemon and dashboard boundary
+
+Phase 1T-A and Phase 1T-B are internal operator-control-plane features.
+
+They must support:
+
+- Codex connector
+- Hermes connector
+- DeepSeek GUI connector
+- Coordination across all three agents from the dashboard
+- Dashboard visibility into agent handoffs
+- Dashboard visibility into phase baseline
+- Dashboard visibility into current repo state
+- Dashboard visibility into CI state
+- Dashboard visibility into pending approvals
+- Dashboard visibility into project adoption state
+- Dashboard visibility into Teach Skills / Obsidian / Teach Skill Studio categories
+
+Boundaries:
+
+- internal-use only
+- no public SaaS dashboard claim in first implementation
+- no automatic deployment by default
+- no uncontrolled GitHub/API mutation
+- no Owner authority bypass without delegated-authority design
+
+### Teach Skills, Obsidian, and Teach Skill Studio
+
+These are not blocked. They are active roadmap categories.
+
+They belong in Phase 1P-G for categorisation design.
+They should be sequenced after Project Profile and Adoption Model.
+
+Roadmap categories:
+
+- Knowledge and Memory Layer: Obsidian
+- Skill Authoring Layer: Teach Skills
+- Operator Training Layer
+- Agent Instruction Layer
+- Project Reuse Layer
+- Dashboard-visible capability category
+
+This phase must not implement them.
+
+## Categorised framework roadmap
+
+### Phase 1P — Foundation and classification
+
+- 1P-A Agent orchestration control loop document
+- 1P-B PNPD-OS framework classification design
+- 1P-C Project profile schema and adoption model
+- 1P-D Project adoption dry-run design
+- 1P-E Reusable project adoption templates
+- 1P-F Existing project adoption map
+- 1P-G Teach Skills / Obsidian / Teach Skill Studio categorisation design
+
+### Phase 1Q — Registry and validation
+
+- 1Q-A Live Product Delivery Registry writer design
+- 1Q-B Artifact path and hash validation design
+
+### Phase 1R — Artifact pipeline
+
+- 1R-A Runtime consumption of Product Delivery artifacts
+- 1R-B Automated Product Delivery artifact generation
+
+### Phase 1S — Agent governance
+
+- 1S-A AgentBridge delegated authority model
+- 1S-B Controlled GitHub/API mutation design
+
+### Phase 1T — Internal operator control plane
+
+- 1T-A Internal daemon/watcher design
+- 1T-B Internal operator dashboard design with Codex, Hermes, and DeepSeek GUI connectors
+
+### Phase 1U — Packaging and installation
+
+- 1U-A Installer design
+- 1U-B Release packaging design
+
+### Phase 1V — Execution control
+
+- 1V-A Dispatch execution design
+- 1V-B Deployment control design
+
+### Phase 1W — Certification
+
+- 1W-A Production-readiness certification framework
 
 ## Verification commands
 
 Copy-paste commands to verify current state locally:
 
 ```bash
-# Repo validation script (phases 0, 1b, 1c, 1f, 1n)
-# Run phases 1h and 1m explicitly with the commands below.
+# Full validation (phases 0, 1b, 1c, 1f, 1n, 1o)
+# Phases 1h and 1m run explicitly with the commands below.
 npm run validate
 
 # Dry-run orchestrator
@@ -81,6 +181,15 @@ npm run dry-run
 
 # Full test (validate + dry-run)
 npm test
+
+# Product Delivery Registry fixture validation (21 shape fixtures)
+npm run validate:pdr:fixtures
+
+# Product Delivery Registry example validation (1 example fixture)
+npm run validate:pdr:examples
+
+# Product Delivery Registry combined validation (fixtures + examples)
+npm run validate:pdr
 
 # Research Discovery fixture validation
 node scripts/pnpd-validate-schemas.mjs --phase 1m
@@ -111,6 +220,8 @@ node scripts/pnpd-orchestrator-dry-run.mjs --write-runtime-readiness
 
 ## Governance boundaries
 
+PNPD-OS is an AI-assisted software delivery framework for building, governing, validating, coordinating, and scaling SaaS/product systems through controlled agent workflows.
+
 - **Owner remains final authority.** All gates require owner decision for merge and release.
 - **Codex audit is required before merge.** Formal audit with full evidence must precede any merge.
 - **AgentBridge coordinates only.** It does not approve, merge, deploy, certify, dispatch, or bypass gates.
@@ -120,6 +231,26 @@ node scripts/pnpd-orchestrator-dry-run.mjs --write-runtime-readiness
 - **Standalone artifact validation is read-only.** Research Discovery and Product Delivery standalone validators create no files.
 - **Codex remains auditor/reviewer, not Owner.**
 - **AgentBridge remains non-authorizing.**
+
+### Hermes intake governance
+
+- Hermes design output requires a fresh session for PNPD phase authority.
+- Reused Telegram Hermes sessions are invalid for PNPD design authority.
+- Each required Hermes section must appear exactly once.
+- Duplicated semantic sections invalidate Hermes output.
+- Telegram split markers are tolerated only if semantic content is not duplicated.
+- Owner may amend/restate a duplicated Hermes design, but the duplicated output itself is not canonical.
+
+### GitHub App verification governance
+
+- Canonical baseline is accepted only after GitHub App verification.
+- Required verification:
+  - commit metadata
+  - compare against previous baseline
+  - changed-file scope
+  - final file content on main when relevant
+  - GitHub Actions workflow/job conclusion
+  - legacy combined status noted if empty or unavailable
 
 ## Remote CI evidence
 
@@ -138,3 +269,6 @@ All remote CI runs on `main` branch, all concluded `success`:
 | 1H-H | `27503401073` | `e37b6867aabb138715ae6b52828165a128916ff9` | 19s |
 | 1J | `27508672848` | `f7eb3c1b0370ee225b132d2f7c0816dceb936eaa` | 16s |
 | 1N-E | `27653676971` | `2b5093d0a44d3da02928eb22ae40747c7d1b29ff` | 22s |
+| 1O-W | `27868965459` | `4efbba56823257ee9fe7e3e1e2178ecd7753b3e8` | — |
+| 1O-X | `27870885423` | `8d48a7adff0ecb628933b67dd98a1cd54e739468` | — |
+| 1O-Y | `27871552548` | `8b541a143b125940a7392d346e4de612ccee5340` | — |
