@@ -241,6 +241,44 @@ PNPD-OS is an AI-assisted software delivery framework for building, governing, v
 - Telegram split markers are tolerated only if semantic content is not duplicated.
 - Owner may amend/restate a duplicated Hermes design, but the duplicated output itself is not canonical.
 
+### Hermes model status
+
+Hermes is currently configured to use DeepSeek as its model/provider path for design support.
+
+This does not change agent authority boundaries:
+
+- Hermes remains design/recommendation only.
+- DeepSeek GUI remains implementation only.
+- Codex remains audit/finalize only when explicitly authorized.
+- GitHub App verification remains required before canonical acceptance.
+
+### Hermes Terminal preference
+
+For high-authority PNPD design outputs, Hermes Terminal / raw CLI output is preferred over Telegram when exact structure matters.
+
+Reason: Telegram Hermes previously showed duplication/truncation risk through reused session context.
+
+### Telegram Hermes acceptance
+
+Telegram Hermes output is acceptable only when:
+
+- it uses a fresh session
+- semantic section counts pass
+- no duplicated sections appear
+- no truncated final section appears
+- Telegram split markers are ignored only if semantic content is not duplicated
+
+### Model switch caution
+
+Changing Hermes model/provider does not by itself prove the duplication/truncation issue is fixed.
+
+The output path must still pass:
+
+- fresh-session rule
+- section-count validation
+- no-truncation check
+- Owner review
+
 ### GitHub App verification governance
 
 - Canonical baseline is accepted only after GitHub App verification.
