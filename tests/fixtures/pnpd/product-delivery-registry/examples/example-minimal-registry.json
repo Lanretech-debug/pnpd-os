@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordType": "productDeliveryArtifactRegistry",
+  "registryId": "example-minimal-registry",
+  "createdAt": "2026-06-19T00:00:00.000Z",
+  "createdBy": "phase-1o-s-example",
+  "repo": {
+    "repoId": "pnpd-os",
+    "name": "pnpd-os",
+    "rootRelative": ".",
+    "branch": "main",
+    "commit": "e9071ae4ed313244b41bc91f86589db2e7a963d6"
+  },
+  "governance": {
+    "advisoryOnly": true,
+    "authorizesImplementation": false,
+    "authorizesMerge": false,
+    "authorizesDispatch": false,
+    "authorizesDeployment": false,
+    "authorizesGitHubMutation": false,
+    "authorizesApiMutation": false,
+    "certifiesProductionReadiness": false,
+    "ownerFinalAuthority": true,
+    "codexIsOwner": false,
+    "agentBridgeCanApprove": false,
+    "agentBridgeCanMerge": false,
+    "agentBridgeCanDispatch": false,
+    "agentBridgeCanDeploy": false,
+    "runtimeConsumptionAllowed": false,
+    "artifactGenerationAllowed": false,
+    "externalMutationAllowed": false
+  },
+  "entries": [
+    {
+      "artifactId": "example-prd-entry",
+      "artifactType": "prd",
+      "phase": "1O-S-example",
+      "path": "artifacts/product-delivery/prd/example-prd.json",
+      "validation": {
+        "validator": "pnpd-validate-schemas",
+        "mode": "product-delivery-artifact",
+        "status": "valid",
+        "validatedAt": "2026-06-19T00:00:00.000Z",
+        "path": "artifacts/product-delivery/prd/example-prd.json",
+        "exitCode": 0
+      },
+      "createdAt": "2026-06-19T00:00:00.000Z",
+      "createdBy": "phase-1o-s-example",
+      "source": {
+        "sourceType": "humanAuthored",
+        "sourceRef": "phase-1o-s-example"
+      },
+      "notes": "Illustrative minimal registry example for Phase 1O-S. Valid shape only. No runtime, dispatch, deployment, or production authority.",
+      "integrity": {
+        "hashAlgorithm": "none",
+        "contentHash": null
+      }
+    }
+  ]
+}
