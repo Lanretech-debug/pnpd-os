@@ -1,0 +1,299 @@
+{
+  "schemaVersion": "1.0.0",
+  "profileId": "synthetic-saas-alpha",
+  "projectName": "Synthetic SaaS Alpha",
+  "projectSlug": "synthetic-saas-alpha",
+  "projectOwner": "synthetic-owner",
+  "repo": {
+    "provider": "github",
+    "repoFullName": "synthetic-org/synthetic-saas-alpha",
+    "defaultBranch": "main",
+    "localPath": "/Users/synthetic/projects/synthetic-saas-alpha",
+    "remoteUrl": "https://github.com/synthetic-org/synthetic-saas-alpha.git",
+    "visibility": "private",
+    "primaryLanguage": "TypeScript",
+    "packageManager": "pnpm",
+    "ciProvider": "github-actions"
+  },
+  "product": {
+    "productType": "saas",
+    "domain": "synthetic-saas.example.com",
+    "targetUsers": [
+      "small-business-owners"
+    ],
+    "targetMarket": "global",
+    "dataSensitivity": "medium",
+    "criticality": "medium",
+    "revenueModel": "subscription",
+    "userImpact": "business-operations"
+  },
+  "lifecycle": {
+    "stage": "alpha",
+    "maturity": "development",
+    "releaseStatus": "internal",
+    "productionReadinessClaim": false,
+    "lastVerifiedBaseline": "PHASE_0_DRY_RUN_PASSED",
+    "lastVerifiedCiRun": "synthetic-ci-run-12345",
+    "lastVerifiedCommit": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+    "currentKnownRisks": [
+      "synthetic-risk-not-real"
+    ]
+  },
+  "pnpdAdoption": {
+    "adoptionStatus": "profile_created",
+    "adoptedLayers": [
+      "project-profile"
+    ],
+    "missingLayers": [
+      "product-delivery",
+      "product-delivery-registry",
+      "dispatch-readiness"
+    ],
+    "activePhase": "1P-E",
+    "nextRecommendedPhase": "1P-F",
+    "adoptionMode": "greenfield",
+    "adoptionBlockers": [
+      "no-product-delivery-framework"
+    ],
+    "adoptionEvidence": [
+      {
+        "label": "synthetic-profile-creation",
+        "commit": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+        "notes": "Synthetic evidence for fixture validation"
+      }
+    ]
+  },
+  "authority": {
+    "ownerRequired": true,
+    "ownerApprovalRequiredFor": [
+      "dispatch",
+      "deployment",
+      "production-readiness"
+    ],
+    "codexAuditRequiredFor": [
+      "finalize",
+      "merge"
+    ],
+    "allowedAgentRoles": [
+      "hermes-design",
+      "deepseek-implementation"
+    ],
+    "delegatedAuthorityStatus": "none",
+    "agentBridgeAuthority": false,
+    "githubMutationPolicy": "blocked_except_explicit_codex_finalization",
+    "deploymentPolicy": "blocked",
+    "dispatchPolicy": "blocked"
+  },
+  "agents": {
+    "hermes": {
+      "enabled": true,
+      "role": "design/recommendation only",
+      "allowedActions": [
+        "design",
+        "recommend",
+        "review"
+      ],
+      "forbiddenActions": [
+        "implement",
+        "merge",
+        "deploy",
+        "dispatch",
+        "certify"
+      ],
+      "evidenceRequired": [
+        "design-doc",
+        "recommendation-report"
+      ],
+      "stopConditions": [
+        "owner-disagrees",
+        "codex-flags-issue"
+      ]
+    },
+    "deepseekGui": {
+      "enabled": true,
+      "role": "implementation only for approved scope",
+      "allowedActions": [
+        "implement",
+        "test",
+        "validate"
+      ],
+      "forbiddenActions": [
+        "merge",
+        "deploy",
+        "dispatch",
+        "certify"
+      ],
+      "evidenceRequired": [
+        "implementation-handoff"
+      ],
+      "stopConditions": [
+        "out-of-scope-work",
+        "owner-rejects"
+      ]
+    },
+    "codex": {
+      "enabled": true,
+      "role": "audit/finalize only when explicitly authorized",
+      "allowedActions": [
+        "audit",
+        "review",
+        "finalize-if-authorized"
+      ],
+      "forbiddenActions": [
+        "implement",
+        "deploy",
+        "dispatch",
+        "certify"
+      ],
+      "evidenceRequired": [
+        "audit-report",
+        "owner-authorization"
+      ],
+      "stopConditions": [
+        "no-owner-authorization",
+        "amber-or-red-classification"
+      ]
+    },
+    "githubApp": {
+      "enabled": true,
+      "role": "external verification only",
+      "allowedActions": [
+        "verify-ci",
+        "verify-commit"
+      ],
+      "forbiddenActions": [
+        "merge",
+        "push",
+        "deploy",
+        "dispatch"
+      ],
+      "evidenceRequired": [
+        "ci-run-result"
+      ],
+      "stopConditions": [
+        "ci-failure",
+        "protected-branch-violation"
+      ]
+    },
+    "agentBridge": {
+      "enabled": false,
+      "role": "coordinate only in current state",
+      "allowedActions": [
+        "coordinate"
+      ],
+      "forbiddenActions": [
+        "approve",
+        "merge",
+        "deploy",
+        "dispatch",
+        "certify"
+      ],
+      "evidenceRequired": [],
+      "stopConditions": [
+        "any-escalation-attempt"
+      ]
+    },
+    "futureDashboard": {
+      "enabled": false,
+      "role": "planned, internal-use only, no current authority",
+      "allowedActions": [],
+      "forbiddenActions": [
+        "implement",
+        "merge",
+        "deploy",
+        "dispatch",
+        "certify"
+      ],
+      "evidenceRequired": [],
+      "stopConditions": [
+        "any-authority-claim"
+      ]
+    }
+  },
+  "automation": {
+    "automationLevel": "advisory_only",
+    "allowedAutomationActions": [
+      "validate",
+      "test",
+      "lint"
+    ],
+    "blockedAutomationActions": [
+      "merge",
+      "deploy",
+      "dispatch",
+      "mutate-github"
+    ],
+    "requiresOwnerApproval": [
+      "merge",
+      "deploy",
+      "dispatch"
+    ],
+    "requiresCodexAudit": [
+      "finalize"
+    ],
+    "requiresGithubVerification": [
+      "ci-pass"
+    ]
+  },
+  "validation": {
+    "requiredCommands": [
+      "npm test",
+      "npm run validate"
+    ],
+    "lastLocalValidation": {
+      "status": "pass",
+      "command": "npm run validate",
+      "recordedAt": "2026-06-20T00:00:00.000Z",
+      "notes": "synthetic-fixture-not-real"
+    },
+    "lastRemoteCi": {
+      "provider": "github-actions",
+      "runId": "synthetic-run-12345",
+      "conclusion": "success",
+      "headSha": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+      "url": "https://github.com/synthetic-org/synthetic-saas-alpha/actions/runs/synthetic-run-12345",
+      "recordedAt": "2026-06-20T00:00:00.000Z"
+    },
+    "schemaValidationStatus": "pending_future_validator",
+    "fixtureValidationStatus": "pending_future_validator",
+    "dryRunStatus": "NEEDS_TRIAGE",
+    "testStatus": "pass",
+    "knownLocalCaveats": [
+      "synthetic-caveat-not-real"
+    ]
+  },
+  "controlledUnlocks": {
+    "requestedUnlocks": [],
+    "allowedUnlocks": [],
+    "blockedUntilPhase": [
+      {
+        "unlock": "dispatch",
+        "requiredPhase": "2A",
+        "reason": "dispatch framework not designed"
+      }
+    ],
+    "dependencyNotes": [],
+    "ownerApprovalStatus": {},
+    "codexAuditStatus": {},
+    "githubVerificationStatus": {}
+  },
+  "audit": {
+    "createdAt": "2026-06-20T00:00:00.000Z",
+    "updatedAt": "2026-06-20T00:00:00.000Z",
+    "createdBy": "synthetic-validator",
+    "lastReviewedBy": "synthetic-validator",
+    "lastReviewedAt": "2026-06-20T00:00:00.000Z",
+    "baselineCommit": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+    "baselineVerdict": "SYNTHETIC_FIXTURE_NOT_REAL",
+    "evidenceLinks": [
+      {
+        "label": "synthetic-fixture-evidence",
+        "commit": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+        "notes": "Not real evidence"
+      }
+    ],
+    "notes": [
+      "This is a synthetic fixture for schema validation testing."
+    ]
+  }
+}

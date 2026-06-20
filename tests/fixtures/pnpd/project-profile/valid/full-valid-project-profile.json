@@ -1,0 +1,412 @@
+{
+  "schemaVersion": "1.0.0",
+  "profileId": "synthetic-learning-app",
+  "projectName": "Synthetic Learning App",
+  "projectSlug": "synthetic-learning-app",
+  "projectAliases": [
+    "synth-learn",
+    "sla"
+  ],
+  "projectOwner": "synthetic-owner",
+  "repo": {
+    "provider": "gitlab",
+    "repoFullName": "synthetic-org/synthetic-learning-app",
+    "defaultBranch": "main",
+    "localPath": "/Users/synthetic/projects/synthetic-learning-app",
+    "remoteUrl": "https://gitlab.com/synthetic-org/synthetic-learning-app.git",
+    "visibility": "public",
+    "primaryLanguage": "Python",
+    "packageManager": "pip",
+    "ciProvider": "gitlab-ci",
+    "productionEnvironment": "fly.io",
+    "stagingEnvironment": "fly.io-staging"
+  },
+  "product": {
+    "productType": "learning_app",
+    "domain": "synthetic-learn.example.com",
+    "targetUsers": [
+      "students",
+      "teachers"
+    ],
+    "targetMarket": "education",
+    "complianceContext": [
+      "ferpa",
+      "coppa"
+    ],
+    "dataSensitivity": "high",
+    "criticality": "high",
+    "revenueModel": "freemium",
+    "userImpact": "educational-outcomes"
+  },
+  "lifecycle": {
+    "stage": "beta",
+    "maturity": "stable",
+    "releaseStatus": "beta",
+    "productionReadinessClaim": false,
+    "lastVerifiedBaseline": "PHASE_1P_D_SCHEMA_COMMITTED",
+    "lastVerifiedCiRun": "synthetic-ci-run-67890",
+    "lastVerifiedCommit": "b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9",
+    "currentKnownRisks": [
+      "synthetic-risk-not-real"
+    ]
+  },
+  "pnpdAdoption": {
+    "adoptionStatus": "validation_ready",
+    "adoptedLayers": [
+      "project-profile",
+      "product-delivery",
+      "product-delivery-registry"
+    ],
+    "missingLayers": [
+      "dispatch-readiness",
+      "runtime-readiness"
+    ],
+    "activePhase": "1P-E",
+    "nextRecommendedPhase": "1P-F",
+    "adoptionMode": "brownfield",
+    "adoptionBlockers": [
+      "dispatch-framework-not-implemented"
+    ],
+    "adoptionEvidence": [
+      {
+        "label": "synthetic-profile-validation",
+        "path": "tests/fixtures/pnpd/project-profile/valid/full-valid-project-profile.json",
+        "url": "https://github.com/synthetic-org/pnpd-os/blob/main/tests/fixtures/pnpd/project-profile/valid/full-valid-project-profile.json",
+        "commit": "b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9",
+        "notes": "Synthetic evidence for full fixture"
+      }
+    ]
+  },
+  "authority": {
+    "ownerRequired": true,
+    "ownerApprovalRequiredFor": [
+      "dispatch",
+      "deployment"
+    ],
+    "codexAuditRequiredFor": [
+      "finalize"
+    ],
+    "allowedAgentRoles": [
+      "hermes-design",
+      "deepseek-implementation",
+      "codex-audit"
+    ],
+    "delegatedAuthorityStatus": "none",
+    "agentBridgeAuthority": false,
+    "githubMutationPolicy": "blocked_except_explicit_codex_finalization",
+    "deploymentPolicy": "blocked",
+    "dispatchPolicy": "blocked"
+  },
+  "agents": {
+    "hermes": {
+      "enabled": true,
+      "role": "design/recommendation only",
+      "allowedActions": [
+        "design",
+        "recommend",
+        "review"
+      ],
+      "forbiddenActions": [
+        "implement",
+        "merge",
+        "deploy",
+        "dispatch",
+        "certify"
+      ],
+      "evidenceRequired": [
+        "design-doc"
+      ],
+      "stopConditions": [
+        "owner-disagrees"
+      ]
+    },
+    "deepseekGui": {
+      "enabled": true,
+      "role": "implementation only for approved scope",
+      "allowedActions": [
+        "implement",
+        "test",
+        "validate"
+      ],
+      "forbiddenActions": [
+        "merge",
+        "deploy",
+        "dispatch",
+        "certify"
+      ],
+      "evidenceRequired": [
+        "implementation-handoff"
+      ],
+      "stopConditions": [
+        "out-of-scope-work"
+      ]
+    },
+    "codex": {
+      "enabled": true,
+      "role": "audit/finalize only when explicitly authorized",
+      "allowedActions": [
+        "audit",
+        "review",
+        "finalize-if-authorized"
+      ],
+      "forbiddenActions": [
+        "implement",
+        "deploy",
+        "dispatch",
+        "certify"
+      ],
+      "evidenceRequired": [
+        "audit-report",
+        "owner-authorization"
+      ],
+      "stopConditions": [
+        "no-owner-authorization"
+      ]
+    },
+    "githubApp": {
+      "enabled": true,
+      "role": "external verification only",
+      "allowedActions": [
+        "verify-ci",
+        "verify-commit"
+      ],
+      "forbiddenActions": [
+        "merge",
+        "push",
+        "deploy",
+        "dispatch"
+      ],
+      "evidenceRequired": [
+        "ci-run-result"
+      ],
+      "stopConditions": [
+        "ci-failure"
+      ]
+    },
+    "agentBridge": {
+      "enabled": false,
+      "role": "coordinate only in current state",
+      "allowedActions": [
+        "coordinate"
+      ],
+      "forbiddenActions": [
+        "approve",
+        "merge",
+        "deploy",
+        "dispatch",
+        "certify"
+      ],
+      "evidenceRequired": [],
+      "stopConditions": [
+        "any-escalation-attempt"
+      ]
+    },
+    "futureDashboard": {
+      "enabled": false,
+      "role": "planned, internal-use only, no current authority",
+      "allowedActions": [],
+      "forbiddenActions": [
+        "implement",
+        "merge",
+        "deploy",
+        "dispatch",
+        "certify"
+      ],
+      "evidenceRequired": [],
+      "stopConditions": [
+        "any-authority-claim"
+      ]
+    }
+  },
+  "automation": {
+    "automationLevel": "advisory_only",
+    "allowedAutomationActions": [
+      "validate",
+      "test"
+    ],
+    "blockedAutomationActions": [
+      "merge",
+      "deploy",
+      "dispatch"
+    ],
+    "requiresOwnerApproval": [
+      "merge",
+      "deploy",
+      "dispatch"
+    ],
+    "requiresCodexAudit": [
+      "finalize"
+    ],
+    "requiresGithubVerification": [
+      "ci-pass"
+    ]
+  },
+  "validation": {
+    "requiredCommands": [
+      "npm test",
+      "npm run validate",
+      "npm run dry-run"
+    ],
+    "lastLocalValidation": {
+      "status": "pass",
+      "command": "npm run validate",
+      "recordedAt": "2026-06-20T00:00:00.000Z",
+      "notes": "synthetic-fixture"
+    },
+    "lastRemoteCi": {
+      "provider": "gitlab-ci",
+      "runId": "synthetic-run-67890",
+      "conclusion": "success",
+      "headSha": "b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9",
+      "url": "https://gitlab.com/synthetic-org/synthetic-learning-app/-/pipelines/synthetic-run-67890",
+      "recordedAt": "2026-06-20T00:00:00.000Z"
+    },
+    "schemaValidationStatus": "pending_future_validator",
+    "fixtureValidationStatus": "pending_future_validator",
+    "dryRunStatus": "PASS",
+    "testStatus": "pass",
+    "knownLocalCaveats": [
+      "synthetic-caveat"
+    ]
+  },
+  "productDelivery": {
+    "frameworkDocsPresent": true,
+    "templatesPresent": false,
+    "schemaPresent": true,
+    "fixturesPresent": true,
+    "validatorPresent": false,
+    "artifactValidationStatus": "needs_triage",
+    "artifacts": [
+      "product-spec",
+      "prd"
+    ],
+    "missingArtifacts": [
+      "architecture-spec",
+      "implementation-handoff"
+    ],
+    "recommendedArtifacts": [
+      "architecture-spec"
+    ]
+  },
+  "productDeliveryRegistry": {
+    "registryMode": "example_only",
+    "registryPresent": true,
+    "registryPath": ".pnpd/product-delivery-registry.json",
+    "schemaInstanceValidation": "pending_future_validator",
+    "exampleDiscovery": "not_run",
+    "artifactReferences": [
+      "product-spec-entry",
+      "prd-entry"
+    ],
+    "hashValidationStatus": "pending_path_design",
+    "liveWriterStatus": "not_implemented"
+  },
+  "memoryAndKnowledge": {
+    "obsidianPolicy": "not_implemented",
+    "memorySources": [
+      "docs/pnpd/",
+      "design-notes/"
+    ],
+    "canonicalContextSources": [
+      "docs/pnpd/project-profile-schema-and-adoption-model.md"
+    ],
+    "sensitiveContextPolicy": "restricted",
+    "projectNotesPath": "docs/notes/",
+    "skillReferences": []
+  },
+  "teachSkills": {
+    "enabled": false,
+    "categoryStatus": "active_roadmap",
+    "requiredSkills": [],
+    "availableSkills": [],
+    "missingSkills": [],
+    "skillStudioStatus": "not_implemented",
+    "validationPolicy": "future"
+  },
+  "riskAndCompliance": {
+    "complianceContexts": [
+      "ferpa",
+      "coppa"
+    ],
+    "dataSensitivity": "high",
+    "safetyRisks": [
+      "student-data-exposure"
+    ],
+    "operationalRisks": [
+      "service-disruption"
+    ],
+    "aiRisks": [
+      "biased-content-delivery"
+    ],
+    "deploymentRisks": [
+      "staging-misconfiguration"
+    ],
+    "mitigationNotes": [
+      "regular-security-audits",
+      "data-encryption-at-rest"
+    ]
+  },
+  "adoptionRecommendations": {
+    "recommendedNextPhase": "1P-F",
+    "missingPnpdFiles": [
+      "templates/product-spec-template.md"
+    ],
+    "recommendedTemplates": [
+      "product-spec",
+      "architecture-spec"
+    ],
+    "recommendedValidationCommands": [
+      "npm run validate",
+      "npm run dry-run"
+    ],
+    "controlledUnlockWarnings": [
+      "dispatch-not-implemented",
+      "deployment-not-implemented"
+    ],
+    "humanReviewNotes": [
+      "Review product delivery artifacts before next phase."
+    ]
+  },
+  "controlledUnlocks": {
+    "requestedUnlocks": [],
+    "allowedUnlocks": [],
+    "blockedUntilPhase": [
+      {
+        "unlock": "dispatch",
+        "requiredPhase": "2A",
+        "reason": "dispatch framework not designed"
+      },
+      {
+        "unlock": "deployment",
+        "requiredPhase": "3A",
+        "reason": "deployment framework not designed"
+      }
+    ],
+    "dependencyNotes": [
+      "dispatch depends on runtime-readiness schema"
+    ],
+    "ownerApprovalStatus": {},
+    "codexAuditStatus": {},
+    "githubVerificationStatus": {}
+  },
+  "audit": {
+    "createdAt": "2026-06-20T00:00:00.000Z",
+    "updatedAt": "2026-06-20T00:00:00.000Z",
+    "createdBy": "synthetic-validator",
+    "lastReviewedBy": "synthetic-validator",
+    "lastReviewedAt": "2026-06-20T00:00:00.000Z",
+    "baselineCommit": "b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9",
+    "baselineVerdict": "SYNTHETIC_FIXTURE_FULL_NOT_REAL",
+    "evidenceLinks": [
+      {
+        "label": "synthetic-full-fixture-evidence",
+        "path": "tests/fixtures/pnpd/project-profile/valid/full-valid-project-profile.json",
+        "commit": "b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9",
+        "notes": "Not real evidence"
+      }
+    ],
+    "notes": [
+      "This is a full synthetic fixture exercising optional top-level objects."
+    ]
+  }
+}

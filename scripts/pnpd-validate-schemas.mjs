@@ -121,11 +121,60 @@ const PHASE_1C_FIXTURES = [
     expectedReason: "authority flags must be const false"
   }
 ];
+const PROJECT_PROFILE_FIXTURES = [
+  {
+    file: "tests/fixtures/pnpd/project-profile/valid/minimal-valid-project-profile.json",
+    expectValid: true,
+    expectedReason: "minimal valid synthetic project profile"
+  },
+  {
+    file: "tests/fixtures/pnpd/project-profile/valid/full-valid-project-profile.json",
+    expectValid: true,
+    expectedReason: "full valid synthetic project profile"
+  },
+  {
+    file: "tests/fixtures/pnpd/project-profile/invalid/missing-required-root.json",
+    expectValid: false,
+    expectedReason: "missing required root field"
+  },
+  {
+    file: "tests/fixtures/pnpd/project-profile/invalid/invalid-project-slug.json",
+    expectValid: false,
+    expectedReason: "projectSlug must match slug pattern"
+  },
+  {
+    file: "tests/fixtures/pnpd/project-profile/invalid/invalid-commit-sha.json",
+    expectValid: false,
+    expectedReason: "commit fields must be full 40-character lowercase SHA"
+  },
+  {
+    file: "tests/fixtures/pnpd/project-profile/invalid/owner-required-false.json",
+    expectValid: false,
+    expectedReason: "ownerRequired must be const true"
+  },
+  {
+    file: "tests/fixtures/pnpd/project-profile/invalid/agentbridge-authority-true.json",
+    expectValid: false,
+    expectedReason: "agentBridgeAuthority must be const false"
+  },
+  {
+    file: "tests/fixtures/pnpd/project-profile/invalid/root-additional-property.json",
+    expectValid: false,
+    expectedReason: "root additionalProperties false blocks unknown fields"
+  },
+  {
+    file: "tests/fixtures/pnpd/project-profile/invalid/invalid-dry-run-status.json",
+    expectValid: false,
+    expectedReason: "dryRunStatus must be an allowed enum value"
+  }
+];
+
+
 
 
 
 function parseArgs(argv) {
-  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null, checkRegistryArtifacts: false, verifyRegistryArtifactHashes: false, validateSchemaInstance: false };
+  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null, projectProfile: null, checkRegistryArtifacts: false, verifyRegistryArtifactHashes: false, validateSchemaInstance: false };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -145,12 +194,15 @@ function parseArgs(argv) {
       if (args.checkRegistryArtifacts) {
         throw new Error("--check-registry-artifacts cannot be combined with --phase.");
       }
+      if (args.projectProfile) {
+        throw new Error("--project-profile is a standalone validator and cannot be combined with --phase.");
+      }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, or 1o-example).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, or 1p-profile).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", or "1o-example".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", or "1p-profile".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -160,6 +212,9 @@ function parseArgs(argv) {
       }
       if (args.productDeliveryArtifact) {
         throw new Error("--runtime-readiness-report is a standalone validator and cannot be combined with --product-delivery-artifact.");
+      }
+      if (args.projectProfile) {
+        throw new Error("--runtime-readiness-report is a standalone validator and cannot be combined with --project-profile.");
       }
       if (!argv[i + 1]) {
         throw new Error("--runtime-readiness-report requires a file path argument.");
@@ -182,6 +237,9 @@ function parseArgs(argv) {
       if (args.productDeliveryArtifact) {
         throw new Error("--research-discovery-artifact is a standalone validator and cannot be combined with --product-delivery-artifact.");
       }
+      if (args.projectProfile) {
+        throw new Error("--research-discovery-artifact is a standalone validator and cannot be combined with --project-profile.");
+      }
       if (!argv[i + 1]) {
         throw new Error("--research-discovery-artifact requires a file path argument.");
       }
@@ -202,6 +260,9 @@ function parseArgs(argv) {
       }
       if (args.researchDiscoveryArtifact) {
         throw new Error("--product-delivery-artifact is a standalone validator and cannot be combined with --research-discovery-artifact.");
+      }
+      if (args.projectProfile) {
+        throw new Error("--product-delivery-artifact is a standalone validator and cannot be combined with --project-profile.");
       }
       if (!argv[i + 1]) {
         throw new Error("--product-delivery-artifact requires a file path argument.");
@@ -227,6 +288,9 @@ function parseArgs(argv) {
       if (args.productDeliveryArtifact) {
         throw new Error("--product-delivery-registry is a standalone validator and cannot be combined with --product-delivery-artifact.");
       }
+      if (args.projectProfile) {
+        throw new Error("--product-delivery-registry is a standalone validator and cannot be combined with --project-profile.");
+      }
       if (!argv[i + 1]) {
         throw new Error("--product-delivery-registry requires a file path argument.");
       }
@@ -238,6 +302,42 @@ function parseArgs(argv) {
       }
       args.productDeliveryRegistry = argv[i + 1];
       i += 1;
+    } else if (arg === "--project-profile") {
+      if (args.phase) {
+        throw new Error("--project-profile is a standalone validator and cannot be combined with --phase.");
+      }
+      if (args.runtimeReadinessReport) {
+        throw new Error("--project-profile is a standalone validator and cannot be combined with --runtime-readiness-report.");
+      }
+      if (args.researchDiscoveryArtifact) {
+        throw new Error("--project-profile is a standalone validator and cannot be combined with --research-discovery-artifact.");
+      }
+      if (args.productDeliveryArtifact) {
+        throw new Error("--project-profile is a standalone validator and cannot be combined with --product-delivery-artifact.");
+      }
+      if (args.productDeliveryRegistry) {
+        throw new Error("--project-profile is a standalone validator and cannot be combined with --product-delivery-registry.");
+      }
+      if (args.checkRegistryArtifacts) {
+        throw new Error("--project-profile is a standalone validator and cannot be combined with --check-registry-artifacts.");
+      }
+      if (args.verifyRegistryArtifactHashes) {
+        throw new Error("--project-profile is a standalone validator and cannot be combined with --verify-registry-artifact-hashes.");
+      }
+      if (args.validateSchemaInstance) {
+        throw new Error("--project-profile is a standalone validator and cannot be combined with --validate-schema-instance.");
+      }
+      if (!argv[i + 1]) {
+        throw new Error("--project-profile requires a file path argument.");
+      }
+      if (args.projectProfile) {
+        throw new Error("--project-profile accepts exactly one file path.");
+      }
+      if (argv[i + 1].startsWith("-")) {
+        throw new Error("--project-profile requires a file path argument, got: " + argv[i + 1]);
+      }
+      args.projectProfile = argv[i + 1];
+      i += 1;
     } else if (arg === "--check-registry-artifacts") {
       args.checkRegistryArtifacts = true;
     } else if (arg === "--verify-registry-artifact-hashes") {
@@ -248,11 +348,12 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-registry <path> [--validate-schema-instance] [--check-registry-artifacts] [--verify-registry-artifact-hashes]
+  node scripts/pnpd-validate-schemas.mjs --project-profile <path>
 
 Options:
   --phase 0   Validate Phase 0 invariants only.
@@ -264,10 +365,12 @@ Options:
   --phase 1n  Validate Product Delivery schema and fixtures (explicit-only, not included in default).
   --phase 1o  Validate Product Delivery registry schema and shape fixtures (explicit-only, not included in default).
   --phase 1o-example  Validate Product Delivery registry example fixtures (explicit-only, not included in default).
+  --phase 1p-profile  Validate PNPD project profile fixtures (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
   --product-delivery-artifact <path>  Validate a user-created Product Delivery artifact JSON file.
   --product-delivery-registry <path>  Validate a Product Delivery registry JSON file.
+  --project-profile <path>  Validate a project profile JSON file against the project profile schema.
   --validate-schema-instance           With --product-delivery-registry: validate registry JSON against the registry schema.
   --check-registry-artifacts          With --product-delivery-registry: check each entry path points to an existing regular file.
   --verify-registry-artifact-hashes   With --product-delivery-registry AND --check-registry-artifacts: verify sha256 contentHash against file bytes.
@@ -5729,6 +5832,136 @@ function validateProductDeliveryRegistryPhase1OExample() {
   process.exit(exitCode);
 }
 
+
+// ── Phase 1P: Project Profile Validation ──────────────────────────────────────────
+
+const PROJECT_PROFILE_SCHEMA_PATH = ".pnpd/project-profile.schema.json";
+
+function loadProjectProfileSchema() {
+  const schema = readJson(PROJECT_PROFILE_SCHEMA_PATH);
+  assert(schema["$schema"] === "https://json-schema.org/draft/2020-12/schema",
+    "Project profile schema must use JSON Schema draft 2020-12.");
+  assert(schema["$id"] === "pnpd-project-profile.schema.json",
+    "Project profile schema $id must be pnpd-project-profile.schema.json.");
+  assert(schema.title === "PNPD Project Profile",
+    "Project profile schema title must be 'PNPD Project Profile'.");
+  assert(schema.type === "object",
+    "Project profile schema top-level type must be object.");
+  assert(schema.additionalProperties === false,
+    "Project profile schema top-level additionalProperties must be false.");
+
+  // Required root fields
+  const topRequired = schema.required || [];
+  const expectedRequired = [
+    "schemaVersion", "profileId", "projectName", "projectSlug",
+    "projectOwner", "repo", "product", "lifecycle", "pnpdAdoption",
+    "authority", "agents", "automation", "validation",
+    "controlledUnlocks", "audit"
+  ];
+  for (const f of expectedRequired) {
+    assert(topRequired.includes(f),
+      "Project profile schema missing required root field: " + f);
+  }
+
+  // Safety const checks in $defs
+  const defs = schema["$defs"] || {};
+  assert(defs.authority, "Missing $defs.authority");
+  assert(defs.authority.properties.ownerRequired.const === true,
+    "authority.ownerRequired must be const: true.");
+  assert(defs.authority.properties.agentBridgeAuthority.const === false,
+    "authority.agentBridgeAuthority must be const: false.");
+  assert(defs.lifecycle.properties.productionReadinessClaim.default === false,
+    "lifecycle.productionReadinessClaim must default to false.");
+  assert(defs.authority.properties.deploymentPolicy.default === "blocked",
+    "authority.deploymentPolicy must default to blocked.");
+  assert(defs.authority.properties.dispatchPolicy.default === "blocked",
+    "authority.dispatchPolicy must default to blocked.");
+  assert(defs.automation.properties.automationLevel.default === "advisory_only",
+    "automation.automationLevel must default to advisory_only.");
+
+  return schema;
+}
+
+function formatValidationFailures(failures) {
+  return failures.map(function(f) {
+    return f.path + ": expected " + f.expected + " (got: " + f.actual + ")";
+  }).join("; ");
+}
+
+function validateProjectProfileInstance(profile, sourceLabel) {
+  const safetyIssues = scanFixtureContent(profile);
+  if (safetyIssues.length > 0) {
+    throw new Error(sourceLabel + ": SAFETY VIOLATION: " + safetyIssues.join("; "));
+  }
+
+  const schema = loadProjectProfileSchema();
+  const failures = validateInstance(profile, schema, schema, "$");
+  if (failures.length > 0) {
+    throw new Error(sourceLabel + ": validation failed: " + formatValidationFailures(failures));
+  }
+  return true;
+}
+
+function validateProjectProfileFile(file) {
+  let profile;
+  try {
+    profile = readJson(file);
+  } catch (e) {
+    throw new Error(file + ": invalid JSON: " + e.message);
+  }
+  validateProjectProfileInstance(profile, file);
+  return profile;
+}
+
+function validateProjectProfileFixtures() {
+  const schema = loadProjectProfileSchema();
+  const failures = [];
+
+  console.log("PNPD Project Profile Validation");
+  console.log("Schema: " + PROJECT_PROFILE_SCHEMA_PATH);
+  console.log("Fixtures: tests/fixtures/pnpd/project-profile");
+
+  for (var _pp = 0; _pp < PROJECT_PROFILE_FIXTURES.length; _pp++) {
+    const entry = PROJECT_PROFILE_FIXTURES[_pp];
+    let fixture;
+    try {
+      fixture = readJson(entry.file);
+    } catch (e) {
+      failures.push(entry.file + ": MISSING or invalid JSON: " + e.message);
+      continue;
+    }
+
+    // Safety scan
+    const safetyIssues = scanFixtureContent(fixture);
+    if (safetyIssues.length > 0) {
+      failures.push(entry.file + ": SAFETY VIOLATION: " + safetyIssues.join("; "));
+      continue;
+    }
+
+    // Validate against the root schema
+    const validationFailures = validateInstance(fixture, schema, schema, "$");
+
+    if (entry.expectValid && validationFailures.length > 0) {
+      const detail = validationFailures.map(function(f) {
+        return f.path + ": " + f.expected + " (got: " + f.actual + ")";
+      }).join("; ");
+      failures.push(entry.file + ": expected VALID (" + entry.expectedReason + ") but got " + validationFailures.length + " failure(s): " + detail);
+    } else if (!entry.expectValid && validationFailures.length === 0) {
+      failures.push(entry.file + ": expected INVALID (" + entry.expectedReason + ") but passed validation");
+    } else if (entry.expectValid) {
+      console.log("[PASS] " + entry.file + " \u2014 " + entry.expectedReason);
+    } else {
+      console.log("[INVALID-as-expected] " + entry.file + " \u2014 " + entry.expectedReason);
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error("Project profile fixture validation failures:\\n  " + failures.join("\\n  "));
+  }
+
+  console.log("Project profile validation: pass");
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
@@ -5738,6 +5971,9 @@ try {
   if (args.verifyRegistryArtifactHashes) {
     if (args.phase) {
       throw new Error("--verify-registry-artifact-hashes cannot be combined with --phase.");
+    }
+    if (args.projectProfile) {
+      throw new Error("--verify-registry-artifact-hashes cannot be combined with --project-profile.");
     }
     if (!args.productDeliveryRegistry) {
       throw new Error("--verify-registry-artifact-hashes requires --product-delivery-registry <path>.");
@@ -5769,6 +6005,13 @@ try {
   if (args.productDeliveryRegistry) {
     validateProductDeliveryRegistryFile(args.productDeliveryRegistry, args.checkRegistryArtifacts, args.verifyRegistryArtifactHashes, args.validateSchemaInstance);
     // validateProductDeliveryRegistryFile calls process.exit internally
+  }
+
+  // Phase 1P-D: standalone project profile validation
+  if (args.projectProfile) {
+    validateProjectProfileFile(args.projectProfile);
+    console.log("project profile: pass");
+    process.exit(0);
   }
 
   // Phase 1O-I: --check-registry-artifacts requires --product-delivery-registry
@@ -5812,6 +6055,12 @@ try {
 
   if (runPhase1oExample) {
     validateProductDeliveryRegistryPhase1OExample();
+  }
+
+  const runPhase1pProfile = args.phase === "1p-profile";
+
+  if (runPhase1pProfile) {
+    validateProjectProfileFixtures();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
