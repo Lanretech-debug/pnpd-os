@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactType": "bug-forecast-report",
+  "producedBy": "manual_review",
+  "createdAt": "2026-06-21T00:00:00.000Z",
+  "phaseId": "1Q-F",
+  "projectId": "fixture-project",
+  "target": {
+    "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "phase": "1Q-F",
+    "component": "bug forecast example discovery",
+    "artifactKind": "mixed",
+    "paths": [
+      "tests/fixtures/pnpd/bug-forecast/examples/synthetic-valid-bug-forecast-example.json",
+      "scripts/pnpd-validate-schemas.mjs"
+    ]
+  },
+  "forecastScope": "Synthetic example discovery artifact only. This forecast demonstrates the shape of a valid bug forecast report for example discovery validation. It contains no real findings, claims, or evidence.",
+  "findings": [
+    {
+      "id": "BF-0001",
+      "title": "Synthetic advisory example finding",
+      "type": "unsupported_claim",
+      "severity": "info",
+      "confidence": "low",
+      "falsePositiveLikelihood": "high",
+      "claim": "This synthetic claim exists only to demonstrate the shape of a bug forecast example artifact.",
+      "forecast": "If unsupported claims are not labelled as advisory examples, they can create false confidence during review.",
+      "evidenceRefs": [
+        "EVID-0001"
+      ],
+      "affectedAreas": [
+        "example-discovery"
+      ],
+      "recommendedReviewer": "manual_review",
+      "recommendedNextAction": "Review this artifact as a synthetic example only; do not treat it as production evidence.",
+      "status": "open"
+    }
+  ],
+  "summary": {
+    "totalFindings": 1,
+    "blockerCount": 0,
+    "highCount": 0,
+    "mediumCount": 0,
+    "lowCount": 0,
+    "infoCount": 1,
+    "evidenceGapCount": 0,
+    "ownerReviewRequired": false,
+    "codexReviewRecommended": false
+  },
+  "evidence": [
+    {
+      "id": "EVID-0001",
+      "kind": "manual_note",
+      "path": "tests/fixtures/pnpd/bug-forecast/examples/synthetic-valid-bug-forecast-example.json",
+      "notes": "Synthetic manual note used only to demonstrate evidence reference shape for example discovery."
+    }
+  ],
+  "limitations": "This artifact is synthetic, advisory, and not production evidence. It is not a real Skeptic forecast. It does not certify anything. It exists only to validate example discovery in the PNPD validator.",
+  "governanceBoundary": {
+    "advisoryOnly": true,
+    "doesNotAuthorize": [
+      "implementation",
+      "fix",
+      "merge",
+      "deploy",
+      "dispatch",
+      "certify",
+      "production_readiness",
+      "compliance_certification"
+    ],
+    "requiresOwnerReview": false,
+    "requiresCodexReview": false,
+    "generatedByAi": false,
+    "humanReviewed": false
+  },
+  "securityBoundary": {
+    "redactionApplied": false,
+    "containsSensitiveData": false,
+    "sensitiveDataPolicy": "synthetic_only"
+  }
+}
