@@ -1,0 +1,503 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pnpd-bug-forecast.schema.json",
+  "title": "PNPD Bug Forecast Report",
+  "description": "Schema contract for PNPD Bug Forecast Reports, the first future structured output format for Skeptic-style adversarial review. Findings are advisory only and do not authorize implementation, merge, deploy, dispatch, or certification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "artifactType",
+    "producedBy",
+    "createdAt",
+    "phaseId",
+    "projectId",
+    "target",
+    "forecastScope",
+    "findings",
+    "summary",
+    "evidence",
+    "limitations",
+    "governanceBoundary",
+    "securityBoundary"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Schema version for the bug forecast report format."
+    },
+    "artifactType": {
+      "type": "string",
+      "const": "bug-forecast-report",
+      "description": "Artifact type identifier. Must be bug-forecast-report."
+    },
+    "producedBy": {
+      "type": "string",
+      "enum": [
+        "skeptic",
+        "codex",
+        "manual_review"
+      ],
+      "description": "Producer of this forecast. Skeptic is the primary future producer, but Codex or manual review may produce equivalent adversarial forecasts before executable Skeptic exists."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this forecast report was created."
+    },
+    "phaseId": {
+      "type": "string",
+      "pattern": "^1[qQ]-[A-Z]$|^[0-9]+[a-zA-Z]?-[a-zA-Z0-9_-]+$",
+      "description": "PNPD phase identifier for the phase this forecast was produced in."
+    },
+    "projectId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "description": "Project identifier this forecast applies to."
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commit",
+        "phase",
+        "component",
+        "artifactKind"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Full 40-character git commit SHA this forecast targets. Short SHA is forbidden."
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "PNPD phase identifier of the target phase being reviewed."
+        },
+        "component": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "Specific component or file area under review."
+        },
+        "artifactKind": {
+          "type": "string",
+          "enum": [
+            "docs",
+            "schema",
+            "fixture",
+            "validator",
+            "script",
+            "runtime",
+            "ci",
+            "config",
+            "mixed"
+          ],
+          "description": "Kind of artifact being reviewed. Forecast does not certify any artifact kind."
+        },
+        "paths": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "description": "File paths covered by this forecast review."
+        }
+      }
+    },
+    "forecastScope": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Brief description of what this forecast covers and its boundaries."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 25,
+      "description": "Advisory findings from the forecast review. A zero-finding report is allowed only when summary.totalFindings is 0.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "type",
+          "severity",
+          "confidence",
+          "falsePositiveLikelihood",
+          "claim",
+          "forecast",
+          "evidenceRefs",
+          "affectedAreas",
+          "recommendedReviewer",
+          "recommendedNextAction",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^BF-[0-9]{4}$",
+            "description": "Bug forecast finding identifier in BF-NNNN format."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "description": "Short descriptive title of the finding."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "weak_test",
+              "missing_test",
+              "test_oracle_weakness",
+              "mutation_survivor",
+              "property_gap",
+              "design_drift",
+              "evidence_gap",
+              "unsupported_claim",
+              "insecure_default_risk",
+              "hallucinated_dependency_risk",
+              "unhandled_failure_mode",
+              "authority_creep_risk",
+              "runtime_assumption",
+              "data_integrity_risk",
+              "privacy_boundary_risk"
+            ],
+            "description": "Classification of the finding type."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "blocker",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ],
+            "description": "Severity of the finding. Measures impact, not certainty. Blocker severity requires Owner review, not automatic blocking."
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "description": "How confident the producer is in this finding. Measures evidence strength."
+          },
+          "falsePositiveLikelihood": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "description": "Estimated likelihood this finding is a false positive. Measures uncertainty."
+          },
+          "claim": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "The claim or assumption being challenged by this finding."
+          },
+          "forecast": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1500,
+            "description": "The forecasted risk or defect scenario if this finding is not addressed."
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "description": "References to evidence entries supporting this finding, by evidence id."
+          },
+          "affectedAreas": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "description": "Areas of the project affected by this finding."
+          },
+          "recommendedReviewer": {
+            "type": "string",
+            "enum": [
+              "hermes",
+              "deepseek",
+              "codex",
+              "owner",
+              "manual_review"
+            ],
+            "description": "Recommended agent or human role to review this finding."
+          },
+          "recommendedNextAction": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "Recommended next action for the reviewer. Advisory only."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "accepted_risk",
+              "needs_owner_review",
+              "needs_codex_review",
+              "deferred",
+              "dismissed_false_positive"
+            ],
+            "description": "Current status of the finding. Resolution or authority-conferring statuses are intentionally excluded from the enum."
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "totalFindings",
+        "blockerCount",
+        "highCount",
+        "mediumCount",
+        "lowCount",
+        "infoCount",
+        "evidenceGapCount",
+        "ownerReviewRequired",
+        "codexReviewRecommended"
+      ],
+      "properties": {
+        "totalFindings": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25,
+          "description": "Total number of findings in this report."
+        },
+        "blockerCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25,
+          "description": "Count of blocker-severity findings."
+        },
+        "highCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25,
+          "description": "Count of high-severity findings."
+        },
+        "mediumCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25,
+          "description": "Count of medium-severity findings."
+        },
+        "lowCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25,
+          "description": "Count of low-severity findings."
+        },
+        "infoCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25,
+          "description": "Count of info-severity findings."
+        },
+        "evidenceGapCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25,
+          "description": "Count of findings classified as evidence gaps."
+        },
+        "ownerReviewRequired": {
+          "type": "boolean",
+          "description": "Whether any finding in this report requires Owner review."
+        },
+        "codexReviewRecommended": {
+          "type": "boolean",
+          "description": "Whether Codex review is recommended for any finding in this report."
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 100,
+      "description": "Evidence references supporting the forecast findings. Must not contain secrets, credentials, personal data, production customer data, live payment data, bank data, healthcare data, regulated finance production data, or .env contents.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "Unique identifier for this evidence reference."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "hermes_design",
+              "deepseek_report",
+              "codex_report",
+              "git_diff",
+              "schema",
+              "fixture",
+              "validator_output",
+              "test_output",
+              "npm_output",
+              "package_manifest",
+              "lockfile",
+              "project_profile",
+              "product_delivery_artifact",
+              "manual_note"
+            ],
+            "description": "Kind of evidence being referenced."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "File path for this evidence reference."
+          },
+          "lineStart": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Starting line number referenced in the evidence."
+          },
+          "lineEnd": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Ending line number referenced in the evidence."
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "Command that generated this evidence."
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Optional short excerpt from the evidence. Must not contain secrets or sensitive data."
+          },
+          "hash": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Content hash for integrity verification of the referenced evidence."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Additional notes about this evidence reference."
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000,
+      "description": "Known limitations of this forecast review, including scope boundaries and untested areas."
+    },
+    "governanceBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "advisoryOnly",
+        "doesNotAuthorize",
+        "requiresOwnerReview",
+        "requiresCodexReview",
+        "generatedByAi",
+        "humanReviewed"
+      ],
+      "properties": {
+        "advisoryOnly": {
+          "type": "boolean",
+          "const": true,
+          "description": "This artifact is advisory only. It does not authorize any action."
+        },
+        "doesNotAuthorize": {
+          "type": "array",
+          "const": [
+            "implementation",
+            "fix",
+            "merge",
+            "deploy",
+            "dispatch",
+            "certify",
+            "production_readiness",
+            "compliance_certification"
+          ],
+          "description": "List of actions this artifact explicitly does not authorize."
+        },
+        "requiresOwnerReview": {
+          "type": "boolean",
+          "description": "Whether Owner review is required before any downstream action."
+        },
+        "requiresCodexReview": {
+          "type": "boolean",
+          "description": "Whether Codex review is recommended before any downstream action."
+        },
+        "generatedByAi": {
+          "type": "boolean",
+          "description": "Whether this forecast was generated by an AI agent."
+        },
+        "humanReviewed": {
+          "type": "boolean",
+          "description": "Whether a human has reviewed this forecast. false does not invalidate the artifact; it only records review state."
+        }
+      }
+    },
+    "securityBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "redactionApplied",
+        "containsSensitiveData",
+        "sensitiveDataPolicy"
+      ],
+      "properties": {
+        "redactionApplied": {
+          "type": "boolean",
+          "description": "Whether sensitive data redaction was applied to this report."
+        },
+        "containsSensitiveData": {
+          "type": "boolean",
+          "const": false,
+          "description": "Must be false. Bug forecast reports must not contain sensitive data."
+        },
+        "sensitiveDataPolicy": {
+          "type": "string",
+          "enum": [
+            "redacted",
+            "synthetic_only",
+            "reference_only"
+          ],
+          "description": "Policy applied to ensure no sensitive data is present in this report."
+        }
+      }
+    }
+  }
+}
