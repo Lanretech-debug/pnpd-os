@@ -169,12 +169,69 @@ const PROJECT_PROFILE_FIXTURES = [
   }
 ];
 
+const BUG_FORECAST_SCHEMA_PATH = ".pnpd/bug-forecast.schema.json";
+const BUG_FORECAST_FIXTURES_DIR = "tests/fixtures/pnpd/bug-forecast";
 
-
-
+const BUG_FORECAST_FIXTURES = [
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/valid/minimal-valid-bug-forecast.json",
+    expectValid: true,
+    expectedReason: "minimal valid synthetic bug forecast report with zero findings"
+  },
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/valid/full-valid-bug-forecast.json",
+    expectValid: true,
+    expectedReason: "full valid synthetic bug forecast report with three findings and evidence"
+  },
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/invalid/missing-required-root.json",
+    expectValid: false,
+    expectedReason: "missing required root field governanceBoundary"
+  },
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/invalid/invalid-artifact-type.json",
+    expectValid: false,
+    expectedReason: "artifactType must equal const bug-forecast-report"
+  },
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/invalid/invalid-produced-by.json",
+    expectValid: false,
+    expectedReason: "producedBy not in enum"
+  },
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/invalid/short-target-commit.json",
+    expectValid: false,
+    expectedReason: "target.commit must match full 40-character SHA pattern"
+  },
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/invalid/authority-field-additional-property.json",
+    expectValid: false,
+    expectedReason: "governanceBoundary additionalProperties false blocks unexpectedAuthorityFlag"
+  },
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/invalid/contains-sensitive-data-true.json",
+    expectValid: false,
+    expectedReason: "securityBoundary.containsSensitiveData must equal const false"
+  },
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/invalid/governance-advisory-false.json",
+    expectValid: false,
+    expectedReason: "governanceBoundary.advisoryOnly must equal const true"
+  },
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/invalid/invalid-finding-status.json",
+    expectValid: false,
+    expectedReason: "finding.status not in enum"
+  },
+  {
+    file: "tests/fixtures/pnpd/bug-forecast/invalid/too-many-findings.json",
+    expectValid: false,
+    expectedReason: "findings maxItems 25 exceeded"
+  }
+];
 
 function parseArgs(argv) {
-  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null, projectProfile: null, checkRegistryArtifacts: false, verifyRegistryArtifactHashes: false, validateSchemaInstance: false };
+  const args = { phase: null, runtimeReadinessReport: null, researchDiscoveryArtifact: null, productDeliveryArtifact: null, productDeliveryRegistry: null, projectProfile: null, bugForecast: null, checkRegistryArtifacts: false, verifyRegistryArtifactHashes: false, validateSchemaInstance: false };
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -197,12 +254,15 @@ function parseArgs(argv) {
       if (args.projectProfile) {
         throw new Error("--project-profile is a standalone validator and cannot be combined with --phase.");
       }
+      if (args.bugForecast) {
+        throw new Error("--bug-forecast is a standalone validator and cannot be combined with --phase.");
+      }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, or 1p-profile).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, or 1q-bug-forecast).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", or "1p-profile".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", or "1q-bug-forecast".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -338,6 +398,45 @@ function parseArgs(argv) {
       }
       args.projectProfile = argv[i + 1];
       i += 1;
+    } else if (arg === "--bug-forecast") {
+      if (args.phase) {
+        throw new Error("--bug-forecast is a standalone validator and cannot be combined with --phase.");
+      }
+      if (args.runtimeReadinessReport) {
+        throw new Error("--bug-forecast is a standalone validator and cannot be combined with --runtime-readiness-report.");
+      }
+      if (args.researchDiscoveryArtifact) {
+        throw new Error("--bug-forecast is a standalone validator and cannot be combined with --research-discovery-artifact.");
+      }
+      if (args.productDeliveryArtifact) {
+        throw new Error("--bug-forecast is a standalone validator and cannot be combined with --product-delivery-artifact.");
+      }
+      if (args.productDeliveryRegistry) {
+        throw new Error("--bug-forecast is a standalone validator and cannot be combined with --product-delivery-registry.");
+      }
+      if (args.projectProfile) {
+        throw new Error("--bug-forecast is a standalone validator and cannot be combined with --project-profile.");
+      }
+      if (args.checkRegistryArtifacts) {
+        throw new Error("--bug-forecast is a standalone validator and cannot be combined with --check-registry-artifacts.");
+      }
+      if (args.verifyRegistryArtifactHashes) {
+        throw new Error("--bug-forecast is a standalone validator and cannot be combined with --verify-registry-artifact-hashes.");
+      }
+      if (args.validateSchemaInstance) {
+        throw new Error("--bug-forecast is a standalone validator and cannot be combined with --validate-schema-instance.");
+      }
+      if (!argv[i + 1]) {
+        throw new Error("--bug-forecast requires a file path argument.");
+      }
+      if (args.bugForecast) {
+        throw new Error("--bug-forecast accepts exactly one file path.");
+      }
+      if (argv[i + 1].startsWith("-")) {
+        throw new Error("--bug-forecast requires a file path argument, got: " + argv[i + 1]);
+      }
+      args.bugForecast = argv[i + 1];
+      i += 1;
     } else if (arg === "--check-registry-artifacts") {
       args.checkRegistryArtifacts = true;
     } else if (arg === "--verify-registry-artifact-hashes") {
@@ -348,12 +447,13 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-registry <path> [--validate-schema-instance] [--check-registry-artifacts] [--verify-registry-artifact-hashes]
   node scripts/pnpd-validate-schemas.mjs --project-profile <path>
+  node scripts/pnpd-validate-schemas.mjs --bug-forecast <path>
 
 Options:
   --phase 0   Validate Phase 0 invariants only.
@@ -366,11 +466,13 @@ Options:
   --phase 1o  Validate Product Delivery registry schema and shape fixtures (explicit-only, not included in default).
   --phase 1o-example  Validate Product Delivery registry example fixtures (explicit-only, not included in default).
   --phase 1p-profile  Validate PNPD project profile fixtures (explicit-only, not included in default).
+  --phase 1q-bug-forecast  Validate PNPD bug forecast fixtures (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
   --product-delivery-artifact <path>  Validate a user-created Product Delivery artifact JSON file.
   --product-delivery-registry <path>  Validate a Product Delivery registry JSON file.
   --project-profile <path>  Validate a project profile JSON file against the project profile schema.
+  --bug-forecast <path>  Validate a bug forecast report JSON file against the bug forecast schema.
   --validate-schema-instance           With --product-delivery-registry: validate registry JSON against the registry schema.
   --check-registry-artifacts          With --product-delivery-registry: check each entry path points to an existing regular file.
   --verify-registry-artifact-hashes   With --product-delivery-registry AND --check-registry-artifacts: verify sha256 contentHash against file bytes.
@@ -774,8 +876,18 @@ function validateInstance(instance, schemaDef, fullSchema, path) {
   }
 
   // const
-  if (schemaDef.const !== undefined && instance !== schemaDef.const) {
-    failures.push({ path: path, expected: String(schemaDef.const), actual: String(instance) });
+  if (schemaDef.const !== undefined) {
+    var constMatches = false;
+    if (Array.isArray(schemaDef.const) && Array.isArray(instance)) {
+      if (schemaDef.const.length === instance.length) {
+        constMatches = schemaDef.const.every(function(v, i) { return v === instance[i]; });
+      }
+    } else {
+      constMatches = instance === schemaDef.const;
+    }
+    if (!constMatches) {
+      failures.push({ path: path, expected: String(schemaDef.const), actual: String(instance) });
+    }
   }
 
   // enum
@@ -5962,6 +6074,74 @@ function validateProjectProfileFixtures() {
   console.log("Project profile validation: pass");
 }
 
+// ── Phase 1Q: Bug Forecast Validation ───────────────────────────────────────────
+
+function loadBugForecastSchema() {
+  const schema = readJson(BUG_FORECAST_SCHEMA_PATH);
+  assert(schema["$id"] === "pnpd-bug-forecast.schema.json",
+    "Bug forecast schema $id must be pnpd-bug-forecast.schema.json.");
+  return schema;
+}
+
+function validateBugForecastFile(file) {
+  let forecast;
+  try {
+    forecast = readJson(file);
+  } catch (e) {
+    throw new Error(file + ": invalid JSON: " + e.message);
+  }
+  const schema = loadBugForecastSchema();
+  const failures = validateInstance(forecast, schema, schema, "$");
+  if (failures.length > 0) {
+    const detail = failures.map(function(f) {
+      return f.path + ": " + f.expected + " (got: " + f.actual + ")";
+    }).join("; ");
+    throw new Error(file + ": validation failed with " + failures.length + " issue(s): " + detail);
+  }
+  return forecast;
+}
+
+function validateBugForecastPhase() {
+  const schema = loadBugForecastSchema();
+  const failures = [];
+
+  console.log("PNPD Bug Forecast Validation");
+  console.log("Schema: " + BUG_FORECAST_SCHEMA_PATH);
+  console.log("Fixtures: " + BUG_FORECAST_FIXTURES_DIR);
+
+  for (var _bf = 0; _bf < BUG_FORECAST_FIXTURES.length; _bf++) {
+    const entry = BUG_FORECAST_FIXTURES[_bf];
+    let fixture;
+    try {
+      fixture = readJson(entry.file);
+    } catch (e) {
+      failures.push(entry.file + ": MISSING or invalid JSON: " + e.message);
+      continue;
+    }
+
+    const validationFailures = validateInstance(fixture, schema, schema, "$");
+
+    if (entry.expectValid && validationFailures.length > 0) {
+      const detail = validationFailures.map(function(f) {
+        return f.path + ": " + f.expected + " (got: " + f.actual + ")";
+      }).join("; ");
+      failures.push(entry.file + ": expected VALID (" + entry.expectedReason + ") but got " + validationFailures.length + " failure(s): " + detail);
+    } else if (!entry.expectValid && validationFailures.length === 0) {
+      failures.push(entry.file + ": expected INVALID (" + entry.expectedReason + ") but passed validation");
+    } else if (entry.expectValid) {
+      console.log("[PASS] " + entry.file + " \u2014 " + entry.expectedReason);
+    } else {
+      console.log("[INVALID-as-expected] " + entry.file + " \u2014 " + entry.expectedReason);
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error("Bug forecast fixture validation failures:\\n  " + failures.join("\\n  "));
+  }
+
+  console.log("Bug forecast validation: pass");
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
@@ -6014,6 +6194,13 @@ try {
     process.exit(0);
   }
 
+  // Phase 1Q-D: standalone bug forecast validation
+  if (args.bugForecast) {
+    validateBugForecastFile(args.bugForecast);
+    console.log("bug forecast: pass");
+    process.exit(0);
+  }
+
   // Phase 1O-I: --check-registry-artifacts requires --product-delivery-registry
   if (args.checkRegistryArtifacts && !args.productDeliveryRegistry) {
     if (args.phase) {
@@ -6061,6 +6248,12 @@ try {
 
   if (runPhase1pProfile) {
     validateProjectProfileFixtures();
+  }
+
+  const runPhase1qBugForecast = args.phase === "1q-bug-forecast";
+
+  if (runPhase1qBugForecast) {
+    validateBugForecastPhase();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";

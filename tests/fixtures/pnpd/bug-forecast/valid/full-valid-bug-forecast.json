@@ -1,0 +1,139 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactType": "bug-forecast-report",
+  "producedBy": "skeptic",
+  "createdAt": "2026-01-15T12:00:00Z",
+  "phaseId": "1Q-D",
+  "projectId": "fixture-project",
+  "target": {
+    "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "phase": "1Q-D",
+    "component": "validator-script",
+    "artifactKind": "validator",
+    "paths": [
+      "scripts/pnpd-validate-schemas.mjs",
+      "tests/fixtures/pnpd/bug-forecast"
+    ]
+  },
+  "forecastScope": "Synthetic fixture: full valid bug forecast report with three findings and evidence.",
+  "findings": [
+    {
+      "id": "BF-0001",
+      "title": "Synthetic weak test coverage in validator helper",
+      "type": "weak_test",
+      "severity": "high",
+      "confidence": "medium",
+      "falsePositiveLikelihood": "low",
+      "claim": "The validator script has sufficient test coverage for edge cases.",
+      "forecast": "Edge cases in date-time format validation may not be exercised by current tests.",
+      "evidenceRefs": [
+        "ev-001",
+        "ev-002"
+      ],
+      "affectedAreas": [
+        "scripts/pnpd-validate-schemas.mjs",
+        "date-time validation"
+      ],
+      "recommendedReviewer": "codex",
+      "recommendedNextAction": "Review test coverage for date-time format edge cases.",
+      "status": "open"
+    },
+    {
+      "id": "BF-0002",
+      "title": "Synthetic design drift between schema and validator",
+      "type": "design_drift",
+      "severity": "medium",
+      "confidence": "high",
+      "falsePositiveLikelihood": "medium",
+      "claim": "The validator faithfully implements all schema constraints.",
+      "forecast": "Some schema constraints may be partially enforced in the hand-rolled validator.",
+      "evidenceRefs": [
+        "ev-003"
+      ],
+      "affectedAreas": [
+        "scripts/pnpd-validate-schemas.mjs",
+        ".pnpd/bug-forecast.schema.json"
+      ],
+      "recommendedReviewer": "hermes",
+      "recommendedNextAction": "Hermes should verify validator-to-schema alignment.",
+      "status": "needs_codex_review"
+    },
+    {
+      "id": "BF-0003",
+      "title": "Synthetic authority creep risk in governance boundary",
+      "type": "authority_creep_risk",
+      "severity": "low",
+      "confidence": "low",
+      "falsePositiveLikelihood": "high",
+      "claim": "The governance boundary fields prevent unintended authority escalation.",
+      "forecast": "Future phases may inadvertently relax advisoryOnly or doesNotAuthorize constraints.",
+      "evidenceRefs": [
+        "ev-001",
+        "ev-003"
+      ],
+      "affectedAreas": [
+        ".pnpd/bug-forecast.schema.json",
+        "governanceBoundary"
+      ],
+      "recommendedReviewer": "owner",
+      "recommendedNextAction": "Monitor future schema changes to governanceBoundary const values.",
+      "status": "accepted_risk"
+    }
+  ],
+  "summary": {
+    "totalFindings": 3,
+    "blockerCount": 0,
+    "highCount": 1,
+    "mediumCount": 1,
+    "lowCount": 1,
+    "infoCount": 0,
+    "evidenceGapCount": 0,
+    "ownerReviewRequired": true,
+    "codexReviewRecommended": true
+  },
+  "evidence": [
+    {
+      "id": "ev-001",
+      "kind": "validator_output",
+      "command": "node scripts/pnpd-validate-schemas.mjs --phase 0",
+      "notes": "Synthetic validator output reference."
+    },
+    {
+      "id": "ev-002",
+      "kind": "git_diff",
+      "path": "scripts/pnpd-validate-schemas.mjs",
+      "lineStart": 713,
+      "lineEnd": 832,
+      "notes": "Synthetic git diff reference for validateInstance function."
+    },
+    {
+      "id": "ev-003",
+      "kind": "schema",
+      "path": ".pnpd/bug-forecast.schema.json",
+      "notes": "Synthetic schema reference for bug forecast schema."
+    }
+  ],
+  "limitations": "This is a synthetic fixture with no real findings. Evidence references are fabricated.",
+  "governanceBoundary": {
+    "advisoryOnly": true,
+    "doesNotAuthorize": [
+      "implementation",
+      "fix",
+      "merge",
+      "deploy",
+      "dispatch",
+      "certify",
+      "production_readiness",
+      "compliance_certification"
+    ],
+    "requiresOwnerReview": true,
+    "requiresCodexReview": true,
+    "generatedByAi": true,
+    "humanReviewed": true
+  },
+  "securityBoundary": {
+    "redactionApplied": true,
+    "containsSensitiveData": false,
+    "sensitiveDataPolicy": "reference_only"
+  }
+}

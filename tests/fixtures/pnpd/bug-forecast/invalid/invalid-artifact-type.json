@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactType": "security-audit-report",
+  "producedBy": "codex",
+  "createdAt": "2026-01-15T10:30:00Z",
+  "phaseId": "1Q-D",
+  "projectId": "fixture-project",
+  "target": {
+    "commit": "dddddddddddddddddddddddddddddddddddddddd",
+    "phase": "1Q-D",
+    "component": "synthetic",
+    "artifactKind": "schema"
+  },
+  "forecastScope": "Synthetic invalid artifact type.",
+  "findings": [],
+  "summary": {
+    "totalFindings": 0,
+    "blockerCount": 0,
+    "highCount": 0,
+    "mediumCount": 0,
+    "lowCount": 0,
+    "infoCount": 0,
+    "evidenceGapCount": 0,
+    "ownerReviewRequired": false,
+    "codexReviewRecommended": false
+  },
+  "evidence": [],
+  "limitations": "Synthetic.",
+  "governanceBoundary": {
+    "advisoryOnly": true,
+    "doesNotAuthorize": [
+      "implementation",
+      "fix",
+      "merge",
+      "deploy",
+      "dispatch",
+      "certify",
+      "production_readiness",
+      "compliance_certification"
+    ],
+    "requiresOwnerReview": false,
+    "requiresCodexReview": false,
+    "generatedByAi": false,
+    "humanReviewed": false
+  },
+  "securityBoundary": {
+    "redactionApplied": false,
+    "containsSensitiveData": false,
+    "sensitiveDataPolicy": "synthetic_only"
+  }
+}

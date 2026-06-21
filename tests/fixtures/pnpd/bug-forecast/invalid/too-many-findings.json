@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactType": "bug-forecast-report",
+  "producedBy": "codex",
+  "createdAt": "2026-01-15T10:30:00Z",
+  "phaseId": "1Q-D",
+  "projectId": "fixture-project",
+  "target": {
+    "commit": "4444444444444444444444444444444444444444",
+    "phase": "1Q-D",
+    "component": "synthetic",
+    "artifactKind": "schema"
+  },
+  "forecastScope": "Synthetic: 26 findings exceeds maxItems 25.",
+  "findings": [
+    {"id": "BF-0001", "title": "Finding 01", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0002", "title": "Finding 02", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0003", "title": "Finding 03", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0004", "title": "Finding 04", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0005", "title": "Finding 05", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0006", "title": "Finding 06", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0007", "title": "Finding 07", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0008", "title": "Finding 08", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0009", "title": "Finding 09", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0010", "title": "Finding 10", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0011", "title": "Finding 11", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0012", "title": "Finding 12", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0013", "title": "Finding 13", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0014", "title": "Finding 14", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0015", "title": "Finding 15", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0016", "title": "Finding 16", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0017", "title": "Finding 17", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0018", "title": "Finding 18", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0019", "title": "Finding 19", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0020", "title": "Finding 20", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0021", "title": "Finding 21", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0022", "title": "Finding 22", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0023", "title": "Finding 23", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0024", "title": "Finding 24", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0025", "title": "Finding 25", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"},
+    {"id": "BF-0026", "title": "Finding 26", "type": "weak_test", "severity": "info", "confidence": "low", "falsePositiveLikelihood": "high", "claim": "Synthetic.", "forecast": "Synthetic.", "evidenceRefs": [], "affectedAreas": ["synthetic"], "recommendedReviewer": "codex", "recommendedNextAction": "Synthetic.", "status": "open"}
+  ],
+  "summary": {
+    "totalFindings": 26,
+    "blockerCount": 0,
+    "highCount": 0,
+    "mediumCount": 0,
+    "lowCount": 0,
+    "infoCount": 26,
+    "evidenceGapCount": 0,
+    "ownerReviewRequired": false,
+    "codexReviewRecommended": false
+  },
+  "evidence": [],
+  "limitations": "Synthetic.",
+  "governanceBoundary": {
+    "advisoryOnly": true,
+    "doesNotAuthorize": ["implementation", "fix", "merge", "deploy", "dispatch", "certify", "production_readiness", "compliance_certification"],
+    "requiresOwnerReview": false,
+    "requiresCodexReview": false,
+    "generatedByAi": false,
+    "humanReviewed": false
+  },
+  "securityBoundary": {
+    "redactionApplied": false,
+    "containsSensitiveData": false,
+    "sensitiveDataPolicy": "synthetic_only"
+  }
+}

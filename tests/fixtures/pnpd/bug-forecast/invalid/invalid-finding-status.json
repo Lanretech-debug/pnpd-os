@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactType": "bug-forecast-report",
+  "producedBy": "codex",
+  "createdAt": "2026-01-15T10:30:00Z",
+  "phaseId": "1Q-D",
+  "projectId": "fixture-project",
+  "target": {
+    "commit": "3333333333333333333333333333333333333333",
+    "phase": "1Q-D",
+    "component": "synthetic",
+    "artifactKind": "schema"
+  },
+  "forecastScope": "Synthetic invalid finding status 'fixed'.",
+  "findings": [
+    {
+      "id": "BF-0100",
+      "title": "Synthetic finding with invalid status fixed",
+      "type": "weak_test",
+      "severity": "medium",
+      "confidence": "medium",
+      "falsePositiveLikelihood": "medium",
+      "claim": "Synthetic claim.",
+      "forecast": "Synthetic forecast.",
+      "evidenceRefs": [],
+      "affectedAreas": [
+        "synthetic"
+      ],
+      "recommendedReviewer": "codex",
+      "recommendedNextAction": "Synthetic.",
+      "status": "fixed"
+    }
+  ],
+  "summary": {
+    "totalFindings": 1,
+    "blockerCount": 0,
+    "highCount": 0,
+    "mediumCount": 1,
+    "lowCount": 0,
+    "infoCount": 0,
+    "evidenceGapCount": 0,
+    "ownerReviewRequired": false,
+    "codexReviewRecommended": true
+  },
+  "evidence": [],
+  "limitations": "Synthetic.",
+  "governanceBoundary": {
+    "advisoryOnly": true,
+    "doesNotAuthorize": ["implementation", "fix", "merge", "deploy", "dispatch", "certify", "production_readiness", "compliance_certification"],
+    "requiresOwnerReview": false,
+    "requiresCodexReview": false,
+    "generatedByAi": false,
+    "humanReviewed": false
+  },
+  "securityBoundary": {
+    "redactionApplied": false,
+    "containsSensitiveData": false,
+    "sensitiveDataPolicy": "synthetic_only"
+  }
+}

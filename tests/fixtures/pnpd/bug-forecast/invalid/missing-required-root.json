@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactType": "bug-forecast-report",
+  "producedBy": "codex",
+  "createdAt": "2026-01-15T10:30:00Z",
+  "phaseId": "1Q-D",
+  "projectId": "fixture-project",
+  "target": {
+    "commit": "cccccccccccccccccccccccccccccccccccccccc",
+    "phase": "1Q-D",
+    "component": "synthetic",
+    "artifactKind": "schema"
+  },
+  "forecastScope": "Synthetic missing required root field.",
+  "findings": [],
+  "summary": {
+    "totalFindings": 0,
+    "blockerCount": 0,
+    "highCount": 0,
+    "mediumCount": 0,
+    "lowCount": 0,
+    "infoCount": 0,
+    "evidenceGapCount": 0,
+    "ownerReviewRequired": false,
+    "codexReviewRecommended": false
+  },
+  "evidence": [],
+  "limitations": "Synthetic.",
+  "securityBoundary": {
+    "redactionApplied": false,
+    "containsSensitiveData": false,
+    "sensitiveDataPolicy": "synthetic_only"
+  }
+}
