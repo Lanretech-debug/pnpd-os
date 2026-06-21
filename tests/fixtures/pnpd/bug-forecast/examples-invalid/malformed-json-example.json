@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactType": "bug-forecast-report",
+  "producedBy": "manual_review",
+  "createdAt": "2026-06-21T00:00:00.000Z",
+  "phaseId": "1Q-G",
+  "projectId": "fixture-project",
+  "target": {
+    "commit": "dddddddddddddddddddddddddddddddddddddddd",
+    "phase": "1Q-G",
+    "component": "bug forecast negative example guard",
+    "artifactKind": "fixture"
+  },
+  "forecastScope": "Synthetic malformed JSON example to prove parser rejection.

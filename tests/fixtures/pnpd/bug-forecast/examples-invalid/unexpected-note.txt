@@ -1,0 +1,7 @@
+This file is a synthetic plain-text artifact placed in the isolated negative example directory.
+
+It exists only to prove that non-JSON files are rejected by the negative example guard.
+
+It is not a real forecast, was not produced by an AI agent, contains no sensitive data, and makes no production claims.
+
+tests/fixtures/pnpd/bug-forecast/examples-invalid/unexpected-note.txt

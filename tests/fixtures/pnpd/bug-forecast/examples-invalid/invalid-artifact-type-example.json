@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactType": "security-audit-report",
+  "producedBy": "manual_review",
+  "createdAt": "2026-06-21T00:00:00.000Z",
+  "phaseId": "1Q-G",
+  "projectId": "fixture-project",
+  "target": {
+    "commit": "cccccccccccccccccccccccccccccccccccccccc",
+    "phase": "1Q-G",
+    "component": "bug forecast negative example guard",
+    "artifactKind": "fixture"
+  },
+  "forecastScope": "Synthetic negative example: invalid artifactType to prove schema rejection.",
+  "findings": [
+    {
+      "id": "BF-0001",
+      "title": "Synthetic negative example finding",
+      "type": "unsupported_claim",
+      "severity": "info",
+      "confidence": "low",
+      "falsePositiveLikelihood": "high",
+      "claim": "This synthetic finding exists only to demonstrate negative example validation.",
+      "forecast": "If invalid artifact types are accepted, schema validation is too permissive.",
+      "evidenceRefs": [],
+      "affectedAreas": [
+        "example-negative-discovery"
+      ],
+      "recommendedReviewer": "manual_review",
+      "recommendedNextAction": "Reject this artifact as an invalid bug forecast example.",
+      "status": "open"
+    }
+  ],
+  "summary": {
+    "totalFindings": 1,
+    "blockerCount": 0,
+    "highCount": 0,
+    "mediumCount": 0,
+    "lowCount": 0,
+    "infoCount": 1,
+    "evidenceGapCount": 0,
+    "ownerReviewRequired": false,
+    "codexReviewRecommended": false
+  },
+  "evidence": [],
+  "limitations": "This is a synthetic negative example. It exists only to prove invalid artifactType is rejected.",
+  "governanceBoundary": {
+    "advisoryOnly": true,
+    "doesNotAuthorize": [
+      "implementation",
+      "fix",
+      "merge",
+      "deploy",
+      "dispatch",
+      "certify",
+      "production_readiness",
+      "compliance_certification"
+    ],
+    "requiresOwnerReview": false,
+    "requiresCodexReview": false,
+    "generatedByAi": false,
+    "humanReviewed": false
+  },
+  "securityBoundary": {
+    "redactionApplied": false,
+    "containsSensitiveData": false,
+    "sensitiveDataPolicy": "synthetic_only"
+  }
+}

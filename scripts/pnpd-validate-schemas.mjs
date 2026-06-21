@@ -172,6 +172,7 @@ const PROJECT_PROFILE_FIXTURES = [
 const BUG_FORECAST_SCHEMA_PATH = ".pnpd/bug-forecast.schema.json";
 const BUG_FORECAST_FIXTURES_DIR = "tests/fixtures/pnpd/bug-forecast";
 const BUG_FORECAST_EXAMPLES_DIR = "tests/fixtures/pnpd/bug-forecast/examples";
+const BUG_FORECAST_INVALID_EXAMPLES_DIR = "tests/fixtures/pnpd/bug-forecast/examples-invalid";
 
 const BUG_FORECAST_FIXTURES = [
   {
@@ -259,11 +260,11 @@ function parseArgs(argv) {
         throw new Error("--bug-forecast is a standalone validator and cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, 1q-bug-forecast, or 1q-bug-forecast-example).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, 1q-bug-forecast, 1q-bug-forecast-example, or 1q-bug-forecast-example-negative).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast" && phaseVal !== "1q-bug-forecast-example") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", "1q-bug-forecast", or "1q-bug-forecast-example".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast" && phaseVal !== "1q-bug-forecast-example" && phaseVal !== "1q-bug-forecast-example-negative") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", "1q-bug-forecast", "1q-bug-forecast-example", or "1q-bug-forecast-example-negative".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -448,7 +449,7 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast|1q-bug-forecast-example]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast|1q-bug-forecast-example|1q-bug-forecast-example-negative]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
@@ -469,6 +470,7 @@ Options:
   --phase 1p-profile  Validate PNPD project profile fixtures (explicit-only, not included in default).
   --phase 1q-bug-forecast  Validate PNPD bug forecast fixtures (explicit-only, not included in default).
   --phase 1q-bug-forecast-example  Validate PNPD bug forecast examples (explicit-only, not included in default).
+  --phase 1q-bug-forecast-example-negative  Validate PNPD bug forecast negative examples (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
   --product-delivery-artifact <path>  Validate a user-created Product Delivery artifact JSON file.
@@ -6222,6 +6224,85 @@ function validateBugForecastExamplePhase() {
   console.log("Bug forecast examples: " + jsonFiles.length + " found, all passed");
 }
 
+function validateBugForecastExampleNegativePhase() {
+  const examplesDirPath = path.join(ROOT, BUG_FORECAST_INVALID_EXAMPLES_DIR);
+
+  console.log("PNPD Bug Forecast Negative Example Guard");
+  console.log("Examples path: " + BUG_FORECAST_INVALID_EXAMPLES_DIR);
+
+  let entries;
+  try {
+    entries = fs.readdirSync(examplesDirPath);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      throw new Error("Bug forecast negative examples directory missing: " + BUG_FORECAST_INVALID_EXAMPLES_DIR);
+    }
+    throw new Error("Bug forecast negative examples directory read failed: " + e.message);
+  }
+
+  if (entries.length === 0) {
+    throw new Error("Bug forecast negative examples directory is empty. Expected at least one negative example file.");
+  }
+
+  entries.sort();
+
+  const schema = loadBugForecastSchema();
+  const rejected = [];
+  const unexpected = [];
+
+  for (var _ek = 0; _ek < entries.length; _ek++) {
+    const entry = entries[_ek];
+    // Skip dotfiles and directories
+    if (entry.startsWith(".")) {
+      continue;
+    }
+    const file = BUG_FORECAST_INVALID_EXAMPLES_DIR + "/" + entry;
+    let stat;
+    try {
+      stat = fs.statSync(file);
+    } catch (e) {
+      rejected.push(file + ": cannot stat: " + e.message);
+      continue;
+    }
+    if (stat.isDirectory()) {
+      continue;
+    }
+
+    // Non-JSON files are expected rejections
+    if (!entry.endsWith(".json")) {
+      rejected.push(file + " (non-JSON: expected rejection)");
+      continue;
+    }
+
+    // Try to parse as JSON
+    let example;
+    try {
+      example = readJson(file);
+    } catch (e) {
+      rejected.push(file + " (malformed JSON: expected rejection): " + e.message);
+      continue;
+    }
+
+    // JSON parsed, verify it fails schema validation
+    const validationFailures = validateInstance(example, schema, schema, "$");
+
+    if (validationFailures.length > 0) {
+      const detail = validationFailures.map(function(f) {
+        return f.path + ": " + f.expected + " (got: " + f.actual + ")";
+      }).join("; ");
+      rejected.push(file + " (schema invalid: expected rejection): " + detail);
+    } else {
+      unexpected.push(file + ": parsed and passed schema validation, but expected rejection");
+    }
+  }
+
+  if (unexpected.length > 0) {
+    throw new Error("Bug forecast negative example passed when it should have been rejected:\\n  " + unexpected.join("\\n  "));
+  }
+
+  console.log("Bug forecast negative examples: " + rejected.length + " rejected as expected");
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
@@ -6340,6 +6421,12 @@ try {
 
   if (runPhase1qBugForecastExample) {
     validateBugForecastExamplePhase();
+  }
+
+  const runPhase1qBugForecastExampleNegative = args.phase === "1q-bug-forecast-example-negative";
+
+  if (runPhase1qBugForecastExampleNegative) {
+    validateBugForecastExampleNegativePhase();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
