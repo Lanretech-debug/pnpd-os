@@ -171,6 +171,7 @@ const PROJECT_PROFILE_FIXTURES = [
 
 const BUG_FORECAST_SCHEMA_PATH = ".pnpd/bug-forecast.schema.json";
 const BUG_FORECAST_FIXTURES_DIR = "tests/fixtures/pnpd/bug-forecast";
+const BUG_FORECAST_EXAMPLES_DIR = "tests/fixtures/pnpd/bug-forecast/examples";
 
 const BUG_FORECAST_FIXTURES = [
   {
@@ -258,11 +259,11 @@ function parseArgs(argv) {
         throw new Error("--bug-forecast is a standalone validator and cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, or 1q-bug-forecast).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, 1q-bug-forecast, or 1q-bug-forecast-example).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", or "1q-bug-forecast".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast" && phaseVal !== "1q-bug-forecast-example") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", "1q-bug-forecast", or "1q-bug-forecast-example".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -447,7 +448,7 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast|1q-bug-forecast-example]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
@@ -467,6 +468,7 @@ Options:
   --phase 1o-example  Validate Product Delivery registry example fixtures (explicit-only, not included in default).
   --phase 1p-profile  Validate PNPD project profile fixtures (explicit-only, not included in default).
   --phase 1q-bug-forecast  Validate PNPD bug forecast fixtures (explicit-only, not included in default).
+  --phase 1q-bug-forecast-example  Validate PNPD bug forecast examples (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
   --product-delivery-artifact <path>  Validate a user-created Product Delivery artifact JSON file.
@@ -6142,6 +6144,84 @@ function validateBugForecastPhase() {
   console.log("Bug forecast validation: pass");
 }
 
+// ── Phase 1Q-E: Bug Forecast Example Discovery ──────────────────────────────────
+
+function validateBugForecastExamplePhase() {
+  const examplesDirPath = path.join(ROOT, BUG_FORECAST_EXAMPLES_DIR);
+
+  console.log("PNPD Bug Forecast Example Discovery");
+  console.log("Examples path: " + BUG_FORECAST_EXAMPLES_DIR);
+
+  let entries;
+  try {
+    entries = fs.readdirSync(examplesDirPath);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      console.log("Bug forecast examples: 0 found");
+      return;
+    }
+    throw new Error("Bug forecast examples directory read failed: " + e.message);
+  }
+
+  if (entries.length === 0) {
+    console.log("Bug forecast examples: 0 found");
+    return;
+  }
+
+  const jsonFiles = [];
+  const nonJsonFiles = [];
+
+  for (var _ei = 0; _ei < entries.length; _ei++) {
+    const entry = entries[_ei];
+    if (entry.endsWith(".json")) {
+      jsonFiles.push(entry);
+    } else {
+      nonJsonFiles.push(entry);
+    }
+  }
+
+  if (nonJsonFiles.length > 0) {
+    nonJsonFiles.sort();
+    const fileList = nonJsonFiles.map(function(f) {
+      return BUG_FORECAST_EXAMPLES_DIR + "/" + f;
+    }).join(", ");
+    throw new Error("Unexpected non-JSON file(s) in bug forecast examples directory: " + fileList);
+  }
+
+  jsonFiles.sort();
+
+  const schema = loadBugForecastSchema();
+  const failures = [];
+
+  for (var _ej = 0; _ej < jsonFiles.length; _ej++) {
+    const file = BUG_FORECAST_EXAMPLES_DIR + "/" + jsonFiles[_ej];
+    let example;
+    try {
+      example = readJson(file);
+    } catch (e) {
+      failures.push(file + ": invalid JSON: " + e.message);
+      continue;
+    }
+
+    const validationFailures = validateInstance(example, schema, schema, "$");
+
+    if (validationFailures.length > 0) {
+      const detail = validationFailures.map(function(f) {
+        return f.path + ": " + f.expected + " (got: " + f.actual + ")";
+      }).join("; ");
+      failures.push(file + ": validation failed with " + validationFailures.length + " issue(s): " + detail);
+    } else {
+      console.log("[PASS] " + file + " \u2014 valid bug forecast example");
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error("Bug forecast example validation failures:\\n  " + failures.join("\\n  "));
+  }
+
+  console.log("Bug forecast examples: " + jsonFiles.length + " found, all passed");
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
@@ -6254,6 +6334,12 @@ try {
 
   if (runPhase1qBugForecast) {
     validateBugForecastPhase();
+  }
+
+  const runPhase1qBugForecastExample = args.phase === "1q-bug-forecast-example";
+
+  if (runPhase1qBugForecastExample) {
+    validateBugForecastExamplePhase();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
