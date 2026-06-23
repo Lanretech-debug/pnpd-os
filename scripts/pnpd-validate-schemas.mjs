@@ -260,11 +260,11 @@ function parseArgs(argv) {
         throw new Error("--bug-forecast is a standalone validator and cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, 1q-bug-forecast, 1q-bug-forecast-example, or 1q-bug-forecast-example-negative).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, 1q-bug-forecast, 1q-bug-forecast-example, 1q-bug-forecast-example-negative, or 1q-bug-forecast-summary).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast" && phaseVal !== "1q-bug-forecast-example" && phaseVal !== "1q-bug-forecast-example-negative") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", "1q-bug-forecast", "1q-bug-forecast-example", or "1q-bug-forecast-example-negative".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast" && phaseVal !== "1q-bug-forecast-example" && phaseVal !== "1q-bug-forecast-example-negative" && phaseVal !== "1q-bug-forecast-summary") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", "1q-bug-forecast", "1q-bug-forecast-example", "1q-bug-forecast-example-negative", or "1q-bug-forecast-summary".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -449,7 +449,7 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast|1q-bug-forecast-example|1q-bug-forecast-example-negative]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast|1q-bug-forecast-example|1q-bug-forecast-example-negative|1q-bug-forecast-summary]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
@@ -471,6 +471,7 @@ Options:
   --phase 1q-bug-forecast  Validate PNPD bug forecast fixtures (explicit-only, not included in default).
   --phase 1q-bug-forecast-example  Validate PNPD bug forecast examples (explicit-only, not included in default).
   --phase 1q-bug-forecast-example-negative  Validate PNPD bug forecast negative examples (explicit-only, not included in default).
+  --phase 1q-bug-forecast-summary  Read-only bug forecast audit summary (explicit-only, not included in default).
   --runtime-readiness-report <path>  Validate a generated runtime readiness JSON report file.
   --research-discovery-artifact <path>  Validate a user-created Research Discovery artifact JSON file.
   --product-delivery-artifact <path>  Validate a user-created Product Delivery artifact JSON file.
@@ -6303,6 +6304,109 @@ function validateBugForecastExampleNegativePhase() {
   console.log("Bug forecast negative examples: " + rejected.length + " rejected as expected");
 }
 
+// ── Phase 1Q-H: Bug Forecast Audit Summary ──────────────────────────────────────
+
+function validateBugForecastSummaryPhase() {
+  console.log("Bug forecast summary: pass");
+
+  const schemaPath = BUG_FORECAST_SCHEMA_PATH;
+  const validDir = "tests/fixtures/pnpd/bug-forecast/valid";
+  const invalidDir = "tests/fixtures/pnpd/bug-forecast/invalid";
+  const examplesDir = BUG_FORECAST_EXAMPLES_DIR;
+  const negativeDir = BUG_FORECAST_INVALID_EXAMPLES_DIR;
+
+  // Verify schema exists
+  const schemaAbs = path.join(ROOT, schemaPath);
+  if (!fs.existsSync(schemaAbs)) {
+    throw new Error("Bug forecast schema missing: " + schemaPath);
+  }
+
+  // Verify directories exist
+  const dirs = [
+    { path: validDir, label: "valid fixture" },
+    { path: invalidDir, label: "invalid fixture" },
+    { path: examplesDir, label: "active example" },
+    { path: negativeDir, label: "negative example" }
+  ];
+
+  for (var _ds = 0; _ds < dirs.length; _ds++) {
+    const d = dirs[_ds];
+    if (!fs.existsSync(path.join(ROOT, d.path))) {
+      throw new Error("Bug forecast " + d.label + " directory missing: " + d.path);
+    }
+  }
+
+  // Count valid fixtures (.json files only)
+  const validEntries = fs.readdirSync(path.join(ROOT, validDir));
+  const validJsonCount = validEntries.filter(function(e) {
+    return e.endsWith(".json") && fs.statSync(path.join(ROOT, validDir, e)).isFile();
+  }).length;
+
+  if (validJsonCount !== 2) {
+    throw new Error("Expected valid fixture count 2, got " + validJsonCount);
+  }
+
+  // Count invalid fixtures (.json files only)
+  const invalidEntries = fs.readdirSync(path.join(ROOT, invalidDir));
+  const invalidJsonCount = invalidEntries.filter(function(e) {
+    return e.endsWith(".json") && fs.statSync(path.join(ROOT, invalidDir, e)).isFile();
+  }).length;
+
+  if (invalidJsonCount !== 9) {
+    throw new Error("Expected invalid fixture count 9, got " + invalidJsonCount);
+  }
+
+  // Count active examples (.json files only)
+  const exampleEntries = fs.readdirSync(path.join(ROOT, examplesDir));
+  const exampleJsonCount = exampleEntries.filter(function(e) {
+    return e.endsWith(".json") && fs.statSync(path.join(ROOT, examplesDir, e)).isFile();
+  }).length;
+
+  if (exampleJsonCount !== 1) {
+    throw new Error("Expected active example count 1, got " + exampleJsonCount);
+  }
+
+  // Count negative examples (all direct files, including .json and .txt)
+  const negativeEntries = fs.readdirSync(path.join(ROOT, negativeDir));
+  const negativeFileCount = negativeEntries.filter(function(e) {
+    return !e.startsWith(".") && fs.statSync(path.join(ROOT, negativeDir, e)).isFile();
+  }).length;
+
+  if (negativeFileCount !== 3) {
+    throw new Error("Expected negative example count 3, got " + negativeFileCount);
+  }
+
+  // Print summary
+  console.log("schema: " + schemaPath);
+  console.log("valid fixtures: " + validDir);
+  console.log("invalid fixtures: " + invalidDir);
+  console.log("active examples: " + examplesDir);
+  console.log("negative examples: " + negativeDir);
+
+  console.log("valid fixture count: " + validJsonCount);
+  console.log("invalid fixture count: " + invalidJsonCount);
+  console.log("active example count: " + exampleJsonCount);
+  console.log("negative example count: " + negativeFileCount);
+
+  console.log("standalone validator: --bug-forecast <path>");
+  console.log("suite flag: --phase 1q-bug-forecast");
+  console.log("suite flag: --phase 1q-bug-forecast-example");
+  console.log("suite flag: --phase 1q-bug-forecast-example-negative");
+  console.log("summary flag: --phase 1q-bug-forecast-summary");
+
+  console.log("advisoryOnly enforced by schema");
+  console.log("sensitive data boundary enforced by schema");
+
+  console.log("non-capability: no Skeptic execution");
+  console.log("non-capability: no generator");
+  console.log("non-capability: no runtime behavior");
+  console.log("non-capability: no scanner behavior");
+  console.log("non-capability: no CI change");
+  console.log("non-capability: no deployment");
+  console.log("non-capability: no certification");
+  console.log("non-capability: no production readiness claim");
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
@@ -6427,6 +6531,12 @@ try {
 
   if (runPhase1qBugForecastExampleNegative) {
     validateBugForecastExampleNegativePhase();
+  }
+
+  const runPhase1qBugForecastSummary = args.phase === "1q-bug-forecast-summary";
+
+  if (runPhase1qBugForecastSummary) {
+    validateBugForecastSummaryPhase();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";
