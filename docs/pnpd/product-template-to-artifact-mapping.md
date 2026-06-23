@@ -63,6 +63,12 @@ A template has no safe mapping until future design. Its purpose, structure, or t
 **E. Retired or duplicate candidate:**
 A template may overlap with another template and needs later review before mapping. It may be a candidate for retirement, consolidation, or explicit differentiation from another template.
 
+### Category Coverage Rule
+
+Mapping categories A-E are allowed values, not mandatory coverage buckets. A category may have zero matrix rows when no current template fits that category; zero-row categories are valid and do not indicate an error or omission.
+
+Category E must only be used when a template is actually retired, duplicate, or materially overlapping based on current evidence. Category E must not be assigned only to satisfy coverage. Manufactured retired/duplicate classifications create false governance classification and are forbidden.
+
 ## 6. Product Delivery Artifact Families
 
 The following artifact families are recognized at a high level. This section does not change any schema. It does not invent new schema fields. It does not claim all families are currently implemented. It does not claim documentation-only families are validated today.
@@ -130,9 +136,23 @@ No template is edited by this phase.
 | `parked-idea.md` | Parked product ideas for future consideration | D — No mapping yet | unknown / needs later design | documentation-only today | Artifact family decision; parking policy before mapping | No mapping yet: parked ideas are intentionally deferred. Mapping now would contradict their parking status. |
 | `rejected-options.md` | Rejected product options with rejection rationale | D — No mapping yet | unknown / needs later design | documentation-only today | Artifact family decision; rejection evidence policy before mapping | No mapping yet: rejected options serve as decision evidence. Mapping would risk treating rejections as active artifacts. |
 
+### Category Distribution
+
+The current distribution across the fourteen product templates:
+
+- A (Direct future source candidate): 4
+- B (Partial future source candidate): 4
+- C (Supporting context only): 4
+- D (No mapping yet): 2
+- E (Retired or duplicate candidate): 0
+
+Category E has zero rows intentionally. No current product template is classified as retired or duplicate in this matrix. The zero count does not mean Category E is invalid or missing. Category E remains available for a later governed review if evidence of retirement, duplication, or material overlap appears. The zero count does not authorize changing templates.
+
 ## 9. Non-Mapping Cases
 
 The following cases identify where mapping must not happen yet, either because the template's purpose would be distorted or because mapping would imply capabilities that do not exist:
+
+A non-mapping case is not automatically Category E. Templates that are unclear or unsafe to map should normally be Category D unless retirement, duplication, or material overlap is specifically evidenced. Category E requires a distinct factual basis — the template must demonstrably be retired, duplicate another current template, or have materially overlapping scope such that consolidation is warranted. Templates placed in Category D for "no mapping yet" are not Category E candidates solely by virtue of being non-mapping.
 
 **Templates too broad:** `product-vision-brief.md` covers too wide a scope to map to a single artifact family. Forcing a direct mapping would lose the narrative value of the template.
 
@@ -322,6 +342,7 @@ This phase forbids:
 | 13 | Adoption readiness overclaim | No adoption readiness claim. |
 | 14 | Phase 1Q reopening | 1N-E is product delivery track (1N), not bug forecast track (1Q). |
 | 15 | External report authority creep | Mapping follows 1N-D contract, not external proposals. |
+| 16 | forced category coverage creating false retired/duplicate claims | Categories are allowed values, not mandatory distribution buckets; Category E may remain zero until evidence supports it. Manufactured Category E rows are forbidden. |
 
 ## 16. Gates And Non-Goals
 
