@@ -56,6 +56,9 @@
 | Product Delivery Registry CI integration design (Phase 1O-X) | ✅ Complete | `docs/pnpd/phase-1o-x-ci-integration-design.md` |
 | Product Delivery Registry CI validation (Phase 1O-Y): separate `validate:pdr:fixtures` and `validate:pdr:examples` steps | ✅ Complete | `.github/workflows/pnpd-ci.yml` |
 | GitHub-app-verified CI green baseline for Phase 1O-Y | ✅ Complete | PNPD CI run `27871552548`, conclusion `success` |
+| Bug forecast validator (Phase 1Q) | ✅ Complete | `node scripts/pnpd-validate-schemas.mjs --phase 1q` |
+| Bug forecast schema (Phase 1Q) | ✅ Complete | `.pnpd/bug-forecast.schema.json` |
+| Bug forecast fixtures (Phase 1Q) | ✅ Complete | `tests/fixtures/pnpd/bug-forecast/` |
 
 **Note:** Runtime readiness report file validation (Phase 1J) uses filename-prefix validation only; it does not recompute the full report content hash yet.
 
@@ -63,9 +66,10 @@
 
 The following governance capabilities are completed as docs-only deliverables. They are **advisory only, non-executable, non-mutating, and do not implement runtime, schema, validators, fixtures, CI enforcement, registry writes, generated state, or AgentBridge authority.**
 
+**Note:** Phase 1Q (bug forecast validator) is listed above under Existing capabilities because it implemented a validator with schema, fixtures, and tests. It is not a docs-only phase.
+
 | Phase | Capability | Status |
 |-------|-----------|--------|
-| Phase 1Q | Bug forecast validator | ✅ Complete |
 | Phase 1N-C | Template adoption/validation decision pack | ✅ Complete — docs-only |
 | Phase 1N-D | Product template contract | ✅ Complete — docs-only |
 | Phase 1N-E | Product template-to-artifact mapping matrix | ✅ Complete — docs-only |
@@ -75,7 +79,7 @@ The following governance capabilities are completed as docs-only deliverables. T
 | Phase 1R Batch 1 | Agent novelty review pack | ✅ Complete — docs-only |
 | Phase 1S Batch 0 | Repo hygiene and deferred scope reconciliation | ✅ Complete — docs-only |
 
-These docs-only phases do **not**:
+These docs-only phases (1N-C through 1S Batch 0) do **not**:
 
 - implement runtime behavior
 - implement schema
@@ -400,6 +404,4 @@ All remote CI runs on `main` branch, all concluded `success`:
 | 1O-W | `27868965459` | `4efbba56823257ee9fe7e3e1e2178ecd7753b3e8` | — |
 | 1O-X | `27870885423` | `8d48a7adff0ecb628933b67dd98a1cd54e739468` | — |
 | 1O-Y | `27871552548` | `8b541a143b125940a7392d346e4de612ccee5340` | — |
-| 1Q | `28083166676` | `384d7328e07c08baf1d903c56ca48a66b0fe4ca3` | — |
-| 1N-C | `28083166676` | `384d7328e07c08baf1d903c56ca48a66b0fe4ca3` | — |
 | 1S Batch 0 | `28089376629` | `6ea9beb88bc0a0f34536cfbf247e67f43a629c07` | — |
