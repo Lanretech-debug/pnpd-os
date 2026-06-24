@@ -727,7 +727,7 @@ AgentBridge authority and registry writes remain forbidden unless separately aut
 
 JobToCash may use a repo-vault pattern with Obsidian Git under its own project policy. That pattern does not automatically transfer to PNPD-OS.
 
-`.obsidian` paths outside PNPD-OS are not PNPD-OS failures, but must not be copied, committed, symlinked, or referenced as authorized PNPD-OS state.
+.obsidian paths outside PNPD-OS are not PNPD-OS failures, but must not be copied, committed, symlinked, or referenced as authorized PNPD-OS state.
 
 ## 20. Teach Skills rules
 
