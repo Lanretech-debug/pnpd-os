@@ -4,12 +4,12 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1P-G (docs-only design) |
-| **Current canonical verdict** | `PHASE_1P_G_TEACH_SKILLS_OBSIDIAN_GIT_KNOWLEDGE_LAYER_CATEGORISATION_DESIGN_PUSHED_CI_GREEN` |
-| **Latest stable commit** | `d391d73afbeac69394971206f0e71e76eeda3b57` |
+| **Phase** | Phase 1P-H (Git-backed Obsidian memory scaffold) |
+| **Current canonical verdict** | `PHASE_1P_H_GIT_BACKED_OBSIDIAN_MEMORY_SCAFFOLD_PUSHED_CI_GREEN` |
+| **Latest stable commit** | `bbd9700c60627574a4389861aadff826fcce26cb` |
 | **Branch** | `main` |
 | **Node version** | `22` (see `.github/workflows/pnpd-ci.yml`) |
-| **Remote CI run** | `28127202378` |
+| **Remote CI run** | `28130153767` |
 | **Remote CI conclusion** | `success` |
 | **known untracked files: none** | confirmed |
 | **Repo hygiene** | clean `main` matching `origin/main` |
@@ -81,6 +81,7 @@ The following governance capabilities are completed as docs-only deliverables. T
 | Phase 1S Batch 1 | Current capability map reconciliation | ✅ Complete — docs-only |
 | Phase 1S Batch 2 | Post-canonical baseline doc consistency reconciliation | ✅ Complete — docs-only |
 | Phase 1P-G | Teach Skills / Obsidian / Git knowledge layer categorisation design | ✅ Complete — docs-only |
+| Phase 1P-H | Git-backed Obsidian-compatible Markdown memory scaffold | ✅ Complete — docs-only scaffold |
 
 The docs-only governance phases listed in this section do **not**:
 
@@ -94,6 +95,8 @@ The docs-only governance phases listed in this section do **not**:
 - alter AgentBridge authority
 - claim production readiness
 - claim adoption readiness
+
+Phase 1P-H added a manual Markdown scaffold under `memory/`. This Batch 0 adds one pointer-only canonical baseline record in `memory/00-canonical/baselines/`. Neither the scaffold nor the pointer record supersedes `docs/pnpd/current-capability-map.md`.
 
 ## Deferred and blocked boundary
 
