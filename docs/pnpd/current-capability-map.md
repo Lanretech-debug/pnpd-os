@@ -56,7 +56,7 @@
 | Product Delivery Registry CI integration design (Phase 1O-X) | ✅ Complete | `docs/pnpd/phase-1o-x-ci-integration-design.md` |
 | Product Delivery Registry CI validation (Phase 1O-Y): separate `validate:pdr:fixtures` and `validate:pdr:examples` steps | ✅ Complete | `.github/workflows/pnpd-ci.yml` |
 | GitHub-app-verified CI green baseline for Phase 1O-Y | ✅ Complete | PNPD CI run `27871552548`, conclusion `success` |
-| Bug forecast validator (Phase 1Q) | ✅ Complete | `node scripts/pnpd-validate-schemas.mjs --phase 1q` |
+| Bug forecast validator (Phase 1Q) | ✅ Complete | `node scripts/pnpd-validate-schemas.mjs --phase 1q-bug-forecast` |
 | Bug forecast schema (Phase 1Q) | ✅ Complete | `.pnpd/bug-forecast.schema.json` |
 | Bug forecast fixtures (Phase 1Q) | ✅ Complete | `tests/fixtures/pnpd/bug-forecast/` |
 
