@@ -4,12 +4,12 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1S Batch 1 (docs-only) |
-| **Current canonical verdict** | `PHASE_1S_BATCH_1_CURRENT_CAPABILITY_MAP_RECONCILIATION_PUSHED_CI_GREEN` |
-| **Latest stable commit** | `f57dcd322dff6fc6f5aa88beb54820bfc127ce4e` |
+| **Phase** | Phase 1P-G (docs-only design) |
+| **Current canonical verdict** | `PHASE_1P_G_TEACH_SKILLS_OBSIDIAN_GIT_KNOWLEDGE_LAYER_CATEGORISATION_DESIGN_PUSHED_CI_GREEN` |
+| **Latest stable commit** | `d391d73afbeac69394971206f0e71e76eeda3b57` |
 | **Branch** | `main` |
 | **Node version** | `22` (see `.github/workflows/pnpd-ci.yml`) |
-| **Remote CI run** | `28116267106` |
+| **Remote CI run** | `28127202378` |
 | **Remote CI conclusion** | `success` |
 | **known untracked files: none** | confirmed |
 | **Repo hygiene** | clean `main` matching `origin/main` |
@@ -78,8 +78,11 @@ The following governance capabilities are completed as docs-only deliverables. T
 | Phase 1R-B | Agent novel idea candidate synthetic example | ✅ Complete — docs-only |
 | Phase 1R Batch 1 | Agent novelty review pack | ✅ Complete — docs-only |
 | Phase 1S Batch 0 | Repo hygiene and deferred scope reconciliation | ✅ Complete — docs-only |
+| Phase 1S Batch 1 | Current capability map reconciliation | ✅ Complete — docs-only |
+| Phase 1S Batch 2 | Post-canonical baseline doc consistency reconciliation | ✅ Complete — docs-only |
+| Phase 1P-G | Teach Skills / Obsidian / Git knowledge layer categorisation design | ✅ Complete — docs-only |
 
-These docs-only phases (1N-C through 1S Batch 0) do **not**:
+The docs-only governance phases listed in this section do **not**:
 
 - implement runtime behavior
 - implement schema
@@ -180,8 +183,8 @@ Boundaries:
 
 These are not blocked. They are active roadmap categories.
 
-They belong in Phase 1P-G for categorisation design.
-They should be sequenced after Project Profile and Adoption Model.
+Phase 1P-G has completed the categorisation and governance design for Teach Skills / Obsidian / Git.
+It should be sequenced after Project Profile and Adoption Model.
 
 Roadmap categories:
 
@@ -192,7 +195,7 @@ Roadmap categories:
 - Project Reuse Layer
 - Dashboard-visible capability category
 
-This phase must not implement them.
+No implementation is authorized by the current design.
 
 ## Categorised framework roadmap
 
