@@ -196,12 +196,13 @@ A manual triage checklist would:
 
 ### 10. Evidence available
 
+Evidence available: weak, synthetic, and inferential only. The example is based on the Phase 1R-A harness structure and this Phase 1R-B teaching purpose. No repository-verified user demand, Owner demand, market validation, production impact, or adoption impact is claimed.
+
 - The Phase 1R-A harness output model defines 24 required fields (evidence of shape)
 - Prior PNPD phases demonstrate that docs-only governance tools are effective (evidence of pattern)
-- The Owner has previously expressed need for reduced review overhead (evidence of demand signal)
 - Rejected ideas in 1R-A show that early filtering would have saved review cycles (evidence of gap)
 
-Evidence classification: **weak to moderate**. No user interviews. No quantitative data on Owner review time. No A/B test. The evidence is pattern-based and inferential.
+Evidence classification: **weak**. No user interviews. No quantitative data on Owner review time. No A/B test. No repository-verified demand signal. The evidence is pattern-based, synthetic, and inferential.
 
 ---
 
@@ -342,7 +343,7 @@ The idea may become timely when candidate volume increases or when Owner explici
 Backlog only
 ```
 
-This candidate is not routed to DeepSeek implementation. It is not routed to Codex audit. It is not routed to canonical status. It is backlogged for future reconsideration when evidence or timing improves.
+This candidate is not routed to DeepSeek implementation. It is not routed to Codex audit. It is not routed to canonical status. Its recommended route is Backlog only — deferred for possible future backlog consideration when evidence or timing improves. This does not create active backlog state. This does not create a backlog entry. This does not create a roadmap item.
 
 Backlog only is not roadmap authority. Backlog only is not implementation approval. Backlog only is not delivery evidence.
 
@@ -457,7 +458,7 @@ The required authority path remains:
 Owner -> Hermes design -> DeepSeek implementation -> Codex audit -> GitHub verification -> canonical status
 ```
 
-No step in this path has been satisfied for the synthetic example. All steps remain future-gated. The example demonstrates correct routing discipline: candidates with weak evidence and uncertain timing are backlogged, not routed forward.
+No step in this path has been satisfied for the synthetic example. All steps remain future-gated. The example demonstrates correct routing discipline: candidates with weak evidence and uncertain timing receive a Backlog only recommended route, not a forward implementation route. Backlog only does not create active backlog state.
 
 ---
 
