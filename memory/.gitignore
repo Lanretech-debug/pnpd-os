@@ -1,0 +1,9 @@
+.obsidian/
+**/.obsidian/
+attachments/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.pdf
