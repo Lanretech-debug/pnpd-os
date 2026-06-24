@@ -77,6 +77,7 @@ This phase explicitly does not:
 - create research, inbox, or archive notes
 - claim production readiness
 - claim adoption readiness
+- adopt the JobToCash repo-vault model into PNPD-OS
 
 No production readiness claim. No adoption readiness claim.
 
@@ -705,6 +706,26 @@ future ventures
 ```
 
 This phase creates no project folders, project profiles, or project adoption notes.
+
+### Cross-project Obsidian adoption boundary
+
+PNPD-OS currently supports Obsidian-compatible Markdown navigation through `memory/`, but does not authorize `.obsidian/`, Obsidian plugins, workspace files, plugin data, vault-writing automation, auto-sync authority, AgentBridge authority, or registry writes.
+
+Another project repo, such as JobToCash, may separately choose a repo-as-Obsidian-vault model only under that project's own governance, because its risk profile, sync needs, and repo policy are separate from PNPD-OS.
+
+Cross-project Obsidian adoption must not be inferred from one repository to another.
+
+A project repo may use Obsidian as a repo-vault only after explicit project-level authorization.
+
+PNPD-OS remains Markdown-compatible with Obsidian, not an Obsidian vault implementation.
+
+No .obsidian directory is created in PNPD-OS.
+
+Obsidian plugins, workspace.json, plugin data.json, vault-writing automation, and auto-sync authority are not authorized for PNPD-OS by this phase.
+
+AgentBridge authority and registry writes remain forbidden unless separately authorized.
+
+JobToCash may use a repo-vault pattern with Obsidian Git under its own project policy. That pattern does not automatically transfer to PNPD-OS.
 
 ## 20. Teach Skills rules
 
