@@ -4,12 +4,12 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1S Batch 0 (docs-only) |
-| **Current canonical verdict** | `PHASE_1S_BATCH_0_REPO_HYGIENE_AND_DEFERRED_SCOPE_RECONCILIATION_PUSHED_CI_GREEN` |
-| **Latest stable commit** | `6ea9beb88bc0a0f34536cfbf247e67f43a629c07` |
+| **Phase** | Phase 1S Batch 1 (docs-only) |
+| **Current canonical verdict** | `PHASE_1S_BATCH_1_CURRENT_CAPABILITY_MAP_RECONCILIATION_PUSHED_CI_GREEN` |
+| **Latest stable commit** | `f57dcd322dff6fc6f5aa88beb54820bfc127ce4e` |
 | **Branch** | `main` |
 | **Node version** | `22` (see `.github/workflows/pnpd-ci.yml`) |
-| **Remote CI run** | `28089376629` |
+| **Remote CI run** | `28116267106` |
 | **Remote CI conclusion** | `success` |
 | **known untracked files: none** | confirmed |
 | **Repo hygiene** | clean `main` matching `origin/main` |
@@ -208,7 +208,7 @@ This phase must not implement them.
 
 ### Phase 1Q — Registry and validation
 
-**Note:** Phase 1Q designation now refers to the bug forecast validator (docs-only governance, complete). The roadmap items below retain their original design intent but use older sub-phase labels (1Q-A, 1Q-B). These labels must not be treated as current authorization. Current authorization comes from the latest canonical baseline and Owner-approved Hermes design.
+**Note:** Phase 1Q designation now refers to the bug forecast validator (implemented validator/schema/fixture capability, complete). The roadmap items below retain their original design intent but use older sub-phase labels (1Q-A, 1Q-B). These labels must not be treated as current authorization. Current authorization comes from the latest canonical baseline and Owner-approved Hermes design.
 
 - 1Q-A Live Product Delivery Registry writer design (deferred — see deferred scope reconciliation)
 - 1Q-B Artifact path and hash validation design (deferred)
