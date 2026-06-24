@@ -4,13 +4,15 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1O-Y |
-| **Latest stable commit** | `8b541a143b125940a7392d346e4de612ccee5340` |
+| **Phase** | Phase 1S Batch 0 (docs-only) |
+| **Current canonical verdict** | `PHASE_1S_BATCH_0_REPO_HYGIENE_AND_DEFERRED_SCOPE_RECONCILIATION_PUSHED_CI_GREEN` |
+| **Latest stable commit** | `6ea9beb88bc0a0f34536cfbf247e67f43a629c07` |
 | **Branch** | `main` |
 | **Node version** | `22` (see `.github/workflows/pnpd-ci.yml`) |
-| **Remote CI run** | `27871552548` |
+| **Remote CI run** | `28089376629` |
 | **Remote CI conclusion** | `success` |
-| **Current CI commit** | `8b541a143b125940a7392d346e4de612ccee5340` |
+| **known untracked files: none** | confirmed |
+| **Repo hygiene** | clean `main` matching `origin/main` |
 
 ## Existing capabilities
 
@@ -57,7 +59,74 @@
 
 **Note:** Runtime readiness report file validation (Phase 1J) uses filename-prefix validation only; it does not recompute the full report content hash yet.
 
+## Docs-only governance capabilities
+
+The following governance capabilities are completed as docs-only deliverables. They are **advisory only, non-executable, non-mutating, and do not implement runtime, schema, validators, fixtures, CI enforcement, registry writes, generated state, or AgentBridge authority.**
+
+| Phase | Capability | Status |
+|-------|-----------|--------|
+| Phase 1Q | Bug forecast validator | ✅ Complete |
+| Phase 1N-C | Template adoption/validation decision pack | ✅ Complete — docs-only |
+| Phase 1N-D | Product template contract | ✅ Complete — docs-only |
+| Phase 1N-E | Product template-to-artifact mapping matrix | ✅ Complete — docs-only |
+| Phase 1N-F | Product template conversion boundary and no-parser strategy | ✅ Complete — docs-only |
+| Phase 1R-A | Agent novel idea capability harness | ✅ Complete — docs-only |
+| Phase 1R-B | Agent novel idea candidate synthetic example | ✅ Complete — docs-only |
+| Phase 1R Batch 1 | Agent novelty review pack | ✅ Complete — docs-only |
+| Phase 1S Batch 0 | Repo hygiene and deferred scope reconciliation | ✅ Complete — docs-only |
+
+These docs-only phases do **not**:
+
+- implement runtime behavior
+- implement schema
+- implement validators
+- create fixtures
+- add CI enforcement
+- write registry state
+- create generated state
+- alter AgentBridge authority
+- claim production readiness
+- claim adoption readiness
+
+## Deferred and blocked boundary
+
+Reference: `docs/pnpd/deferred-scope-reconciliation.md`.
+
+**deferred work is not active backlog.** Deferred items are recorded in the deferred work register. They must not be mistaken for work-in-progress, active backlog state, or eligible implementation.
+
+**blocked work is not eligible implementation.** Blocked items require Owner-authorized Hermes design, missing evidence, or external authority before they can be unlocked. They must not be described as actionable.
+
+**eligible next work is limited to docs-only or confirmed validator-defect work unless Owner authorizes Hermes design.** No implementation batch is eligible merely because it is interesting. No deferred work becomes implementation without Owner-authorized Hermes design.
+
+**no deferred work becomes implementation merely by appearing in the map.** This capability map is descriptive, not authority-granting. Presence in this map does not authorize implementation.
+
+## Batch mode delivery discipline
+
+PNPD-OS now enforces **batch mode** delivery for all future increments.
+
+- **batch mode** is preferred for related docs-only governance controls sharing one risk class
+- microphase chains are allowed only when risk classes genuinely differ
+- one batch must have one coherent risk class
+- one batch must have one allowed file set
+- one batch must have one forbidden implementation surface
+- one batch must have one audit strategy
+- one batch must have one CI verification
+- batch mode accelerates delivery without weakening governance
+- batch mode must not hide implementation inside docs
+
+## Repo hygiene policy
+
+**known untracked files: none.**
+
+- local dirt must not become permanent background noise
+- cleanup must be targeted only
+- no broad `git clean -fdx` without explicit Owner authorization
+- unknown untracked files must be inspected before deletion
+- expected local implementation state is clean `main` matching `origin/main`
+
 ## Controlled Unlock capabilities
+
+**Note on superseded phase labels:** Some Controlled Unlock entries below reference older phase designations (e.g., Phase 1Q-A, 1Q-B, 1R-A, 1R-B, 1S-A, 1S-B). These phase labels have been partially superseded by later docs-only governance phases (see Docs-only governance capabilities above). The old labels must not be treated as current authorization. Current authorization comes only from the latest canonical baseline and Owner-approved Hermes design. Runtime consumption of Product Delivery artifacts remains blocked. Automated Product Delivery artifact generation remains blocked. Writer mutation of live Product Delivery Registry state remains blocked. Old labels must not be used to bypass current blocked/deferred registers.
 
 The following capabilities are planned for future implementation through a gated, sequenced roadmap. They are not authorized for immediate implementation by this document. Each unlock requires explicit phase scope, dependency resolution, safety-boundary review, Owner approval, implementation, Codex audit, and GitHub verification before becoming canonical.
 
@@ -135,18 +204,24 @@ This phase must not implement them.
 
 ### Phase 1Q — Registry and validation
 
-- 1Q-A Live Product Delivery Registry writer design
-- 1Q-B Artifact path and hash validation design
+**Note:** Phase 1Q designation now refers to the bug forecast validator (docs-only governance, complete). The roadmap items below retain their original design intent but use older sub-phase labels (1Q-A, 1Q-B). These labels must not be treated as current authorization. Current authorization comes from the latest canonical baseline and Owner-approved Hermes design.
+
+- 1Q-A Live Product Delivery Registry writer design (deferred — see deferred scope reconciliation)
+- 1Q-B Artifact path and hash validation design (deferred)
 
 ### Phase 1R — Artifact pipeline
 
-- 1R-A Runtime consumption of Product Delivery artifacts
-- 1R-B Automated Product Delivery artifact generation
+**Note:** Phase 1R designation now refers to agent novel idea governance (docs-only: 1R-A harness, 1R-B example, Batch 1 review pack — all complete). The roadmap items below retain their original design intent but use older sub-phase labels. These labels must not be treated as current authorization.
+
+- 1R-A Runtime consumption of Product Delivery artifacts (blocked — see blocked work register)
+- 1R-B Automated Product Delivery artifact generation (blocked)
 
 ### Phase 1S — Agent governance
 
-- 1S-A AgentBridge delegated authority model
-- 1S-B Controlled GitHub/API mutation design
+**Note:** Phase 1S designation now refers to repo hygiene and deferred scope reconciliation (docs-only: Batch 0, Batch 1 — both docs-only governance). The roadmap items below retain their original design intent but use older sub-phase labels.
+
+- 1S-A AgentBridge delegated authority model (blocked — no AgentBridge authority)
+- 1S-B Controlled GitHub/API mutation design (deferred)
 
 ### Phase 1T — Internal operator control plane
 
@@ -232,6 +307,21 @@ PNPD-OS is an AI-assisted software delivery framework for building, governing, v
 - **Codex remains auditor/reviewer, not Owner.**
 - **AgentBridge remains non-authorizing.**
 
+### Non-readiness boundary
+
+The current canonical state asserts:
+
+- **no production readiness claim**
+- **no adoption readiness claim**
+- no deployment authorization
+- no dispatch authorization
+- no certification
+- no runtime consumption claim
+- no registry write authorization
+- no roadmap commitment claim
+- no AgentBridge authority
+- no generated state
+
 ### Hermes intake governance
 
 - Hermes design output requires a fresh session for PNPD phase authority.
@@ -310,3 +400,6 @@ All remote CI runs on `main` branch, all concluded `success`:
 | 1O-W | `27868965459` | `4efbba56823257ee9fe7e3e1e2178ecd7753b3e8` | — |
 | 1O-X | `27870885423` | `8d48a7adff0ecb628933b67dd98a1cd54e739468` | — |
 | 1O-Y | `27871552548` | `8b541a143b125940a7392d346e4de612ccee5340` | — |
+| 1Q | `28083166676` | `384d7328e07c08baf1d903c56ca48a66b0fe4ca3` | — |
+| 1N-C | `28083166676` | `384d7328e07c08baf1d903c56ca48a66b0fe4ca3` | — |
+| 1S Batch 0 | `28089376629` | `6ea9beb88bc0a0f34536cfbf247e67f43a629c07` | — |
