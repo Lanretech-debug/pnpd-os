@@ -445,6 +445,11 @@ Blocked items are not eligible implementation.
 The adoption prompt may classify deferred work but must not activate deferred work.
 ```
 
+### Required distinction definitions
+
+- **project adoption**: the Owner-authorized governance decision that a project operates under PNPD-OS rules after Codex audit, GitHub verification, and canonical reconciliation.
+- **deferred implementation**: future work recorded outside the active implementation lane until Owner authorization and a separate Hermes design unlock it.
+
 ## 27. Authority matrix
 
 | Actor/surface | Authority |
