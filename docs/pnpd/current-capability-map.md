@@ -4,12 +4,12 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1P-I (memory record authoring rules and promotion flow design) |
-| **Current canonical verdict** | `PHASE_1P_I_MEMORY_RECORD_AUTHORING_RULES_AND_PROMOTION_FLOW_DESIGN_PUSHED_CI_GREEN` |
-| **Latest stable commit** | `e58f8abcb333094ff9675c7683745466b9f1da82` |
+| **Phase** | Phase 1P-J (adoption playbook and project memory profile design) |
+| **Current canonical verdict** | `PHASE_1P_J_ADOPTION_PLAYBOOK_AND_PROJECT_MEMORY_PROFILE_DESIGN_PUSHED_CI_GREEN` |
+| **Latest stable commit** | `e5be212ab6c303110a86d40001945a5f4762e8ef` |
 | **Branch** | `main` |
 | **Node version** | `22` (see `.github/workflows/pnpd-ci.yml`) |
-| **Remote CI run** | `28135656855` |
+| **Remote CI run** | `28182654938` |
 | **Remote CI conclusion** | `success` |
 | **known untracked files: none** | confirmed |
 | **Repo hygiene** | clean `main` matching `origin/main` |
@@ -83,6 +83,7 @@ The following governance capabilities are completed as docs-only deliverables. T
 | Phase 1P-G | Teach Skills / Obsidian / Git knowledge layer categorisation design | ✅ Complete — docs-only |
 | Phase 1P-H | Git-backed Obsidian-compatible Markdown memory scaffold | ✅ Complete — docs-only scaffold |
 | Phase 1P-I | Memory record authoring rules and promotion flow design | ✅ Complete — docs-only governance design |
+| Phase 1P-J | Adoption playbook and project memory profile design | ✅ Complete — docs-only adoption design |
 
 The docs-only governance phases listed in this section do **not**:
 
@@ -102,6 +103,10 @@ Phase 1P-H added a manual Markdown scaffold under `memory/`. This Batch 0 adds o
 Phase 1P-I added the docs-only governance design for memory record authoring rules, promotion flow, lifecycle states, privacy boundaries, cross-project Obsidian adoption boundaries, and canonical-state drift prevention. It does not create memory records, `.obsidian`, automation, schemas, validators, fixtures, CI enforcement, registry writes, generated state, project profiles, Teach Skills, or AgentBridge authority.
 
 Batch reconciliation verdict target: `PHASE_1P_I_BATCH_0_POST_DESIGN_CANONICAL_STATE_RECONCILIATION`.
+
+Phase 1P-J added the docs-only adoption playbook and project memory profile design for safe PNPD-OS project adoption, README-facing adoption prompt design, GitHub-as-authority memory governance, agent memory boundaries, anti-AI-slope rules, project adoption lifecycle states, project memory profile lifecycle states, deferred-scope boundaries, and future README/project-profile implementation strategy. It does not update README, create project profiles, create memory records, create `.obsidian`, implement runtime integration, implement schemas, implement validators, create fixtures, add CI enforcement, write registry state, create generated state, enable deployment, enable dispatch, create Teach Skills, or authorize AgentBridge.
+
+Batch reconciliation verdict target: `PHASE_1P_J_BATCH_0_POST_DESIGN_CANONICAL_STATE_RECONCILIATION`.
 
 ## Deferred and blocked boundary
 
