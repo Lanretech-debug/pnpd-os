@@ -61,6 +61,17 @@ Adoption is not implementation. Adoption is the governance decision, evidence tr
 - Memory records proliferate without governance, creating fake progress.
 - Vague project ambition is laundered into apparent adoption milestones.
 
+This design also distinguishes the following concepts that are frequently conflated during adoption work:
+
+- **project adoption**: the Owner-authorized governance decision that a project operates under PNPD-OS rules, evidenced by committed, pushed, CI-green state.
+- **project memory profile creation**: the governed construction of a project memory profile YAML/Markdown file, which is a governed artifact of adoption, not adoption itself.
+- **memory record creation**: the authoring of individual memory notes, which are evidence, not authority, and do not constitute adoption.
+- **README adoption prompt**: a copy-paste instruction block designed for the README surface that guides an external agent through governed adoption assessment without authorizing mutation.
+- **external integration prompt**: a user-facing instruction block that guides an agent through assessment and planning, without authorizing repo mutation.
+- **actual runtime integration**: the real execution of PNPD-OS scripts, validators, and orchestrator checks within the target project's CI and local toolchain — deferred until implementation phases.
+- **future AgentBridge integration**: a planned capability that does not yet exist; no AgentBridge authority is active or authorized.
+- **deferred implementation**: future work recorded outside the active implementation lane until Owner authorization and a separate Hermes design unlock it.
+
 A separate adoption design isolates adoption governance from implementation work, memory authoring, README content, and tooling evolution. It defines the sequence, evidence, gates, and authority boundaries before any project is onboarded.
 
 ## 5. PNPD-OS adoption philosophy
@@ -418,7 +429,7 @@ Projects under PNPD-OS governance are classified along the following axes:
 | Obsidian | editor/navigation only |
 | memory/ | governed memory surface only |
 | docs/pnpd/current-capability-map.md | canonical capability authority |
-| README.md | a public onboarding surface only |
+| README.md | public onboarding surface only |
 | AgentBridge | no authority unless separately authorized |
 | external project repo | separately governed project state |
 
