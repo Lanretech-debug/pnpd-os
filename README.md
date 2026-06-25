@@ -6,10 +6,11 @@ A local-first governance and delivery-evidence framework for AI-assisted softwar
 
 PNPD OS is **v0.1.0, early-stage**. It is a governance and evidence framework, not a runtime product.
 
-- **Latest stable commit:** `2b5093d`
-- **Remote CI:** run `27653676971`, success, 22s
+- **Latest stable verdict:** `PHASE_1P_K_BATCH_0_POST_DESIGN_CANONICAL_STATE_RECONCILIATION_PUSHED_CI_GREEN`
+- **Latest stable commit:** `89f392927ed5c6f0e8a3926e4007d7887b965bc7`
+- **Remote CI:** run `28201754089`, success
 - **Branch:** `main`
-- **Node:** `20`
+- **Node:** `22`
 
 It does not guarantee correctness, security, or zero drift. It does not replace human review or Owner judgment.
 
@@ -51,6 +52,84 @@ PNPD OS was built from real multi-agent / AI-assisted development pain. It preve
 - maintainers who need disciplined phase gates
 - projects where AI agents must not certify their own work
 - contributors who need clear local verification
+
+## Adopt PNPD-OS into your project
+
+Use this prompt with an AI coding agent to assess whether PNPD-OS can be adopted into your project. The prompt is assessment-first and does not authorize repo mutation, installation, deployment, dispatch, generated state, memory record creation, project profile creation, or AgentBridge authority.
+
+```text
+You are helping me assess PNPD-OS adoption for my project.
+
+Project name:
+[PROJECT_NAME]
+
+Repo path:
+[REPO_PATH]
+
+Remote repo:
+[REMOTE_REPO]
+
+Default branch:
+[DEFAULT_BRANCH]
+
+Current goal:
+[CURRENT_GOAL]
+
+Desired adoption depth:
+[DESIRED_ADOPTION_DEPTH]
+
+Allowed file set:
+[ALLOWED_FILE_SET]
+
+Forbidden surfaces:
+[FORBIDDEN_SURFACES]
+
+Privacy constraints:
+[PRIVACY_CONSTRAINTS]
+
+Current known baseline:
+[CURRENT_KNOWN_BASELINE]
+
+Current known untracked files:
+[CURRENT_KNOWN_UNTRACKED_FILES]
+
+Instructions:
+
+1. Inspect the target repo before proposing changes.
+2. Identify the default branch and current HEAD.
+3. Inspect existing docs, package files, tests, CI, schemas, runtime files, and generated-state folders.
+4. Identify the project purpose and adoption goal.
+5. Separate facts from assumptions.
+6. Treat GitHub committed main as the canonical authority layer for committed repo state.
+7. Treat Owner authorization as required before any file changes.
+8. Treat Obsidian only as editor/navigation unless explicitly authorized.
+9. Avoid private memory leakage.
+10. Do not create memory records until a project memory profile is authorized.
+11. Do not create project profiles until a project profile implementation batch is authorized.
+12. Do not change runtime, schemas, validators, fixtures, CI, packages, generated state, registry state, deployment, or dispatch unless explicitly authorized.
+13. Do not claim production readiness or adoption readiness.
+14. Do not imply PNPD-OS has an installer, package, CLI, daemon, or active AgentBridge integration unless separately canonical.
+15. Produce a PNPD-OS adoption assessment.
+16. Propose the smallest safe first batch.
+17. Provide Codex audit criteria before implementation.
+18. Require remote CI verification before any canonical adoption claim.
+
+Required output:
+
+1. Project facts found
+2. Assumptions and unknowns
+3. Current repo baseline
+4. Existing governance/docs/test/CI state
+5. Risks and privacy boundaries
+6. PNPD-OS adoption suitability
+7. Smallest safe first batch
+8. Allowed file set
+9. Forbidden surfaces
+10. Required Owner authorization phrase
+11. Codex audit criteria
+12. GitHub verification plan
+13. Clear statement of what is not authorized
+```
 
 ## Quick local verification
 
