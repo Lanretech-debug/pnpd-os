@@ -4,12 +4,12 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1P-K (README adoption prompt implementation design) |
-| **Current canonical verdict** | `PHASE_1P_K_README_ADOPTION_PROMPT_IMPLEMENTATION_DESIGN_PUSHED_CI_GREEN` |
-| **Latest stable commit** | `f0ddb838747a6f32106e70f1bdf7404730f92297` |
+| **Phase** | Phase 1P-L (README adoption prompt implementation) |
+| **Current canonical verdict** | `PHASE_1P_L_README_ADOPTION_PROMPT_IMPLEMENTATION_PUSHED_CI_GREEN` |
+| **Latest stable commit** | `9ca86d3baa72f71793ef4549c7396bc15bd35cdc` |
 | **Branch** | `main` |
 | **Node version** | `22` (see `.github/workflows/pnpd-ci.yml`) |
-| **Remote CI run** | `28195094434` |
+| **Remote CI run** | `28202279266` |
 | **Remote CI conclusion** | `success` |
 | **known untracked files: none** | confirmed |
 | **Repo hygiene** | clean `main` matching `origin/main` |
@@ -85,6 +85,7 @@ The following governance capabilities are completed as docs-only deliverables. T
 | Phase 1P-I | Memory record authoring rules and promotion flow design | ✅ Complete — docs-only governance design |
 | Phase 1P-J | Adoption playbook and project memory profile design | ✅ Complete — docs-only adoption design |
 | Phase 1P-K | README adoption prompt implementation design | ✅ Complete — docs-only README implementation design |
+| Phase 1P-L | README adoption prompt implementation | ✅ Complete — README-only docs implementation |
 
 The docs-only governance phases listed in this section do **not**:
 
@@ -112,6 +113,10 @@ Batch reconciliation verdict target: `PHASE_1P_J_BATCH_0_POST_DESIGN_CANONICAL_S
 Phase 1P-K added the docs-only README adoption prompt implementation design for a future README-only status refresh and public copy-paste PNPD-OS adoption prompt. It designs README prompt placement, adoption assessment instructions, GitHub-as-authority requirements, Obsidian and memory boundaries, anti-AI-slope rules, future README-only file scope, and Codex audit strategy. It does not update README, implement the README prompt, create memory records, create project profiles, create `.obsidian`, implement runtime integration, implement schemas, implement validators, create fixtures, add CI enforcement, write registry state, create generated state, enable deployment, enable dispatch, create Teach Skills, or authorize AgentBridge.
 
 Batch reconciliation verdict target: `PHASE_1P_K_BATCH_0_POST_DESIGN_CANONICAL_STATE_RECONCILIATION`.
+
+Phase 1P-L implemented the README-only adoption prompt update. It refreshed the README status block to the Phase 1P-K Batch 0 baseline and added the public assessment-first `## Adopt PNPD-OS into your project` section with 11 placeholders, 18 receiving-agent instructions, and 13 required output items. It does not update the capability map, create memory records, create project profiles, create `.obsidian`, implement runtime integration, implement schemas, implement validators, create fixtures, add CI enforcement, write registry state, create generated state, enable deployment, enable dispatch, create Teach Skills, or authorize AgentBridge.
+
+Batch reconciliation verdict target: `PHASE_1P_L_BATCH_0_POST_README_IMPLEMENTATION_CANONICAL_STATE_RECONCILIATION`.
 
 ## Deferred and blocked boundary
 
@@ -426,3 +431,4 @@ All remote CI runs on `main` branch, all concluded `success`:
 | 1O-X | `27870885423` | `8d48a7adff0ecb628933b67dd98a1cd54e739468` | — |
 | 1O-Y | `27871552548` | `8b541a143b125940a7392d346e4de612ccee5340` | — |
 | 1S Batch 0 | `28089376629` | `6ea9beb88bc0a0f34536cfbf247e67f43a629c07` | — |
+| 1P-L | `28202279266` | `9ca86d3baa72f71793ef4549c7396bc15bd35cdc` | — |
