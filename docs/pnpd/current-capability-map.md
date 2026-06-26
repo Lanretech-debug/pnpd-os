@@ -431,4 +431,3 @@ All remote CI runs on `main` branch, all concluded `success`:
 | 1O-X | `27870885423` | `8d48a7adff0ecb628933b67dd98a1cd54e739468` | — |
 | 1O-Y | `27871552548` | `8b541a143b125940a7392d346e4de612ccee5340` | — |
 | 1S Batch 0 | `28089376629` | `6ea9beb88bc0a0f34536cfbf247e67f43a629c07` | — |
-| 1P-L | `28202279266` | `9ca86d3baa72f71793ef4549c7396bc15bd35cdc` | — |
