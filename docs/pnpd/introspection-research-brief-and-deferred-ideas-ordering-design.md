@@ -306,6 +306,7 @@ AgentBridge authority
 
 Lane: BLOCKED
 Rationale: Blocked by design requirement and Owner decision. Not authorized without explicit design and canonical approval.
+AgentBridge authority = BLOCKED
 AgentBridge authority remains BLOCKED.
 
 memory-provider due diligence
