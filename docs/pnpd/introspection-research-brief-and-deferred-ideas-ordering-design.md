@@ -366,6 +366,7 @@ Microsoft study synthesis
 Lane: RESEARCH_INPUT / ALREADY_STUDIED
 Rationale: Microsoft Learn modules studied and applied as research inputs.
 Microsoft study modules are research inputs, not implementation prompts.
+Microsoft study synthesis = RESEARCH_INPUT / ALREADY_STUDIED
 
 Memory-provider reference classification:
 
