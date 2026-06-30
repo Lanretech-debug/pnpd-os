@@ -279,6 +279,7 @@ governed learning capture
 
 Lane: DEFERRED
 Rationale: Valuable but requires prompt asset layer and idea ordering to be operational first.
+governed learning capture = DEFERRED
 
 Skeptic operationalization
 
