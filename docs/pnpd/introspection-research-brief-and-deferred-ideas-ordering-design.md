@@ -359,6 +359,7 @@ Obsidian human-facing memory/workbench
 Lane: UNBLOCKED / ALREADY_SELECTED_HUMAN_MEMORY_LAYER
 Rationale: Owner-selected human-facing memory/workbench layer.
 Obsidian is the human-facing PNPD-OS memory/workbench layer.
+Obsidian human-facing memory/workbench = UNBLOCKED / ALREADY_SELECTED_HUMAN_MEMORY_LAYER
 
 Microsoft study synthesis
 
