@@ -273,6 +273,7 @@ actual local prompt asset creation
 Lane: UNBLOCKED / NEXT/NOW_CANDIDATE
 Rationale: Designed in Phase 1P-O, eligible for implementation once Owner issues a complete PNPD task contract.
 Actual local prompt asset creation is UNBLOCKED and NEXT/NOW_CANDIDATE, but not executable until Owner issues a complete PNPD task contract.
+actual local prompt asset creation = UNBLOCKED / NEXT/NOW_CANDIDATE
 
 governed learning capture
 
