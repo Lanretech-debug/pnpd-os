@@ -1130,6 +1130,20 @@ Allowed use: use scaffolds to reduce prompt drift and preserve PNPD-OS role boun
 
 Placeholder values must be resolved by the Owner-approved task contract before any scaffold becomes an executable prompt.
 
+Recognized scaffold placeholders:
+- <PHASE_NAME>
+- <BRANCH_NAME>
+- <BASE_COMMIT>
+- <CURRENT_CANONICAL_COMMIT>
+- <CURRENT_CANONICAL_VERDICT>
+- <REMOTE_CI_RUN>
+- <ALLOWED_FILES>
+- <FORBIDDEN_FILES>
+- <EXPECTED_HEAD>
+- <IMPLEMENTATION_COMMIT>
+- <FINALIZED_COMMIT>
+- <CI_RUN_ID>
+
 ## Forbidden Use
 
 Phase 1P-R does not authorize:
