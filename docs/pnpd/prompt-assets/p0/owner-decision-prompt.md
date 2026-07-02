@@ -190,6 +190,9 @@ Required follow-up: <REQUIRED_FOLLOW_UP>
 Canonicalization boundary: <CANONICALIZATION_BOUNDARY>
 ```
 
+Placeholder inventory:
+<BASE_COMMIT> <CURRENT_CANONICAL_COMMIT> <CURRENT_CANONICAL_VERDICT> <REMOTE_CI_RUN> <ALLOWED_FILES> <FORBIDDEN_FILES> <EXPECTED_HEAD> <FINALIZED_COMMIT> <CI_RUN_ID>
+
 Placeholder values must be resolved by the Owner-approved task contract before any prompt asset file becomes an executable task prompt.
 
 Phase 1P-S may instantiate P0 prompt asset scaffolds as docs-only files, but it must not create runtime prompt loading.

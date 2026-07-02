@@ -212,6 +212,9 @@ Recommended next safest step: <RECOMMENDED_NEXT_SAFEST_STEP>
 This report is advisory only. It cannot approve, merge, push, or canonicalize.
 ```
 
+Placeholder inventory:
+<REMOTE_CI_RUN> <ALLOWED_FILES> <FORBIDDEN_FILES> <EXPECTED_HEAD> <IMPLEMENTATION_COMMIT> <FINALIZED_COMMIT> <CI_RUN_ID>
+
 Placeholder values must be resolved by the Owner-approved task contract before any prompt asset file becomes an executable task prompt.
 
 Phase 1P-S may instantiate P0 prompt asset scaffolds as docs-only files, but it must not create runtime prompt loading.

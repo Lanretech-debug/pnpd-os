@@ -235,6 +235,9 @@ Return the finalization report with:
 - Next safest step
 ```
 
+Placeholder inventory:
+<CURRENT_CANONICAL_COMMIT> <CURRENT_CANONICAL_VERDICT> <REMOTE_CI_RUN> <ALLOWED_FILES> <FORBIDDEN_FILES> <EXPECTED_HEAD> <IMPLEMENTATION_COMMIT> <FINALIZED_COMMIT> <CI_RUN_ID>
+
 Placeholder values must be resolved by the Owner-approved task contract before any prompt asset file becomes an executable task prompt.
 
 Phase 1P-S may instantiate P0 prompt asset scaffolds as docs-only files, but it must not create runtime prompt loading.

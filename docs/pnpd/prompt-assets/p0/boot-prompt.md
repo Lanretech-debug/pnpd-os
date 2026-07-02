@@ -212,6 +212,9 @@ Return:
 9. Ready/not ready for next PNPD-OS task
 ```
 
+Placeholder inventory:
+<PHASE_NAME> <BRANCH_NAME> <BASE_COMMIT> <ALLOWED_FILES> <FORBIDDEN_FILES> <EXPECTED_HEAD> <IMPLEMENTATION_COMMIT> <FINALIZED_COMMIT> <CI_RUN_ID>
+
 Placeholder values must be resolved by the Owner-approved task contract before any prompt asset file becomes an executable task prompt.
 
 Phase 1P-S may instantiate P0 prompt asset scaffolds as docs-only files, but it must not create runtime prompt loading.
