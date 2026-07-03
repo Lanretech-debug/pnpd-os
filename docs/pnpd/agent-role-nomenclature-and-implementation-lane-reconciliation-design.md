@@ -35,6 +35,7 @@ Phase 1P-T is held.
 Phase 1P-T is not canonical.
 Phase 1P-T finalization is blocked pending role nomenclature reconciliation.
 The held Phase 1P-T file is advisory context only, not canonical committed-state authority.
+Owner binding correction: PHASE_1P_T_HELD_FILE_IS_ADVISORY_CONTEXT_NOT_CANONICAL_GOVERNING_FILE
 Phase 1P-U does not patch Phase 1P-T.
 Phase 1P-U does not canonicalize Phase 1P-T.
 
