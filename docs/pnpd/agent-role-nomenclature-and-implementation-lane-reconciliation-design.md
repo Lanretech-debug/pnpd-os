@@ -345,7 +345,7 @@ Expected state gate result: no output.
 | Codex implements patch | Implementation lane is breached | Lane-Boundary Rules forbid Codex from implementation | CODEX_BLOCKED_NON_AUDIT_OR_FINALIZATION_PROMPT_RECEIVED |
 | Codex self-authorizes canonical status | Owner authority is bypassed | Canonicalization Boundary requires Owner/GitHub App verification | BLOCKED_STATE_PROMPT |
 | DeepSeek treated as canonical role | Role boundary is permanently blurred | Canonical Role Definitions declare DeepSeek is not canonical | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_AMBIGUOUS_AUTHORITY |
-| Model/provider identity treated as authority | Agent role and model identity are conflated | Lane-Boundary Rules forbid treating model identity as authority | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_AMBIGUOUS_AUTHORITY |
+| model/provider identity treated as authority | Agent role and model identity are conflated | Lane-Boundary Rules forbid treating model identity as authority | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_AMBIGUOUS_AUTHORITY |
 | Historical verdicts rewritten | Audit trail is destroyed | Historical Preservation Rules forbid rewriting without migration map | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_LEGACY_TOKEN_REWRITE_RISK |
 | Historical branch names rewritten | Git history is broken | Historical Preservation Rules forbid branch rename | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_LEGACY_TOKEN_REWRITE_RISK |
 | Prompt asset file renamed too early | Evidence drift across phases | Prompt Asset Migration Question requires Owner decision first | BLOCKED_STATE_PROMPT |
