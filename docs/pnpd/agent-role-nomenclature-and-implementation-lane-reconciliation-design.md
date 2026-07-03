@@ -346,14 +346,14 @@ Expected state gate result: no output.
 | Codex self-authorizes canonical status | Owner authority is bypassed | Canonicalization Boundary requires Owner/GitHub App verification | BLOCKED_STATE_PROMPT |
 | DeepSeek treated as canonical role | Role boundary is permanently blurred | Canonical Role Definitions declare DeepSeek is not canonical | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_AMBIGUOUS_AUTHORITY |
 | model/provider identity treated as authority | Agent role and model identity are conflated | Lane-Boundary Rules forbid treating model identity as authority | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_AMBIGUOUS_AUTHORITY |
-| Historical verdicts rewritten | Audit trail is destroyed | Historical Preservation Rules forbid rewriting without migration map | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_LEGACY_TOKEN_REWRITE_RISK |
-| Historical branch names rewritten | Git history is broken | Historical Preservation Rules forbid branch rename | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_LEGACY_TOKEN_REWRITE_RISK |
-| Prompt asset file renamed too early | Evidence drift across phases | Prompt Asset Migration Question requires Owner decision first | BLOCKED_STATE_PROMPT |
-| Prompt asset name renamed too early | Evidence drift across phases | Prompt Asset Migration Question requires Owner decision first | BLOCKED_STATE_PROMPT |
-| Repo-wide search-and-replace causes evidence drift | Verdicts, evidence, and audit records become inconsistent | Forbidden Future Implementation blocks repo-wide search-and-replace | BLOCKED_STATE_PROMPT |
+| historical verdicts rewritten | Audit trail is destroyed | Historical Preservation Rules forbid rewriting without migration map | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_LEGACY_TOKEN_REWRITE_RISK |
+| historical branch names rewritten | Git history is broken | Historical Preservation Rules forbid branch rename | PNPD_ROLE_NOMENCLATURE_RECONCILIATION_BLOCKED_LEGACY_TOKEN_REWRITE_RISK |
+| prompt asset file renamed too early | Evidence drift across phases | Prompt Asset Migration Question requires Owner decision first | BLOCKED_STATE_PROMPT |
+| prompt asset name renamed too early | Evidence drift across phases | Prompt Asset Migration Question requires Owner decision first | BLOCKED_STATE_PROMPT |
+| repo-wide search-and-replace causes evidence drift | Verdicts, evidence, and audit records become inconsistent | Forbidden Future Implementation blocks repo-wide search-and-replace | BLOCKED_STATE_PROMPT |
 | Phase 1P-T finalized before nomenclature reconciliation | Phase 1P-T contains role-boundary wording that conflicts with canonical model | Phase 1P-T Interaction requires reconciliation first | BLOCKED_STATE_PROMPT |
 | Wayfinder or INDEX.md implemented before role reconciliation | Expands scope without resolving the core nomenclature issue | Forbidden Future Implementation blocks Wayfinder and INDEX.md | BLOCKED_STATE_PROMPT |
-| Runtime prompt routing introduced by naming correction | Naming fix becomes runtime infrastructure | Forbidden Future Implementation blocks runtime prompt routing | BLOCKED_STATE_PROMPT |
+| runtime prompt routing introduced by naming correction | Naming fix becomes runtime infrastructure | Forbidden Future Implementation blocks runtime prompt routing | BLOCKED_STATE_PROMPT |
 
 ## Canonicalization Boundary
 
