@@ -55,7 +55,7 @@ Incident and failure references:
 
 PNPD-OS currently contains canonical and semi-canonical wording that blurs the implementation lane by using DeepSeek/OpenCode, DeepSeek, DEEPSEEK_IMPLEMENTATION_PROMPT, and deepseek-implementation-prompt.md as if they are implementation-lane role names.
 
-The canonical PNPD-OS role order must be Hermes -> OpenCode -> Codex.
+The canonical PNPD-OS role order must be Hermes → OpenCode → Codex.
 
 DeepSeek must be treated as a model/provider reference or legacy historical token, not as the canonical PNPD-OS implementation role.
 
@@ -88,7 +88,7 @@ DeepSeek may appear only as a model/provider reference or preserved historical t
 
 ## Canonical Role Order
 
-Canonical PNPD-OS agent role order: Hermes -> OpenCode -> Codex.
+Canonical PNPD-OS agent role order: Hermes → OpenCode → Codex.
 Owner remains above all agent roles.
 GitHub/App remains the remote evidence and repository authority lane.
 
@@ -154,7 +154,7 @@ Phase chronology must remain auditable.
 ## Future-Facing Correction Rules
 
 Current and future role descriptions should use OpenCode as the canonical implementation lane.
-Current and future design contracts should use Hermes -> OpenCode -> Codex as the canonical agent sequence.
+Current and future design contracts should use Hermes → OpenCode → Codex as the canonical agent sequence.
 DeepSeek must not be used as the canonical implementation-lane role in future-facing governance text.
 
 ## Prompt Asset Migration Question
