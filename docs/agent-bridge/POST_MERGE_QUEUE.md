@@ -1,20 +1,15 @@
 # Post-Merge Queue — PNPD AgentBridge
 
-> Defines when post-merge audit is required, high-risk categories, and post-merge audit templates.
+> Defines post-merge audit policy, high-risk categories requiring additional scrutiny, and post-merge audit templates.
 > Post-merge audit is Codex's formal review of a PR after it has been merged into the target branch.
 
 ---
 
 ## When Post-Merge Audit Is Required
 
-Post-merge audit is required when **any** of the following conditions are true:
+Post-merge audit is **required for all merges**. No merge may close without a post-merge audit confirming the seven required fields (merged SHA, main SHA, scope check, CI status, runtime status, branch cleanup, lane closure).
 
-1. The PR falls into one or more **high-risk categories** (see below).
-2. The owner **overrode** a pre-merge audit gate (e.g., Codex credits unavailable).
-3. The merge occurred with **owner override** accepting caveats that warrant post-merge verification.
-4. The owner explicitly **requests** post-merge audit for any reason.
-
-If none of these conditions are true, post-merge audit is optional but recommended for sensitive changes.
+High-risk categories (see below) trigger **additional scrutiny** within the post-merge audit — not the audit itself, which is mandatory regardless.
 
 ---
 
@@ -145,19 +140,20 @@ follow_up_actions:
 ```
 MERGED
   ↓
-  ├── No high-risk → CLOSED (optional post-merge audit)
-  └── High-risk → POST_MERGE_AUDIT_REQUESTED
-                    ↓
-                    POST_MERGE_VERIFIED
-                    ↓
-                    CLOSED
+POST_MERGE_AUDIT_REQUESTED (mandatory — all merges)
+  ↓
+POST_MERGE_VERIFIED
+  ↓
+BRANCH_CLEANUP
+  ↓
+CLOSED
 ```
 
 ---
 
 ## Core Rules
 
-1. Post-merge audit is **mandatory** for high-risk categories. It is not optional.
+1. Post-merge audit is **mandatory** for all merges. It is never optional.
 2. Post-merge audit reviews the **merged state in the target branch** — not just the PR diff. This catches merge-resolution errors and cross-PR drift.
 3. If post-merge audit finds issues, Codex MUST recommend one of: rollback, follow-up patch PR, or accept with caveats.
 4. Post-merge audit results go to the **Owner** for decision — never auto-actioned.

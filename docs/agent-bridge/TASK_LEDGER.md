@@ -35,6 +35,8 @@ POST_MERGE_AUDIT_REQUESTED
   ↓
 POST_MERGE_VERIFIED
   ↓
+BRANCH_CLEANUP
+  ↓
 CLOSED
 
 (any state) → BLOCKED
@@ -108,7 +110,7 @@ CLOSED
 
 - **Meaning:** Codex has been requested to perform formal audit.
 - **Who can enter:** Hermes (routing to Codex).
-- **Required evidence:** Full PR diff; Hermes verification result; DeepSeek self-review.
+- **Required evidence:** Full branch/proposed diff; Hermes verification result; DeepSeek self-review.
 - **Allowed next states:** `CODEX_APPROVED`, `REQUEST_CHANGES`, `BLOCKED`.
 - **Forbidden next states:** `OWNER_APPROVED`, `MERGED`.
 
@@ -133,13 +135,13 @@ CLOSED
 - **Meaning:** PR has been merged into target branch.
 - **Who can enter:** Owner (authorizes merge); DeepSeek or GitHub executes.
 - **Required evidence:** Merge commit hash; merge timestamp.
-- **Allowed next states:** `POST_MERGE_AUDIT_REQUESTED`, `CLOSED`.
-- **Forbidden next states:** Reversion to pre-merge states.
+- **Allowed next states:** `POST_MERGE_AUDIT_REQUESTED`.
+- **Forbidden next states:** `CLOSED` (post-merge audit is mandatory before closing), reversion to pre-merge states.
 
 ### POST_MERGE_AUDIT_REQUESTED
 
-- **Meaning:** Post-merge audit required (high-risk PR).
-- **Who can enter:** Owner (requests); auto-triggered for high-risk categories.
+- **Meaning:** Post-merge audit required (all merges — mandatory, not optional).
+- **Who can enter:** Auto-triggered by MERGED state (all merges).
 - **Required evidence:** Merge commit; risk category; owner decision reference.
 - **Allowed next states:** `POST_MERGE_VERIFIED`, `BLOCKED`.
 - **Forbidden next states:** `CLOSED` (must complete post-merge audit first).
@@ -168,11 +170,19 @@ CLOSED
 - **Allowed next states:** `IN_PROGRESS` (DeepSeek implements changes); `CLOSED`.
 - **Forbidden next states:** Advancement without addressing change requests.
 
+### BRANCH_CLEANUP
+
+- **Meaning:** Remote and local working branches have been cleaned up after successful post-merge verification.
+- **Who can enter:** DeepSeek / OpenCode (executes); Owner or Hermes (confirms).
+- **Required evidence:** `git branch -r` shows no remote working branch; `git branch` shows no local working branch; cleanup confirmation recorded.
+- **Allowed next states:** `CLOSED`, `BLOCKED`.
+- **Forbidden next states:** Reversion to any pre-CLEANUP state.
+
 ### CLOSED
 
 - **Meaning:** Task complete and all gates satisfied. No further action.
 - **Who can enter:** Owner.
-- **Required evidence:** All required gates passed; merge complete (if applicable); post-merge audit complete (if required).
+- **Required evidence:** All required gates passed; merge complete; post-merge audit complete; branch cleanup confirmed.
 - **Allowed next states:** None (terminal state).
 - **Forbidden next states:** Reopening requires new task proposal.
 
@@ -206,7 +216,7 @@ The following controls are enforced at every state transition. Any violation blo
 ### PR Integrity
 
 6. **PR scope mismatch triggers Hermes verification.** If the implemented diff does not match the approved scope, Hermes must flag it.
-7. **Large PRs must be audited as large PRs, not latest commits only.** Codex must audit the full PR diff, not just the most recent commit. Squash-merging does not reduce audit scope.
+7. **Large PRs must be audited as large PRs, not latest commits only.** Codex must audit the full branch/proposed diff, not just the most recent commit. Squash-merging does not reduce audit scope.
 
 ### Branch Integrity
 
@@ -220,7 +230,7 @@ The following controls are enforced at every state transition. Any violation blo
 ### Merge Gate
 
 11. **Merge requires Codex audit or explicit owner override rationale.** No merge without Codex audit result OR a recorded owner override with rationale.
-12. **Post-merge audit is required for high-risk merges.** See `POST_MERGE_QUEUE.md` for high-risk categories.
+12. **Post-merge audit is required for all merges.** No merge may close without a post-merge audit confirming the seven required fields. See `POST_MERGE_QUEUE.md` for high-risk categories (which require additional scrutiny, not triggering).
 
 ### Handoff Integrity
 

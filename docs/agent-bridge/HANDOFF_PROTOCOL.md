@@ -74,7 +74,7 @@ handoff:
     - deepseek_self_review: "path/to/deepseek-self-review.md"
     - task_ledger_entry: "TASK-001"
   blockers: []
-  next_action: "Codex formal pre-merge audit of full PR diff"
+  next_action: "Codex formal pre-merge audit of full branch/proposed diff"
 ```
 
 ### Codex → DeepSeek
@@ -170,7 +170,7 @@ Examples:
 
 - `"Hermes verify branch, dirty tree, evidence completeness"`
 - `"DeepSeek implement Codex change requests, re-self-review"`
-- `"Codex formal pre-merge audit of full PR diff"`
+- `"Codex formal pre-merge audit of full branch/proposed diff"`
 - `"Owner review caveats and decide merge/patch/reject"`
 - `"Codex post-merge audit of merged diff in target branch"`
 

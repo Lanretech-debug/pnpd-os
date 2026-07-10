@@ -261,13 +261,27 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Failure Behaviour | If self-review reveals unresolved issues, Lane returns to Gate 1 for fixes, then re-runs Gates 2–4. |
 | Rollback Behaviour | Revert problematic commits before re-entering Gate 1. |
 
+### (Prerequisite) Hermes Operational Verification — Layer 2
+
+*This is not a numbered gate. It is a mandatory prerequisite invoked between Gate 5 (Self Review) and Gate 6 (Codex Audit).*
+
+| Field | Value |
+|-------|-------|
+| Purpose | Hermes verifies worktree state, branch, evidence completeness, and anti-drift controls before the lane enters formal Codex audit. |
+| Owner | Hermes |
+| Entry Criteria | Gate 5 passed; self-review log available. |
+| Exit Criteria | Hermes issues one of: `READY_FOR_CODEX_AUDIT`, `REQUEST_CHANGES` (returns to Gate 1), or `BLOCKED` (blocks lane). |
+| Evidence Required | Hermes verification log confirming branch, worktree, evidence completeness, and anti-drift checks. |
+| Failure Behaviour | `REQUEST_CHANGES` returns lane to Gate 1. `BLOCKED` holds lane until blocker is resolved. |
+| Rollback Behaviour | If branch drift or contamination is detected, Hermes may recommend branch recreation before re-entry. |
+
 ### Gate 6 — Independent Codex Audit
 
 | Field | Value |
 |-------|-------|
 | Purpose | Independent formal audit by Codex. Validates implementation, scope fidelity, safety, governance compliance, and runtime evidence. |
 | Owner | Codex |
-| Entry Criteria | Gate 5 passed; self-review log available; full PR diff available. |
+| Entry Criteria | Gate 5 passed; Hermes verification completed; self-review log available; full branch/proposed diff available. |
 | Exit Criteria | Codex issues one of: `CODEX_APPROVED`, `CODEX_APPROVED_WITH_CAVEATS`, `CODEX_REQUEST_CHANGES`, or `CODEX_BLOCKED`. |
 | Evidence Required | Codex audit report documenting verdict, caveats (if any), and merge recommendation. |
 | Failure Behaviour | `CODEX_REQUEST_CHANGES` returns Lane to Gate 1. `CODEX_BLOCKED` holds Lane until blocker is resolved. |
@@ -347,6 +361,8 @@ Gate 3  Integration Tests Green
 Gate 4  Runtime Smoke Passed
   ↓
 Gate 5  Self Review Complete
+  ↓
+(Hermes Verification — Layer 2, mandatory prerequisite)
   ↓
 Gate 6  Independent Codex Audit
   ↓
@@ -430,6 +446,17 @@ Every execution contract (task contract, UEP, or equivalent) must explicitly dec
 5. **Exit Criteria** — conditions that define lane completion.
 
 A contract missing any of the five fields is incomplete. No agent may begin implementation on an incomplete contract.
+
+### Rule 11 — Hermes Before Codex
+
+No implementation lane may enter Codex audit (Gate 6) before Hermes operational verification (Layer 2) confirms all of the following:
+
+- worktree is clean and on the correct working branch
+- evidence for Gates 1–5 is complete and recorded
+- no anti-drift violation exists (scope, authority, security, branch)
+- self-review log is available and complete
+
+Hermes verification is a mandatory prerequisite to Gate 6. It does not replace Codex audit. Hermes may route back to DeepSeek (REQUEST_CHANGES) or forward to Codex (ready for audit). Hermes cannot override Codex findings or owner decisions.
 
 ---
 
@@ -520,17 +547,17 @@ This phase reserves the field only. It does not implement routing, validation, r
 ### Authority Model
 
 - Owner = final authority
-- Hermes = design
+- Hermes = design, orchestration, and operational verification (Layer 2)
 - DeepSeek/OpenCode = implementation
-- Codex = audit/finalization
+- Codex = audit/finalization (pre-merge: Layer 3; post-merge: Layer 4)
 - GitHub/App = remote evidence verification
 
 ### Responsibilities
 
-- Hermes may design and recommend. Hermes does not implement this phase.
+- Hermes may design, recommend, and operationally verify (Layer 2). Hermes does not implement this phase, does not audit, and does not merge. Hermes verification (Layer 2) is a mandatory prerequisite between Gate 5 (Self Review) and Gate 6 (Codex Audit). Hermes cannot override Codex findings or Owner decisions.
 - DeepSeek/OpenCode implements only within Owner-approved scope.
-- Codex audits and finalizes.
-- Owner approves taste, scope expansion, baseline changes, and canonicalization.
+- Codex audits and finalizes. Codex pre-merge audit (Layer 3) is a mandatory gate before any PR may be opened. Codex post-merge audit (Layer 4) is mandatory for all merges before lane closure.
+- Owner approves taste, scope expansion, baseline changes, and canonicalization. Owner may override Codex findings with recorded rationale.
 
 ## Forbidden Implementation
 

@@ -161,7 +161,7 @@ failed_checks: []
 skipped_checks: []
 blockers: []
 routing_decision: "codex"
-next_action: "Codex formal pre-merge audit of full PR diff"
+next_action: "Codex formal pre-merge audit of full branch/proposed diff"
 evidence_refs:
   - "audits/hermes-verify-TASK-001.md"
 timestamp: "2026-06-10T12:05:00Z"
@@ -190,7 +190,7 @@ evidence:
   - deepseek_self_review: "audits/self-review-TASK-001.md"
   - task_ledger: "TASK-001"
 status: "PENDING_CODEX_FINAL_AUDIT"
-next_action: "Codex audit full PR diff and record result"
+next_action: "Codex audit full branch/proposed diff and record result"
 timestamp: "2026-06-10T12:05:00Z"
 commit_hash: "def456abc789"
 ```

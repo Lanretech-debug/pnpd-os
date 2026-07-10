@@ -37,7 +37,7 @@ Every Codex pre-merge audit must explicitly declare one of:
 A verdict of `Runtime Not Verified` SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`.
 
 ## Can Do:
-- Audit the full PR diff
+- Audit the full branch/proposed diff
 - Verify scope against task intent
 - Review security, auth, data, and safety boundaries
 - Review tests, gates, smoke evidence, and skipped checks

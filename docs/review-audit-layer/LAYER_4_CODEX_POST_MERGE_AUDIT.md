@@ -1,10 +1,8 @@
 # Layer 4 — Codex Post-Merge Audit: Retrospective Drift Check
 
-Codex post-merge audit is a retrospective safety and drift check after merge.
+Codex post-merge audit is a mandatory retrospective safety and drift check after every merge. No merge may close without a post-merge audit confirming the seven required fields.
 
-Required for high-risk merges, optional for low-risk docs-only merges.
-
-## High-Risk Categories (Trigger Post-Merge Audit)
+## High-Risk Categories (Additional Scrutiny)
 
 | Category | Examples |
 |----------|----------|
