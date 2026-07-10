@@ -339,12 +339,12 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 
 | Field | Value |
 |-------|-------|
-| Purpose | Remove the working branch after the merge is verified and stable. |
+| Purpose | Remove the working branch after the merge is verified and stable, or confirm the branch is already absent, or record that no feature branch existed. |
 | Owner | DeepSeek / OpenCode |
 | Entry Criteria | Gate 10 passed; post-merge audit confirms no critical drift. |
-| Exit Criteria | Remote branch deleted; local branch deleted. |
-| Evidence Required | `git branch -r` shows no remote branch; `git branch` shows no local working branch. |
-| Failure Behaviour | If branch cannot be deleted (e.g., branch protection), record exception and escalate to Owner. |
+| Exit Criteria | Cleanup outcome recorded with one of `completed`, `already_absent`, or `not_applicable_with_reason`. Remote and local branches are deleted (or confirmed absent). |
+| Evidence Required | `branch_cleanup_status`, `local_branch_status`, `remote_branch_status`, `verification_command_or_source`, `canonical_main_sha`, `merged_head_reachable_from_main`, `reason_if_not_applicable`, `verified_by`, `verified_at`. |
+| Failure Behaviour | An existing branch must not remain merely for reference. An already-absent branch must not be recreated. A lane with no feature branch must record `not_applicable_with_reason`. If branch cannot be deleted (e.g., branch protection), record exception and escalate to Owner. |
 | Rollback Behaviour | N/A — branch cleanup is safe once merge is verified. Branch can be recreated from merge commit if needed. |
 
 ### Gate Flow Diagram
@@ -399,10 +399,11 @@ Runtime defects discovered after implementation (at any gate from Gate 4 onward)
 
 Codex audit validates implementation correctness, scope fidelity, and governance compliance. It does not replace or certify runtime verification.
 
-Every audit must declare one of:
+Every audit must declare exactly one of:
 
 - `Runtime Verified` — runtime smoke evidence was reviewed and is acceptable.
 - `Runtime Not Verified` — runtime smoke evidence was missing, insufficient, or not reviewed. When Runtime Not Verified is declared, the Pre-Merge Audit SHALL reject the PR.
+- `Runtime Not Applicable` — the lane has no executable runtime surface (governance-only documentation, templates, or non-runnable changes). Requires: explicit reason, affected surface classification, substitute validation evidence, self-review confirmation, Hermes verification, and Codex acceptance during audit. Substitute evidence may include: `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-document contradiction analysis, state-machine transition review, or GitHub CI results.
 
 ### Rule 4 — No PR Before Gate 6
 
@@ -422,7 +423,7 @@ No lane is complete until Gate 10 (Post-Merge Verification) passes. Merge alone 
 
 ### Rule 8 — Audit Declares Runtime Status
 
-Every Codex audit output must explicitly declare `Runtime Verified` or `Runtime Not Verified` as part of the audit verdict. A blank or absent runtime field is treated as Runtime Not Verified.
+Every Codex audit output must explicitly declare one of `Runtime Verified`, `Runtime Not Verified`, or `Runtime Not Applicable` as part of the audit verdict. A blank or absent runtime field is treated as Runtime Not Verified. A `Runtime Not Applicable` declaration requires substitute evidence per Rule 3.
 
 ### Rule 9 — Review Comments Must Distinguish Defect Types
 

@@ -17,7 +17,7 @@
 | **Merge Commit** | |
 | **Auditor** | |
 | **Date** | |
-| **Trigger** | `HIGH_RISK` / `OWNER_OVERRIDE` / `OWNER_REQUEST` / `OPTIONAL` |
+| **Trigger** | `ALL_MERGES` / `HIGH_RISK_DEPTH` / `OWNER_OVERRIDE` / `OWNER_REQUEST` |
 
 ---
 

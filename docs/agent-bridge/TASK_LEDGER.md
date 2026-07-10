@@ -29,6 +29,8 @@ CODEX_APPROVED
   ↓
 OWNER_APPROVED
   ↓
+PR_OPENED
+  ↓
 MERGED
   ↓
 POST_MERGE_AUDIT_REQUESTED
@@ -81,12 +83,12 @@ CLOSED
 
 ### RUNTIME_SMOKE_TESTED
 
-- **Meaning:** The implementation has been verified at runtime (local dev server, staging, or browser smoke). This gate prevents entering self-review or audit without runtime evidence.
+- **Meaning:** The implementation has been verified at runtime (local dev server, staging, or browser smoke), or the lane has no executable runtime surface. This gate prevents entering self-review or audit without runtime evidence or an approved N/A declaration.
 - **Who can enter:** DeepSeek / OpenCode.
-- **Required evidence:** Runtime smoke evidence recorded (screenshots, terminal output, console logs, or HTTP response codes proving the app starts and responds).
+- **Required evidence:** Runtime smoke evidence recorded (screenshots, terminal output, console logs, or HTTP response codes proving the app starts and responds) **or** `Runtime Not Applicable` declaration with full N/A evidence contract (runtime_reason, runtime_surface, substitute_evidence, verified_by, verified_at).
 - **Allowed next states:** `SELF_REVIEWED`, `BLOCKED`.
 - **Forbidden next states:** `HERMES_VERIFIED`, `CODEX_APPROVED`, `MERGED`.
-- **Anti-drift:** Runtime smoke is NOT a substitute for self-review, Hermes verification, or Codex audit. It is a prerequisite only.
+- **Anti-drift:** Runtime smoke is NOT a substitute for self-review, Hermes verification, or Codex audit. It is a prerequisite only. `Runtime Not Applicable` requires substitute evidence and does not skip governance validation.
 
 ### SELF_REVIEWED
 
@@ -124,11 +126,20 @@ CLOSED
 
 ### OWNER_APPROVED
 
-- **Meaning:** Owner has reviewed and approved the merge.
+- **Meaning:** Owner has reviewed and approved the changes. A pull request must now be opened.
 - **Who can enter:** Owner.
 - **Required evidence:** Owner decision record with rationale; merge authorization.
-- **Allowed next states:** `MERGED`, `BLOCKED`.
-- **Forbidden next states:** Reversion to any pre-approval state without new REQUEST_CHANGES.
+- **Allowed next states:** `PR_OPENED`, `BLOCKED`.
+- **Forbidden next states:** `MERGED` (PR must be opened first), `CLOSED` (merge must occur before closure), reversion to any pre-approval state without new REQUEST_CHANGES.
+
+### PR_OPENED
+
+- **Meaning:** A pull request has been opened against the target branch. The PR body documents the scope, test results, runtime evidence, Hermes verification, Codex audit, and Owner approval trail.
+- **Who can enter:** DeepSeek / OpenCode (opens PR).
+- **Required evidence:** PR number; PR URL; base branch; base SHA; head branch; head SHA; draft or ready status; proposed diff verified against approved scope; Owner approval reference.
+- **Allowed next states:** `MERGED`, `REQUEST_CHANGES` (if the proposed diff changes materially), `BLOCKED`.
+- **Forbidden next states:** `CLOSED` (PR must be merged before closure), `POST_MERGE_VERIFIED` (merge has not occurred), `BRANCH_CLEANUP` (merge has not occurred).
+- **Failure behaviour:** If the PR diff does not match the approved scope, the lane returns to `REQUEST_CHANGES` for correction. If the PR cannot be opened (branch conflict, base divergence), the issue must be resolved before re-entry.
 
 ### MERGED
 
@@ -172,11 +183,21 @@ CLOSED
 
 ### BRANCH_CLEANUP
 
-- **Meaning:** Remote and local working branches have been cleaned up after successful post-merge verification.
+- **Meaning:** Remote and/or local working branches have been cleaned up after successful post-merge verification. The cleanup outcome is recorded, and no branch remains without justification.
 - **Who can enter:** DeepSeek / OpenCode (executes); Owner or Hermes (confirms).
-- **Required evidence:** `git branch -r` shows no remote working branch; `git branch` shows no local working branch; cleanup confirmation recorded.
+- **Required evidence:**
+  - `branch_cleanup_status`: one of `completed`, `already_absent`, `not_applicable_with_reason`
+  - `local_branch_status`: deleted or verified absent
+  - `remote_branch_status`: deleted or verified absent
+  - `verification_command_or_source`: the git command or automation that confirms absence
+  - `canonical_main_sha`: the target branch SHA after merge
+  - `merged_head_reachable_from_main`: confirmed
+  - `reason_if_not_applicable`: required when status is `not_applicable_with_reason`
+  - `verified_by`: agent or human who confirmed
+  - `verified_at`: ISO 8601 timestamp
 - **Allowed next states:** `CLOSED`, `BLOCKED`.
 - **Forbidden next states:** Reversion to any pre-CLEANUP state.
+- **Failure behaviour:** An existing branch must not remain merely for reference. An already-absent branch must not be recreated merely to delete it. A no-branch lane must explicitly record `not_applicable_with_reason` and the reason.
 
 ### CLOSED
 
@@ -253,7 +274,8 @@ Every task ledger entry MUST record the following lifecycle fields. Each field r
 | `scopeLocked` | Gate 0 | Before implementation begins |
 | `runtimeSmoke` | RUNTIME_SMOKE_TESTED | Before self-review |
 | `auditCompleted` | CODEX_APPROVED / CODEX_REQUEST_CHANGES | After Codex audit |
-| `ownerApproval` | OWNER_APPROVED | Before merge |
+| `ownerApproval` | OWNER_APPROVED | Before PR is opened |
+| `prOpened` | PR_OPENED | Before merge |
 | `merge` | MERGED | After merge |
 | `verification` | POST_MERGE_VERIFIED | After post-merge audit |
 | `cleanup` | BRANCH_CLEANUP | Before CLOSED |

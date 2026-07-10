@@ -115,7 +115,7 @@ handoff:
 
 ### Owner → Post-Merge Audit
 
-**Trigger:** Owner approved merge on high-risk PR. Post-merge audit needed.
+**Trigger:** Owner approved merge. Post-merge audit is mandatory for all merges. High-risk categories affect verification depth only.
 
 ```yaml
 handoff:

@@ -324,7 +324,7 @@ issues_found: []
 rollback_recommended: false
 rollback_rationale: ""
 follow_up_actions: []
-next_action: "Task closed; no further action required"
+next_action: "Post-merge verification passed. Branch cleanup is now required. Lane remains open until cleanup evidence recorded."
 timestamp: "2026-06-10T12:45:00Z"
 evidence_refs:
   - "audits/post-merge-audit-TASK-001.md"

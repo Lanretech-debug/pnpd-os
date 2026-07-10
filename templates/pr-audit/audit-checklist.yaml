@@ -56,14 +56,16 @@
 
 ### 4. Runtime Verification
 
-- [ ] Runtime smoke test completed and passed on working branch
-- [ ] Runtime evidence documented (screenshots, logs, terminal output, or HTTP responses)
-- [ ] Runtime evidence proves the app starts and the affected flows respond correctly
-- [ ] Runtime status declared in audit verdict (`Runtime Verified` or `Runtime Not Verified`)
+- [ ] Runtime smoke test completed and passed on working branch (or `Runtime Not Applicable` declared)
+- [ ] Runtime evidence documented (screenshots, logs, terminal output, or HTTP responses) — or substitute evidence for N/A lanes
+- [ ] Runtime evidence proves the app starts and the affected flows respond correctly — or substitute evidence confirms correctness
+- [ ] Runtime status declared in audit verdict (`Runtime Verified`, `Runtime Not Verified`, or `Runtime Not Applicable`)
 
 **Notes:**
 
 If `Runtime Not Verified` is declared, the Pre-Merge Audit SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`.
+
+If `Runtime Not Applicable` is declared, the full N/A evidence contract is required (runtime_reason, runtime_surface, substitute_evidence, verified_by, verified_at). Substitute evidence may include `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-document contradiction analysis, or state-machine transition review.
 
 ---
 

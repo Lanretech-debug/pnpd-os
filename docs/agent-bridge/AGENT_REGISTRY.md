@@ -116,7 +116,7 @@ cannot_do:
   - Audit a PR by inspecting only the latest commit
   - Skip audit gates without recording rationale
 required_inputs:
-  - Full PR diff and commit history
+  - Full branch/proposed diff against the current base, plus commit history
   - Hermes verification result
   - DeepSeek self-review evidence
   - Task ledger current state

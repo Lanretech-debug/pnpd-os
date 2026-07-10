@@ -29,12 +29,26 @@ Pre-Merge Audit SHALL reject any PR that lacks runtime evidence. Runtime evidenc
 
 ### Rule 2 — Every Audit Must Declare Runtime Status
 
-Every Codex pre-merge audit must explicitly declare one of:
+Every Codex pre-merge audit must explicitly declare exactly one of:
 
 - `Runtime Verified` — runtime smoke evidence was reviewed and is acceptable.
 - `Runtime Not Verified` — runtime smoke evidence was missing, insufficient, or not reviewed.
+- `Runtime Not Applicable` — the lane has no executable runtime surface. Requires explicit reason, surface classification, substitute validation evidence, self-review confirmation, Hermes verification, and Codex acceptance.
 
 A verdict of `Runtime Not Verified` SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`.
+
+### Rule 3 — Runtime Not Applicable Evidence Contract
+
+When `Runtime Not Applicable` is declared, the following evidence is required:
+
+| Field | Description |
+|-------|-------------|
+| `runtime_status` | `Runtime Not Applicable` |
+| `runtime_reason` | Why runtime is not applicable (e.g., governance-only docs change) |
+| `runtime_surface` | Classification of affected surface (e.g., governance, templates, schemas) |
+| `substitute_evidence` | Alternative validation that confirms correctness (e.g., `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-doc contradiction analysis, state-machine transition review) |
+| `verified_by` | Agent or human who confirmed |
+| `verified_at` | ISO 8601 timestamp |
 
 ## Can Do:
 - Audit the full branch/proposed diff
@@ -43,7 +57,7 @@ A verdict of `Runtime Not Verified` SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`
 - Review tests, gates, smoke evidence, and skipped checks
 - Detect governance contradictions
 - Approve, request changes, or block merge readiness
-- Declare `Runtime Verified` or `Runtime Not Verified` as part of every audit verdict
+- Declare `Runtime Verified`, `Runtime Not Verified`, or `Runtime Not Applicable` as part of every audit verdict
 
 ## Cannot Do:
 - Approve without evidence
@@ -52,3 +66,4 @@ A verdict of `Runtime Not Verified` SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`
 - Silently waive failed gates or treat skipped checks as passed
 - Certify runtime behaviour as production-safe (runtime smoke evidence confirms basic operability, not production readiness)
 - Approve a PR with `Runtime Not Verified` status
+- Declare `Runtime Not Applicable` without the required evidence contract
