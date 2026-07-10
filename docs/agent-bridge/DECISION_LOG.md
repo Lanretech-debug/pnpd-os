@@ -99,17 +99,23 @@ If `merge_authorized: true`, the decision MUST include:
 
 ```yaml
 merge_authorization:
-  pr_id: "PR-EXAMPLE"
+  pr_id: "PR-001"
+  pr_url: "https://github.com/org/repo/pull/1"
   branch: "feat/example"
   target: "main"
   base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
   head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
-  timestamp: "2026-06-10T12:30:00Z"
+  codex_audit_reference: "ARES-001"
+  codex_verdict: "CODEX_AUDIT_COMPLETED"
+  required_checks_status: "all_passed"
+  approved_merge_method: "squash"  # squash | merge | rebase
+  approved_by: "owner"
+  approved_at: "2026-06-10T12:45:00Z"
 ```
 
 Without a merge authorization block, the merge is not authorized even if `merge_authorized: true`.
 
-A merge authorization MUST include a real PR number (`pr_id`). `pr_id: "N/A"` is never valid for merge authorization. Merge authorization is bound to the specific PR, base SHA, and head SHA. A material head-SHA change invalidates the authorization.
+A merge authorization MUST include a real PR number (`pr_id`). `pr_id: "N/A"` is never valid for merge authorization. Merge authorization is bound to the specific PR, base SHA, head SHA, current Codex audit, and current required-check status. A material head-SHA change invalidates the authorization. The `codex_verdict` field captures the Codex audit outcome (e.g., `CODEX_AUDIT_COMPLETED`, `CODEX_AUDIT_COMPLETED_WITH_CAVEATS`). `approved_merge_method` records the merge strategy (squash, merge commit, or rebase) approved by the owner.
 
 ---
 
@@ -165,7 +171,10 @@ base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
 head_branch: "feat/example-feature"
 head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
 codex_audit_reference: "ARES-001"
+codex_verdict: "CODEX_AUDIT_COMPLETED"
 required_checks_status: "all_passed"
+approved_merge_method: "squash"
+approved_by: "owner"
 owner_decision_reference: "DEC-002"
 approved_at: "2026-06-10T12:45:00Z"
 rationale: "All checks passed. Codex audit completed. PR scope matches approved task. Proceeding with merge."
@@ -221,7 +230,10 @@ base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
 head_branch: "example-governance-branch"
 head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
 codex_audit_reference: "ARES-003"
+codex_verdict: "CODEX_BLOCKED_EXTERNAL"
 required_checks_status: "all_passed"
+approved_merge_method: "merge"
+approved_by: "owner"
 owner_decision_reference: "DEC-004"
 approved_at: "2026-06-10T14:00:00Z"
 rationale: "Codex formal audit blocked due to Codex credit exhaustion (BLK-004). This is a docs-only PR with zero runtime impact. Overriding audit gate. Post-merge audit will be requested after credits are restored."

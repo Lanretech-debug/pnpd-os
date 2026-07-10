@@ -330,24 +330,24 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 
 | Field | Value |
 |-------|-------|
-| Purpose | Confirm that the merge did not break main. Verify the merged commit, main SHA, scope fidelity, CI status, and runtime behaviour. |
+| Purpose | Confirm that the merge did not break main. Verify the merged commit, main SHA, scope fidelity, CI status, and runtime behaviour. Record cleanup eligibility — Gate 10 does NOT perform cleanup or close the lane. |
 | Owner | Codex |
 | Entry Criteria | Gate 9 passed; merge commit exists on main. |
-| Exit Criteria | Post-merge audit report documents: merged SHA, main SHA, scope check result, CI status, runtime status, branch cleanup status, and lane closure recommendation. |
-| Evidence Required | Post-merge audit report with all 7 confirmation fields. |
-| Failure Behaviour | If post-merge verification detects critical drift, recommend rollback to Owner. Non-critical drift creates a follow-up issue. |
+| Exit Criteria | Post-merge audit report documents: merged SHA, main SHA, scope check result, CI status, runtime status, branch cleanup eligibility, and lane closure recommendation. |
+| Evidence Required | Post-merge audit report with all 7 confirmation fields. Cleanup fields recorded at Gate 10: `branch_cleanup_status` (one of `pending`, `already_absent`, `not_applicable_with_reason`), `cleanup_eligibility` (eligible or blocked), `cleanup_required_actions`, `cleanup_blockers`, `lane_closure_ready` (must be `false` at Gate 10 — cleanup must complete first). |
+| Failure Behaviour | If post-merge verification detects critical drift, recommend rollback to Owner. Non-critical drift creates a follow-up issue. Gate 10 must not perform branch deletion, claim final lane closure, or transition directly to CLOSED. |
 | Rollback Behaviour | Owner decides: rollback (`git revert`), hotfix, or follow-up. |
 
-### Gate 11 — Branch Cleanup
+### Gate 11 — Branch Cleanup and Closure
 
 | Field | Value |
 |-------|-------|
-| Purpose | Remove the working branch after the merge is verified and stable, or confirm the branch is already absent, or record that no feature branch existed. |
-| Owner | DeepSeek / OpenCode |
-| Entry Criteria | Gate 10 passed; post-merge audit confirms no critical drift. |
-| Exit Criteria | Cleanup outcome recorded with one of `completed`, `already_absent`, or `not_applicable_with_reason`. Remote and local branches are deleted (or confirmed absent). |
-| Evidence Required | `branch_cleanup_status`, `local_branch_status`, `remote_branch_status`, `verification_command_or_source`, `canonical_main_sha`, `merged_head_reachable_from_main`, `reason_if_not_applicable`, `verified_by`, `verified_at`. |
-| Failure Behaviour | An existing branch must not remain merely for reference. An already-absent branch must not be recreated. A lane with no feature branch must record `not_applicable_with_reason`. If branch cannot be deleted (e.g., branch protection), record exception and escalate to Owner. |
+| Purpose | Perform required branch deletion (if applicable), verify one valid cleanup outcome, record cleanup evidence, determine closure eligibility, and transition to CLOSED only after evidence passes. No lane may close without passing Gate 11. |
+| Owner | DeepSeek / OpenCode (executes); Owner or Hermes (confirms). |
+| Entry Criteria | Gate 10 passed; post-merge audit confirms no critical drift; cleanup fields recorded at Gate 10. |
+| Exit Criteria | One valid cleanup outcome recorded with full outcome-specific evidence. Cleanup performed or confirmed. `lane_closure_ready` set to `true`. Lane transitions to `CLOSED` if evidence passes, or `BLOCKED` if it fails. |
+| Outcome Evidence | Evidence required depends on the specific cleanup outcome: **completed** — `branch_cleanup_status`: completed, `branch_previously_existed`: true, `branch_name`, `deletion_command_or_authoritative_source`, `local_branch_status_before`: exists, `local_branch_status_after`: deleted, `remote_branch_status_before`: exists, `remote_branch_status_after`: deleted, `canonical_main_sha`, `merged_head_sha`, `merged_head_reachable_from_main`: true, `verified_by`, `verified_at`. **already_absent** — `branch_cleanup_status`: already_absent, `branch_name`, `independent_absence_verification`, `automatic_or_prior_deletion_evidence` (where available), `local_branch_status`: absent, `remote_branch_status`: absent, `canonical_main_sha`, `merged_head_sha`, `merged_head_reachable_from_main`: true, `verified_by`, `verified_at`. **not_applicable_with_reason** — `branch_cleanup_status`: not_applicable_with_reason, `explicit_reason`, `evidence_no_feature_branch_was_used`, `change_delivery_method`, `canonical_main_sha`, `relevant_commit_or_merge_evidence`, `verified_by`, `verified_at`. |
+| Failure Behaviour | An existing branch must not remain merely for reference. An already-absent branch must not be recreated. A lane with no feature branch must record `not_applicable_with_reason`. `not_applicable_with_reason` must not be used because cleanup is inconvenient or where a branch existed. Unsupported claims route to `BLOCKED`. If branch cannot be deleted (e.g., branch protection), record exception and escalate to Owner. Gate 11 must not be skipped — it is the only gate that can set `lane_closure_ready: true`. |
 | Rollback Behaviour | N/A — branch cleanup is safe once merge is verified. Branch can be recreated from merge commit if needed. |
 
 ### Gate Flow Diagram
@@ -375,24 +375,24 @@ Gate 8  Pull Request
    ↓
 Gate 9  Owner Merge Approval + Merge
   ↓
-Gate 10 Post-Merge Verification
+Gate 10 Post-Merge Verification (records cleanup eligibility, lane_closure_ready=false)
   ↓
-Gate 11 Branch Cleanup
+Gate 11 Branch Cleanup and Closure (performs/verifies cleanup, lane_closure_ready=true)
   ↓
-        Lane Closed
+        CLOSED (successful completion)
 ```
 
 ---
 
 ## Mandatory Governance Rules
 
-The following rules are mandatory for every implementation lane. They replace any prior advisory language.
+There are 11 top-level mandatory governance rules (Rules 1–11). Rule 3a is a subordinate clarification under Rule 3 and is not counted as a separate top-level rule. These rules are mandatory for every implementation lane. They replace any prior advisory language.
 
-### Rule 1 — Runtime before Audit
+### Rule 1 — Runtime Evidence before Audit
 
-No implementation lane may enter Codex audit before Runtime Smoke succeeds.
+No implementation lane may enter Codex audit before Gate 4 (Runtime Evidence Satisfied) is met. Gate 4 is satisfied through one of: Runtime Verified (executable runtime exists and runtime evidence is complete) or Runtime Not Applicable (no executable runtime surface and the complete N/A evidence contract is met). Runtime Not Verified never satisfies Gate 4.
 
-Audit checks implementation, scope, safety, and governance — it never replaces runtime verification.
+Audit checks implementation, scope, safety, and governance — it never replaces runtime verification. Static checks do not replace runtime evidence for executable work.
 
 ### Rule 2 — Runtime Defect Returns Lane to Implementation
 
@@ -408,7 +408,7 @@ Every audit must declare exactly one of:
 - `Runtime Not Verified` — runtime smoke evidence was missing, insufficient, or not reviewed. When Runtime Not Verified is declared, the Pre-Merge Audit SHALL reject the PR.
 - `Runtime Not Applicable` — the lane has no executable runtime surface (governance-only documentation, templates, or non-runnable changes). Requires: explicit reason, affected surface classification, substitute validation evidence, self-review confirmation, Hermes verification, and Codex acceptance during audit. Substitute evidence may include: `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-document contradiction analysis, state-machine transition review, or GitHub CI results.
 
-### Rule 3a — Runtime Status Routing
+#### Rule 3a — Runtime Status Routing (subordinate to Rule 3)
 
 Every lane must carry `runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, and `runtime_verified_at` across all handoffs and ledger entries.
 
@@ -430,9 +430,9 @@ Gate 7 (Owner PR Authorization) authorizes PR creation only. Gate 9 (Owner Merge
 
 Branch cleanup (Gate 11) is a required step in every lane. The working branch must be deleted after merge verification completes. An undeleted branch is evidence of an incomplete lane.
 
-### Rule 7 — Lane Completion Requires Post-Merge Verification
+### Rule 7 — Lane Completion Requires Post-Merge Verification and Cleanup
 
-No lane is complete until Gate 10 (Post-Merge Verification) passes. Merge alone does not close a lane.
+No lane is complete until Gate 10 (Post-Merge Verification) and Gate 11 (Branch Cleanup and Closure) both pass. Gate 10 verifies the merge and records cleanup eligibility. Gate 11 performs or confirms branch cleanup and determines closure readiness. Merge alone does not close a lane.
 
 ### Rule 8 — Audit Declares Runtime Status
 

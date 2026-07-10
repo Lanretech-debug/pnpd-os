@@ -1,6 +1,6 @@
-# Layer 4 — Codex Post-Merge Audit: Retrospective Drift Check
+# Layer 4 — Codex Post-Merge Audit: Mandatory Gate 10 Verification
 
-Codex post-merge audit is a mandatory retrospective safety and drift check after every merge. No merge may close without a post-merge audit confirming the seven required fields.
+Codex post-merge audit is a mandatory retrospective safety and drift check after every merge. It satisfies Gate 10 (Post-Merge Verification). No merge may close without a post-merge audit confirming the seven required fields. Gate 10 records cleanup eligibility and lane closure readiness — it does not perform cleanup or close the lane. Cleanup and closure are handled by Gate 11. The lane remains open until Gate 11 passes.
 
 ## High-Risk Categories (Additional Scrutiny)
 
@@ -25,8 +25,8 @@ Every post-merge audit SHALL confirm and record the following seven fields:
 | 3 | Scope Check | Whether the merged changes match the approved scope. |
 | 4 | CI Status | Whether CI checks passed on the merge commit. |
 | 5 | Runtime Status | Whether runtime smoke evidence exists and is consistent with pre-merge evidence. |
-| 6 | Branch Cleanup | Whether the working branch has been deleted (remote and local). |
-| 7 | Lane Closure | Whether the lane is ready to close or follow-up work is required. |
+| 6 | Branch Cleanup | Whether the working branch has been deleted (remote and local). Gate 10 records the cleanup eligibility and status — actual branch deletion is performed by Gate 11. |
+| 7 | Lane Closure | Whether the lane is ready to close or follow-up work is required. At Gate 10, `lane_closure_ready` is `false`. Gate 11 sets it to `true` after cleanup evidence passes. |
 
 A post-merge audit that omits any of the seven fields is incomplete.
 

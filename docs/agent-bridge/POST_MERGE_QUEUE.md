@@ -140,13 +140,13 @@ follow_up_actions:
 ```
 MERGED
   ↓
-POST_MERGE_AUDIT_REQUESTED (mandatory — all merges)
+POST_MERGE_AUDIT_REQUESTED — Gate 10 begins (mandatory — all merges)
   ↓
-POST_MERGE_VERIFIED
+POST_MERGE_VERIFIED — Gate 10 complete; records cleanup eligibility (lane_closure_ready=false)
   ↓
-BRANCH_CLEANUP
+BRANCH_CLEANUP — Gate 11 performs/verifies cleanup; sets lane_closure_ready=true
   ↓
-CLOSED
+CLOSED — terminal state, successful completion only
 ```
 
 ---

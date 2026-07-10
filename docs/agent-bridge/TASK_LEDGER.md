@@ -234,21 +234,54 @@ CLOSED
 
 ### BRANCH_CLEANUP
 
-- **Meaning:** Remote and/or local working branches have been cleaned up after successful post-merge verification. The cleanup outcome is recorded, and no branch remains without justification.
+- **Meaning:** Remote and/or local working branches have been cleaned up after successful post-merge verification. The cleanup outcome is recorded, and no branch remains without justification. Exactly one valid cleanup outcome is required before CLOSED.
 - **Who can enter:** DeepSeek / OpenCode (executes); Owner or Hermes (confirms).
-- **Required evidence:**
-  - `branch_cleanup_status`: one of `completed`, `already_absent`, `not_applicable_with_reason`
-  - `local_branch_status`: deleted or verified absent
-  - `remote_branch_status`: deleted or verified absent
-  - `verification_command_or_source`: the git command or automation that confirms absence
+- **Required evidence depends on outcome:**
+
+  #### Outcome: `completed`
+  A feature branch existed and was removed.
+  - `branch_cleanup_status`: `completed`
+  - `branch_previously_existed`: `true`
+  - `branch_name`: name of the deleted branch
+  - `deletion_command_or_authoritative_source`: git command or automation evidence
+  - `local_branch_status_before`: `exists`
+  - `local_branch_status_after`: `deleted`
+  - `remote_branch_status_before`: `exists`
+  - `remote_branch_status_after`: `deleted`
   - `canonical_main_sha`: the target branch SHA after merge
-  - `merged_head_reachable_from_main`: confirmed
-  - `reason_if_not_applicable`: required when status is `not_applicable_with_reason`
+  - `merged_head_sha`: the merged head SHA
+  - `merged_head_reachable_from_main`: `true`
   - `verified_by`: agent or human who confirmed
   - `verified_at`: ISO 8601 timestamp
+
+  #### Outcome: `already_absent`
+  A feature branch was automatically or previously removed before Gate 11.
+  - `branch_cleanup_status`: `already_absent`
+  - `branch_name`: name of the absent branch
+  - `independent_absence_verification`: git command confirming absence
+  - `automatic_or_prior_deletion_evidence`: evidence of prior deletion, where available
+  - `local_branch_status`: `absent`
+  - `remote_branch_status`: `absent`
+  - `canonical_main_sha`: the target branch SHA after merge
+  - `merged_head_sha`: the merged head SHA
+  - `merged_head_reachable_from_main`: `true`
+  - `verified_by`: agent or human who confirmed
+  - `verified_at`: ISO 8601 timestamp
+
+  #### Outcome: `not_applicable_with_reason`
+  No feature branch existed for the lane.
+  - `branch_cleanup_status`: `not_applicable_with_reason`
+  - `explicit_reason`: why no branch cleanup is applicable
+  - `evidence_no_feature_branch_was_used`: confirmation that no branch was created
+  - `change_delivery_method`: how changes were delivered (e.g., direct commit to main)
+  - `canonical_main_sha`: the target branch SHA after merge
+  - `relevant_commit_or_merge_evidence`: commit or merge that delivered the change
+  - `verified_by`: agent or human who confirmed
+  - `verified_at`: ISO 8601 timestamp
+
 - **Allowed next states:** `CLOSED`, `BLOCKED`.
 - **Forbidden next states:** Reversion to any pre-CLEANUP state.
-- **Failure behaviour:** An existing branch must not remain merely for reference. An already-absent branch must not be recreated merely to delete it. A no-branch lane must explicitly record `not_applicable_with_reason` and the reason.
+- **Failure behaviour:** An existing branch must not remain merely for reference. An already-absent branch must not be recreated merely to delete it. A no-branch lane must explicitly record `not_applicable_with_reason` and the reason. `not_applicable_with_reason` must not be used because cleanup is inconvenient. `not_applicable_with_reason` must not be used where a branch existed. Unsupported or false claims route to `BLOCKED`. Exactly one valid cleanup outcome is required before `CLOSED`.
 
 ### CANCELLED
 

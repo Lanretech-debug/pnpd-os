@@ -23,17 +23,33 @@
 
 ## Mandatory Layer 4 Confirmation Fields
 
-Every post-merge audit SHALL confirm and record all seven fields below. A post-merge audit that omits any field is incomplete.
+Every post-merge audit SHALL confirm and record all fields below. A post-merge audit that omits any field is incomplete.
 
-| # | Field | Value |
-|---|-------|-------|
-| 1 | **Merged SHA** | |
-| 2 | **Main SHA** | |
-| 3 | **Scope Check** | |
-| 4 | **CI Status** | |
-| 5 | **Runtime Status** | |
-| 6 | **Branch Cleanup** | |
-| 7 | **Lane Closure** | |
+| # | Field | Description | Value |
+|---|-------|-------------|-------|
+| 1 | **PR Number** | GitHub PR number | |
+| 2 | **PR URL** | GitHub PR URL | |
+| 3 | **PR Merged State** | Merged, closed, or reverted | |
+| 4 | **Merge Commit SHA** | The merge commit hash on the target branch | |
+| 5 | **Canonical Main SHA** | The updated main branch SHA after merge | |
+| 6 | **Merged Scope** | Whether the merged diff matches the approved scope | |
+| 7 | **CI Status** | Whether CI checks passed on the merge commit | |
+| 8 | **Runtime Status** | Whether runtime evidence exists and is consistent with pre-merge evidence | |
+| 9 | **Runtime Evidence Reference** | Path to runtime evidence or substitute evidence | |
+| 10 | **Branch Cleanup Status** | `pending` / `already_absent` / `not_applicable_with_reason` (recorded at Gate 10; cleanup itself is performed at Gate 11) | |
+| 11 | **Cleanup Eligibility** | Whether the lane is eligible for cleanup | |
+| 12 | **Cleanup Required Actions** | Specific actions needed for clean closure | |
+| 13 | **Cleanup Evidence Reference** | Path to cleanup evidence (finalized at Gate 11) | |
+| 14 | **Lane Closure Ready** | Must be `false` at Gate 10 — cleanup and Gate 11 must complete first | |
+| 15 | **Blocking Findings** | Any findings that prevent clean closure | |
+| 16 | **Verified By** | Agent or human who performed the audit | |
+| 17 | **Verified At** | ISO 8601 timestamp of verification | |
+
+**Rules:**
+- Post-merge audit is **mandatory for every merge** — risk affects verification depth only, not whether verification occurs.
+- `branch_cleanup_status` may be `pending` at Gate 10 — cleanup is performed at Gate 11.
+- `lane_closure_ready` **must remain `false`** until Gate 11 (Branch Cleanup and Closure) passes.
+- This template does **not** imply that Gate 10 closes the lane — closure requires Gate 11.
 
 ---
 

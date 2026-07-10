@@ -400,26 +400,81 @@ evidence_refs:
 
 ---
 
-## Schema 11: Branch Cleanup Record
+## Schema 11a: Branch Cleanup Record — completed
+
+A feature branch existed and was removed.
 
 ```yaml
 schema: branch_cleanup_record
 cleanup_id: "CLN-001"
 task_id: "TASK-001"
 pr_number: "PR-001"
-branch_cleanup_status: "completed"  # completed | already_absent | not_applicable_with_reason
-local_branch_status: "deleted"
-remote_branch_status: "deleted"
-verification_command_or_source: "git branch -d governance/execution-gates-patch && git push origin --delete governance/execution-gates-patch"
+branch_cleanup_status: "completed"
+branch_previously_existed: true
+branch_name: "governance/execution-gates-patch"
+deletion_command_or_authoritative_source: "git branch -d governance/execution-gates-patch && git push origin --delete governance/execution-gates-patch"
+local_branch_status_before: "exists"
+local_branch_status_after: "deleted"
+remote_branch_status_before: "exists"
+remote_branch_status_after: "deleted"
 canonical_main_sha: "ghi789jkl012"
+merged_head_sha: "ce363883c5ff1472bc926cb3e2376ce59d85d22c"
 merged_head_reachable_from_main: true
-reason_if_not_applicable: ""
 verified_by: "opencode"
 verified_at: "2026-07-10T12:00:00Z"
 next_action: "Record BRANCH_CLEANUP state in task ledger; lane ready for CLOSED"
 timestamp: "2026-07-10T12:00:00Z"
 evidence_refs:
   - "audits/cleanup-CLN-001.md"
+```
+
+## Schema 11b: Branch Cleanup Record — already_absent
+
+A feature branch was automatically or previously removed before Gate 11.
+
+```yaml
+schema: branch_cleanup_record
+cleanup_id: "CLN-002"
+task_id: "TASK-001"
+pr_number: "PR-001"
+branch_cleanup_status: "already_absent"
+branch_name: "governance/execution-gates-patch"
+independent_absence_verification: "git branch -a | grep governance/execution-gates-patch || echo 'absent'"
+automatic_or_prior_deletion_evidence: "GitHub auto-delete-branch setting enabled; branch absent from remote"
+local_branch_status: "absent"
+remote_branch_status: "absent"
+canonical_main_sha: "ghi789jkl012"
+merged_head_sha: "ce363883c5ff1472bc926cb3e2376ce59d85d22c"
+merged_head_reachable_from_main: true
+verified_by: "opencode"
+verified_at: "2026-07-10T12:05:00Z"
+next_action: "Record BRANCH_CLEANUP state in task ledger; lane ready for CLOSED"
+timestamp: "2026-07-10T12:05:00Z"
+evidence_refs:
+  - "audits/cleanup-CLN-002.md"
+```
+
+## Schema 11c: Branch Cleanup Record — not_applicable_with_reason
+
+No feature branch existed for the lane.
+
+```yaml
+schema: branch_cleanup_record
+cleanup_id: "CLN-003"
+task_id: "TASK-001"
+pr_number: "PR-001"
+branch_cleanup_status: "not_applicable_with_reason"
+explicit_reason: "Changes delivered via direct commit to main; no feature branch was created"
+evidence_no_feature_branch_was_used: "git log --oneline main | grep <commit>"
+change_delivery_method: "direct commit to main"
+canonical_main_sha: "ghi789jkl012"
+relevant_commit_or_merge_evidence: "abc123def456"
+verified_by: "opencode"
+verified_at: "2026-07-10T12:10:00Z"
+next_action: "Record BRANCH_CLEANUP state in task ledger; lane ready for CLOSED"
+timestamp: "2026-07-10T12:10:00Z"
+evidence_refs:
+  - "audits/cleanup-CLN-003.md"
 ```
 
 ---
