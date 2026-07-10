@@ -273,7 +273,7 @@ merge_authorization:
   branch: "example-governance-branch"
   target: "docs/example-protocol/"
   timestamp: "2026-06-10T12:30:00Z"
-next_action: "DeepSeek prepare for merge; Codex queue post-merge audit if high-risk"
+next_action: "DeepSeek prepare for merge; Codex queue mandatory post-merge audit"
 timestamp: "2026-06-10T12:30:00Z"
 evidence_refs:
   - "audits/decision-TASK-001.md"

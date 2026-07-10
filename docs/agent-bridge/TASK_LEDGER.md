@@ -151,8 +151,8 @@ CLOSED
 - **Meaning:** Codex post-merge audit complete. No issues or follow-ups recorded.
 - **Who can enter:** Codex.
 - **Required evidence:** Post-merge audit report; rollback recommendation (if any).
-- **Allowed next states:** `CLOSED`.
-- **Forbidden next states:** `MERGED` (already merged).
+- **Allowed next states:** `BRANCH_CLEANUP`.
+- **Forbidden next states:** `CLOSED` (branch cleanup is mandatory before closing), `MERGED` (already merged).
 
 ### BLOCKED
 
@@ -216,7 +216,7 @@ The following controls are enforced at every state transition. Any violation blo
 ### PR Integrity
 
 6. **PR scope mismatch triggers Hermes verification.** If the implemented diff does not match the approved scope, Hermes must flag it.
-7. **Large PRs must be audited as large PRs, not latest commits only.** Codex must audit the full branch/proposed diff, not just the most recent commit. Squash-merging does not reduce audit scope.
+7. **Large changesets must be audited as large changesets, not latest commits only.** Codex must audit the full branch/proposed diff, not just the most recent commit. Squash-merging does not reduce audit scope.
 
 ### Branch Integrity
 

@@ -342,7 +342,7 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Purpose | Remove the working branch after the merge is verified and stable. |
 | Owner | DeepSeek / OpenCode |
 | Entry Criteria | Gate 10 passed; post-merge audit confirms no critical drift. |
-| Exit Criteria | Remote branch deleted; local branch deleted (optional, may be kept for reference). |
+| Exit Criteria | Remote branch deleted; local branch deleted. |
 | Evidence Required | `git branch -r` shows no remote branch; `git branch` shows no local working branch. |
 | Failure Behaviour | If branch cannot be deleted (e.g., branch protection), record exception and escalate to Owner. |
 | Rollback Behaviour | N/A — branch cleanup is safe once merge is verified. Branch can be recreated from merge commit if needed. |
