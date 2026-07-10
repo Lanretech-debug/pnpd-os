@@ -25,6 +25,8 @@ merge_authorization:
   pr_id: "PR-EXAMPLE"
   branch: "feat/example"
   target: "main"
+  base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
+  head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
   timestamp: "2026-06-10T12:30:00Z"
 next_action: "Specific next action following this decision"
 timestamp: "2026-06-10T12:30:00Z"
@@ -100,10 +102,14 @@ merge_authorization:
   pr_id: "PR-EXAMPLE"
   branch: "feat/example"
   target: "main"
+  base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
+  head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
   timestamp: "2026-06-10T12:30:00Z"
 ```
 
 Without a merge authorization block, the merge is not authorized even if `merge_authorized: true`.
+
+A merge authorization MUST include a real PR number (`pr_id`). `pr_id: "N/A"` is never valid for merge authorization. Merge authorization is bound to the specific PR, base SHA, and head SHA. A material head-SHA change invalidates the authorization.
 
 ---
 
@@ -117,79 +123,116 @@ An overridden gate is recorded as *overridden*, not as *passed*. The gate result
 
 ## Example Decisions
 
-### Example 1: Approve Merge
+### Example 1a: Owner PR Authorization
 
 ```yaml
-schema: owner_decision
+schema: owner_pr_authorization
 decision_id: "DEC-001"
 task_id: "TASK-001"
 owner: "owner"
-decision_type: "approve_merge"
-rationale: "Codex audit passed with no caveats. Hermes verification clean. PR scope matches approved task. All anti-drift controls satisfied. Proceeding with merge."
+decision_type: "owner_pr_authorization"
+owner_pr_authorized: true
+pr_creation_only: true
+authorized_branch: "feat/example-feature"
+authorized_base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
+authorized_head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
+codex_audit_reference: "ARES-001"
+owner_decision_reference: "DEC-001"
+authorized_at: "2026-06-10T12:30:00Z"
+rationale: "Codex audit passed with no caveats. Hermes verification clean. PR scope matches approved task. PR may be opened."
 accepted_risks: []
 rejected_recommendations: []
-overridden_gates: []
-merge_authorized: true
-merge_authorization:
-  pr_id: "PR-EXAMPLE"
-  branch: "feat/example-feature"
-  target: "main"
-  timestamp: "2026-06-10T12:30:00Z"
-next_action: "DeepSeek merge PR into main"
+next_state: "PR_OPENED"
+next_action: "DeepSeek open PR against main"
 timestamp: "2026-06-10T12:30:00Z"
 evidence_refs:
   - "audits/decision-DEC-001.md"
 ```
 
-### Example 2: Accept Caveat
+### Example 1b: Owner Merge Authorization
 
 ```yaml
-schema: owner_decision
+schema: owner_merge_authorization
 decision_id: "DEC-002"
-task_id: "TASK-002"
+task_id: "TASK-001"
 owner: "owner"
-decision_type: "accept_caveat"
-rationale: "Codex caveat CV-001 flags missing test for edge case X. Edge case X is low-frequency and covered by integration tests in CI. Accepting caveat. Team will add unit test in follow-up sprint task TASK-007."
-accepted_risks:
-  - "CV-001: Missing unit test for edge case X — low risk, integration coverage exists, follow-up task created"
+decision_type: "owner_merge_authorization"
+owner_merge_approved: true
+pr_number: "PR-001"
+pr_url: "https://github.com/org/repo/pull/1"
+base_branch: "main"
+base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
+head_branch: "feat/example-feature"
+head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
+codex_audit_reference: "ARES-001"
+required_checks_status: "all_passed"
+owner_decision_reference: "DEC-002"
+approved_at: "2026-06-10T12:45:00Z"
+rationale: "All checks passed. Codex audit completed. PR scope matches approved task. Proceeding with merge."
+accepted_risks: []
 rejected_recommendations: []
-overridden_gates: []
-merge_authorized: true
-merge_authorization:
-  pr_id: "PR-EXAMPLE"
-  branch: "feat/another-feature"
-  target: "main"
-  timestamp: "2026-06-10T13:00:00Z"
-next_action: "DeepSeek merge PR; create follow-up TASK-007 for missing test"
-timestamp: "2026-06-10T13:00:00Z"
+next_state: "MERGED"
+next_action: "DeepSeek merge PR into main; Codex queue mandatory post-merge audit"
+timestamp: "2026-06-10T12:45:00Z"
 evidence_refs:
   - "audits/decision-DEC-002.md"
 ```
 
-### Example 3: Override Audit Gate
+### Example 2: Owner PR Authorization with Caveat Acceptance
 
 ```yaml
-schema: owner_decision
+schema: owner_pr_authorization
 decision_id: "DEC-003"
+task_id: "TASK-002"
+owner: "owner"
+decision_type: "owner_pr_authorization"
+owner_pr_authorized: true
+pr_creation_only: true
+authorized_branch: "feat/another-feature"
+authorized_base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
+authorized_head_sha: "ghi789jkl012"
+codex_audit_reference: "ARES-002"
+owner_decision_reference: "DEC-003"
+authorized_at: "2026-06-10T13:00:00Z"
+rationale: "Codex caveat CV-001 flags missing test for edge case X. Edge case X is low-frequency and covered by integration tests in CI. Authorizing PR creation. Merge authorization will be decided after PR checks."
+accepted_risks:
+  - "CV-001: Missing unit test for edge case X — low risk, integration coverage exists, follow-up task created"
+rejected_recommendations: []
+next_state: "PR_OPENED"
+next_action: "DeepSeek open PR; add follow-up TASK-007 for missing test"
+timestamp: "2026-06-10T13:00:00Z"
+evidence_refs:
+  - "audits/decision-DEC-003.md"
+```
+
+### Example 3: Override Audit Gate (Merge Authorization)
+
+```yaml
+schema: owner_merge_authorization
+decision_id: "DEC-004"
 task_id: "TASK-003"
 owner: "owner"
-decision_type: "override_audit_gate"
-rationale: "Codex formal audit blocked due to Codex credit exhaustion (BLK-004). This is a docs-only PR with zero runtime impact. Risk of merging without Codex audit is negligible. Overriding audit gate. Post-merge audit will be requested after credits are restored."
+decision_type: "owner_merge_authorization"
+owner_merge_approved: true
+pr_number: "PR-001"
+pr_url: "https://github.com/org/repo/pull/1"
+base_branch: "main"
+base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
+head_branch: "example-governance-branch"
+head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
+codex_audit_reference: "ARES-003"
+required_checks_status: "all_passed"
+owner_decision_reference: "DEC-004"
+approved_at: "2026-06-10T14:00:00Z"
+rationale: "Codex formal audit blocked due to Codex credit exhaustion (BLK-004). This is a docs-only PR with zero runtime impact. Overriding audit gate. Post-merge audit will be requested after credits are restored."
 accepted_risks:
   - "No formal Codex pre-merge audit — mitigated by: docs-only scope, zero runtime impact, post-merge audit queued"
 rejected_recommendations: []
-overridden_gates:
-  - "codex_audit: Codex credits exhausted; docs-only PR; post-merge audit queued"
-merge_authorized: true
-merge_authorization:
-  pr_number: "N/A"
-  branch: "example-governance-branch"
-  target: "docs/example-protocol/"
-  timestamp: "2026-06-10T14:00:00Z"
+next_state: "MERGED"
 next_action: "DeepSeek merge governance docs PR; queue post-merge audit"
 timestamp: "2026-06-10T14:00:00Z"
 evidence_refs:
-  - "audits/decision-DEC-003.md"
+  - "audits/decision-DEC-004.md"
 ```
 
 ### Example 4: Reject Merge

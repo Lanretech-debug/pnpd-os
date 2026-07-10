@@ -20,6 +20,8 @@ Hermes verifies operational truth — state, scope, and evidence.
 - Classify task status and blockers
 - Determine whether a PR is ready for Codex audit
 - Issue READY_FOR_CODEX_AUDIT, REQUEST_CHANGES, or BLOCKED verdict
+- Verify Runtime Truth completeness: runtime_status, runtime_reason, runtime_surface, runtime_evidence_or_substitute_evidence, runtime_verified_by, runtime_verified_at
+- Route `Runtime Not Verified` lanes back to implementation — never forward to Codex
 
 ## Cannot Do:
 - Certify final merge readiness in place of Codex

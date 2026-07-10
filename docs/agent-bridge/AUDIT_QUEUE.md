@@ -68,10 +68,10 @@ timestamp: "2026-06-10T12:30:00Z"
 | Status                        | Meaning                                              |
 | ----------------------------- | ---------------------------------------------------- |
 | `PENDING_CODEX_FINAL_AUDIT`   | Audit requested but not yet started                  |
-| `CODEX_APPROVED`              | Audit passed with no caveats                         |
-| `CODEX_REQUEST_CHANGES`       | Audit found issues; changes requested                |
-| `CODEX_BLOCKED`               | Audit cannot proceed due to blocker                  |
-| `CODEX_APPROVED_WITH_CAVEATS` | Audit passed but owner must accept listed caveats    |
+| `CODEX_AUDIT_COMPLETED`              | Audit passed with no caveats                         |
+| `CODEX_REQUEST_CHANGES`              | Audit found issues; changes requested                |
+| `CODEX_BLOCKED`                      | Audit cannot proceed due to blocker                  |
+| `CODEX_AUDIT_COMPLETED_WITH_CAVEATS` | Audit passed but owner must accept listed caveats    |
 
 ---
 
@@ -93,8 +93,8 @@ Codex MUST provide exactly one merge recommendation per audit:
 ```
 PENDING_CODEX_FINAL_AUDIT
   ↓
-  ├── CODEX_APPROVED           → MERGE_OK or MERGE_OK_OWNER_ACCEPTS_CAVEATS
-  ├── CODEX_APPROVED_WITH_CAVEATS → MERGE_OK_OWNER_ACCEPTS_CAVEATS
+  ├── CODEX_AUDIT_COMPLETED           → MERGE_OK or MERGE_OK_OWNER_ACCEPTS_CAVEATS
+  ├── CODEX_AUDIT_COMPLETED_WITH_CAVEATS → MERGE_OK_OWNER_ACCEPTS_CAVEATS
   ├── CODEX_REQUEST_CHANGES    → DO_NOT_MERGE_REQUEST_CHANGES
   └── CODEX_BLOCKED            → DO_NOT_MERGE_BLOCKED
 ```
@@ -109,7 +109,7 @@ audit_result_id: "ARES-001"
 audit_request_id: "AR-001"
 task_id: "TASK-001"
 auditor: "codex"
-codex_status: "CODEX_APPROVED_WITH_CAVEATS"
+codex_status: "CODEX_AUDIT_COMPLETED_WITH_CAVEATS"
 merge_recommendation: "MERGE_OK_OWNER_ACCEPTS_CAVEATS"
 caveats:
   - caveat_id: "CV-001"

@@ -114,7 +114,14 @@ Codex is the formal pre-merge auditor. Required before merging material changes 
 
 ### Layer 4 — Codex Post-Merge Audit: Retrospective Drift Check
 
-Retrospective safety and drift check after merge. Required for high-risk merges.
+Retrospective safety and drift check after merge. Mandatory for every merged lane. Risk level determines the depth of verification and evidence scrutiny only — it never determines whether verification occurs.
+
+Required lifecycle:
+MERGED
+→ POST_MERGE_AUDIT_REQUESTED
+→ POST_MERGE_VERIFIED
+→ BRANCH_CLEANUP
+→ CLOSED
 
 ### Layer 5 — Owner Final Decision
 

@@ -7,10 +7,10 @@ Codex is the formal pre-merge auditor. Required before merging material product,
 | Status | Meaning |
 |--------|---------|
 | PENDING_CODEX_FINAL_AUDIT | Audit requested but not yet started |
-| CODEX_APPROVED | Audit passed with no caveats |
+| CODEX_AUDIT_COMPLETED | Audit passed with no caveats |
 | CODEX_REQUEST_CHANGES | Audit found issues; changes requested |
 | CODEX_BLOCKED | Audit cannot proceed due to blocker |
-| CODEX_APPROVED_WITH_CAVEATS | Audit passed but owner must accept listed caveats |
+| CODEX_AUDIT_COMPLETED_WITH_CAVEATS | Audit passed but owner must accept listed caveats |
 
 ## Merge Recommendations
 
@@ -25,7 +25,21 @@ Codex is the formal pre-merge auditor. Required before merging material product,
 
 ### Rule 1 — Runtime Evidence Required
 
-Pre-Merge Audit SHALL reject any PR that lacks runtime evidence. Runtime evidence means screenshots, terminal output, console logs, or HTTP response codes proving that the application starts and responds as expected for the scoped changes.
+Every lane must provide either:
+
+1. **Runtime Verified** evidence for an executable runtime surface — screenshots, terminal output, console logs, or HTTP response codes proving that the application starts and responds as expected for the scoped changes; or
+2. A complete **Runtime Not Applicable** contract for a non-executable lane (governance-only documentation, templates, schemas, or non-runnable changes).
+
+Codex must reject when:
+- an executable lane lacks runtime evidence
+- runtime evidence failed or is insufficient
+- `Runtime Not Applicable` lacks a reason
+- `Runtime Not Applicable` is used for an executable surface
+- substitute evidence is missing
+- verifier is missing
+- timestamp is missing
+
+Codex must accept a legitimate governance/docs-only lane with a complete `Runtime Not Applicable` contract.
 
 ### Rule 2 — Every Audit Must Declare Runtime Status
 

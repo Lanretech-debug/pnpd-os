@@ -94,28 +94,57 @@ handoff:
   next_action: "DeepSeek implement Codex change requests, re-self-review"
 ```
 
-### Codex → Owner
+### Codex → Owner (PR Authorization)
 
-**Trigger:** Audit complete. Owner decision needed.
+**Trigger:** Audit complete. Owner decides whether PR creation/continuation is authorized.
 
 ```yaml
 handoff:
   from: codex
   to: owner
   task_id: "TASK-001"
-  status: CODEX_AUDIT_REQUESTED | CODEX_APPROVED
+  status: CODEX_AUDIT_COMPLETED
   evidence:
     - codex_audit: "path/to/codex-audit.md"
-    - codex_status: "CODEX_APPROVED_WITH_CAVEATS"
-    - merge_recommendation: "MERGE_OK_OWNER_ACCEPTS_CAVEATS"
+    - codex_status: "CODEX_AUDIT_COMPLETED"
+    - runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+    - runtime_reason: "Why runtime is or is not applicable"
+    - runtime_surface: "Affected surface classification"
+    - runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+    - runtime_verified_by: "deepseek"
+    - runtime_verified_at: "2026-06-10T12:00:00Z"
     - caveats: ["Caveat 1: item", "Caveat 2: item"]
   blockers: []
-  next_action: "Owner review caveats and decide merge/patch/reject"
+  next_action: "Owner review audit result and authorize PR creation (not merge)"
+```
+
+### Codex → Owner (Merge Authorization)
+
+**Trigger:** PR is open and live metadata is recorded. Owner separately decides whether that exact PR state may merge.
+
+```yaml
+handoff:
+  from: codex
+  to: owner
+  task_id: "TASK-001"
+  status: PR_OPENED | CODEX_AUDIT_COMPLETED
+  evidence:
+    - codex_audit: "path/to/codex-audit.md"
+    - pr_number: "PR-001"
+    - pr_url: "https://github.com/org/repo/pull/1"
+    - base_sha: "abc123def456"
+    - head_sha: "ghi789jkl012"
+    - codex_audit_reference: "ARES-001"
+    - required_checks_status: "all_passed"
+    - runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+    - runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+  blockers: []
+  next_action: "Owner review current PR state and authorize merge (separate from PR authorization)"
 ```
 
 ### Owner → Post-Merge Audit
 
-**Trigger:** Owner approved merge. Post-merge audit is mandatory for all merges. High-risk categories affect verification depth only.
+**Trigger:** Owner merge approval recorded and merge executed. Post-merge audit is mandatory for all merges. Risk level affects verification depth only.
 
 ```yaml
 handoff:
@@ -124,10 +153,14 @@ handoff:
   task_id: "TASK-001"
   status: MERGED
   post_merge_audit_required: true
-  risk_category: "auth"
+  risk_level: "MEDIUM"
   evidence:
     - owner_decision: "path/to/decision-log.md"
     - merge_commit: "abc123def"
+    - pr_number: "PR-001"
+    - pr_url: "https://github.com/org/repo/pull/1"
+    - head_sha: "ghi789jkl012"
+    - codex_audit_reference: "ARES-001"
   next_action: "Codex post-merge audit of merged diff in target branch"
 ```
 
@@ -142,7 +175,10 @@ Every handoff MUST reference specific evidence file paths — never paste eviden
 | Self-review log      | `audits/self-review-TASK-001.md`      | DeepSeek → Hermes          |
 | Diff summary         | `audits/diff-TASK-001.txt`            | DeepSeek → Hermes          |
 | Hermes verification  | `audits/hermes-verify-TASK-001.md`    | Hermes → Codex             |
-| Codex audit          | `audits/codex-audit-TASK-001.md`      | Codex → Owner              |
+| Codex audit          | `audits/codex-audit-TASK-001.md`      | Codex → Owner (PR auth)    |
+| Codex audit          | `audits/codex-audit-TASK-001.md`      | Codex → Owner (merge auth) |
+| PR metadata          | `audits/pr-metadata-TASK-001.md`      | Codex → Owner (merge auth) |
+| Check status         | `audits/check-status-TASK-001.md`     | Codex → Owner (merge auth) |
 | Owner decision       | `audits/decision-TASK-001.md`         | Owner → Post-Merge         |
 | Post-merge audit     | `audits/post-merge-audit-TASK-001.md` | Codex → Owner              |
 
@@ -171,7 +207,8 @@ Examples:
 - `"Hermes verify branch, dirty tree, evidence completeness"`
 - `"DeepSeek implement Codex change requests, re-self-review"`
 - `"Codex formal pre-merge audit of full branch/proposed diff"`
-- `"Owner review caveats and decide merge/patch/reject"`
+- `"Owner review audit result and authorize PR creation (not merge)"`
+- `"Owner review current PR state and authorize merge (separate from PR authorization)"`
 - `"Codex post-merge audit of merged diff in target branch"`
 
 Handoffs without a `next_action` are **invalid** and must be rejected by the receiving agent.

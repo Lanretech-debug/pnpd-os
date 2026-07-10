@@ -61,7 +61,7 @@ Mapping guidance:
 | `IN_PROGRESS` | `IN_PROGRESS` |
 | `AGENT_DONE` | `IMPLEMENTED` or `SELF_REVIEWED` |
 | `CODEX_REVIEW_REQUIRED` | `CODEX_AUDIT_REQUESTED` |
-| `OWNER_REVIEW_REQUIRED` | `CODEX_APPROVED` or owner decision pending |
+| `OWNER_REVIEW_REQUIRED` | `CODEX_AUDIT_COMPLETED` or owner decision pending |
 | `DONE` | `CLOSED` |
 | `BLOCKED` | `BLOCKED` |
 | `WONTFIX` | `CLOSED` with rationale |

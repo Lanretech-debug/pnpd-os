@@ -237,16 +237,16 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Failure Behaviour | Lane returns to Gate 1. Integration failures indicate scope drift, missing configuration, or incorrect assumptions — all require implementation repair before re-entry. |
 | Rollback Behaviour | Revert integration-affecting commits; re-run gate. |
 
-### Gate 4 — Runtime Smoke Passed
+### Gate 4 — Runtime Evidence Satisfied
 
 | Field | Value |
 |-------|-------|
-| Purpose | Prove that the implementation runs correctly in a real or simulated deployment environment. Browser-based smoke, API endpoint calls, or local dev-server verification. |
+| Purpose | Prove that the implementation runs correctly (or document why runtime evidence is not applicable). This gate requires exactly one valid Runtime Evidence contract. |
 | Owner | DeepSeek / OpenCode |
-| Entry Criteria | Gates 1–3 passed; local dev environment or staging can run the application. |
-| Exit Criteria | All critical user flows accessible; no crash-loop or startup error. |
-| Evidence Required | Screenshots, console logs, HTTP response codes, or recorded terminal output proving the app starts and responds. |
-| Failure Behaviour | Lane returns to Gate 1. Runtime defects are always implementation defects and must be fixed before proceeding. |
+| Entry Criteria | Gates 1–3 passed. |
+| Exit Criteria | Exactly one of: valid **Runtime Verified** contract or valid **Runtime Not Applicable** contract. |
+| Evidence Required | **Valid Path A — Runtime Verified:** executable runtime exists, runtime smoke executed, intended observable behaviour confirmed, evidence recorded (screenshots, console logs, HTTP response codes, or recorded terminal output). **Valid Path B — Runtime Not Applicable:** no executable runtime surface exists, explicit reason documented, runtime surface classification, substitute evidence, verifier, timestamp. |
+| Failure Behaviour | Lane returns to Gate 1. **Runtime Not Verified** never satisfies Gate 4. Runtime defects or absent evidence are always implementation defects and must be fixed before proceeding. Static checks must never replace runtime evidence where an executable runtime exists. |
 | Rollback Behaviour | Revert runtime-breaking commits; re-run Gate 2 and Gate 3 before re-entering Gate 4. |
 
 ### Gate 5 — Self Review Complete
@@ -282,10 +282,11 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Purpose | Independent formal audit by Codex. Validates implementation, scope fidelity, safety, governance compliance, and runtime evidence. |
 | Owner | Codex |
 | Entry Criteria | Gate 5 passed; Hermes verification completed; self-review log available; full branch/proposed diff available. |
-| Exit Criteria | Codex issues one of: `CODEX_APPROVED`, `CODEX_APPROVED_WITH_CAVEATS`, `CODEX_REQUEST_CHANGES`, or `CODEX_BLOCKED`. |
+| Exit Criteria | Codex issues one of: `CODEX_AUDIT_COMPLETED`, `CODEX_AUDIT_COMPLETED_WITH_CAVEATS`, `CODEX_REQUEST_CHANGES`, or `CODEX_BLOCKED`. |
 | Evidence Required | Codex audit report documenting verdict, caveats (if any), and merge recommendation. |
 | Failure Behaviour | `CODEX_REQUEST_CHANGES` returns Lane to Gate 1. `CODEX_BLOCKED` holds Lane until blocker is resolved. |
 | Rollback Behaviour | Revert implementation commits if Codex finds uncorrectable issues; re-propose from Gate 0. |
+| Audited Evidence | `codex_audit_reference`, `codex_verdict`, `audited_base_sha`, `audited_head_sha`, `audit_timestamp`, `runtime_status`, `scope_status`, `blocking_findings_status`. |
 
 ### Gate 7 — Owner PR Authorization
 
@@ -297,7 +298,7 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Exit Criteria | Owner issues PR authorization decision with rationale. |
 | Evidence Required | Owner PR authorization recorded (GitHub review, signed comment, or owner-decision log). |
 | Failure Behaviour | If Owner requests changes, Lane returns to Gate 1. If Owner blocks, Lane is closed. |
-| Rollback Behaviour | Owner may accept Codex caveats (CODEX_APPROVED_WITH_CAVEATS). Override rationale must be recorded and does not retroactively pass skipped or failed gates. |
+| Rollback Behaviour | Owner may accept Codex caveats (CODEX_AUDIT_COMPLETED_WITH_CAVEATS). Override rationale must be recorded and does not retroactively pass skipped or failed gates. |
 
 ### Gate 8 — Pull Request
 
@@ -307,9 +308,10 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Owner | DeepSeek / OpenCode |
 | Entry Criteria | Gate 7 passed (Owner PR authorization). |
 | Exit Criteria | GitHub PR is open against main. PR body documents scope, test results, runtime evidence, and audit/PR-authorization trail. |
-| Evidence Required | GitHub PR URL. |
+| Evidence Required | `pr_number`, `pr_url`, `base_branch`, `base_sha`, `head_branch`, `head_sha`, `draft_or_ready_status`, `proposed_diff_reference`, `owner_pr_authorization_reference`, `opened_at`. |
 | Failure Behaviour | If PR cannot be opened (branch conflict, base divergence), resolve conflict and re-enter Gate 8. |
 | Rollback Behaviour | Close PR without merging; return to Gate 1. |
+| Head-Change Rule | If the PR head changes materially after the recorded Codex audit, the previous audit is stale. Any existing merge authorization is invalid. The lane returns to self-review, Hermes verification, and Codex audit stages. |
 
 ### Gate 9 — Owner Merge Approval + Merge
 
@@ -317,10 +319,11 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 |-------|-------|
 | Purpose | Owner separately authorizes the merge of the open PR, then merge executes. This is a distinct authorization from Gate 7 (PR creation authorization). |
 | Owner | Owner (authorises merge); OpenCode or GitHub (executes). |
-| Entry Criteria | Gate 8 passed (PR exists); base SHA; head SHA; proposed diff matches Gate 7 scope; merge checks pass; audit reference recorded. |
+| Entry Criteria | Gate 8 passed (PR exists); `pr_number` and `pr_url` recorded; `base_sha` recorded; `head_sha` recorded; current audit applies to current head; required checks passed; separate Owner merge authorization recorded. Gate 7 authorization alone is insufficient. |
 | Exit Criteria | Owner merge authorization recorded; merge commit exists on main. |
-| Evidence Required | Owner merge approval record (separate from PR authorization); merge commit SHA; merged timestamp. |
+| Evidence Required | Owner merge approval record (separate from PR authorization); `pr_number`, `pr_url`, `base_branch`, `base_sha`, `head_branch`, `head_sha`, `codex_audit_reference`, `required_checks_status`, `approved_at`; merge commit SHA; merged timestamp. |
 | Failure Behaviour | If merge conflicts or CI failures occur, lane returns to Gate 1 for conflict resolution. Owner must re-authorize. |
+| Head-Change Invalidation | Merge authorization is bound to the recorded `pr_number`, `base_sha`, `head_sha`, current Codex audit, and current required-check status. Any material head-SHA change invalidates the previous merge authorization. A new audit and new Owner merge authorization are required before merge. |
 | Rollback Behaviour | `git revert` the merge commit; create a new branch for fixes. |
 
 ### Gate 10 — Post-Merge Verification
@@ -404,6 +407,16 @@ Every audit must declare exactly one of:
 - `Runtime Verified` — runtime smoke evidence was reviewed and is acceptable.
 - `Runtime Not Verified` — runtime smoke evidence was missing, insufficient, or not reviewed. When Runtime Not Verified is declared, the Pre-Merge Audit SHALL reject the PR.
 - `Runtime Not Applicable` — the lane has no executable runtime surface (governance-only documentation, templates, or non-runnable changes). Requires: explicit reason, affected surface classification, substitute validation evidence, self-review confirmation, Hermes verification, and Codex acceptance during audit. Substitute evidence may include: `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-document contradiction analysis, state-machine transition review, or GitHub CI results.
+
+### Rule 3a — Runtime Status Routing
+
+Every lane must carry `runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, and `runtime_verified_at` across all handoffs and ledger entries.
+
+Routing rules:
+
+- **Runtime Verified:** may proceed to Codex audit when evidence is complete.
+- **Runtime Not Applicable:** may proceed to Codex audit only when the N/A contract is complete and the surface is genuinely non-executable.
+- **Runtime Not Verified:** must not be routed to Codex audit. Hermes must route `Runtime Not Verified` lanes back to implementation.
 
 ### Rule 4 — No PR Before Gate 6
 
