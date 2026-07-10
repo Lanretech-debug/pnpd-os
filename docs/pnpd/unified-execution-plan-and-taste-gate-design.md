@@ -287,15 +287,15 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Failure Behaviour | `CODEX_REQUEST_CHANGES` returns Lane to Gate 1. `CODEX_BLOCKED` holds Lane until blocker is resolved. |
 | Rollback Behaviour | Revert implementation commits if Codex finds uncorrectable issues; re-propose from Gate 0. |
 
-### Gate 7 — Owner Approval
+### Gate 7 — Owner PR Authorization
 
 | Field | Value |
 |-------|-------|
-| Purpose | Owner reviews the Codex audit result and either approves merge, requests changes, or blocks. |
+| Purpose | Owner reviews the Codex audit result and authorizes PR creation. This is NOT a merge authorization — merge requires separate approval at Gate 9. |
 | Owner | Owner |
 | Entry Criteria | Gate 6 passed; Codex audit report available. |
-| Exit Criteria | Owner issues approval decision with rationale. |
-| Evidence Required | Owner decision recorded (GitHub review, signed comment, or owner-decision log). |
+| Exit Criteria | Owner issues PR authorization decision with rationale. |
+| Evidence Required | Owner PR authorization recorded (GitHub review, signed comment, or owner-decision log). |
 | Failure Behaviour | If Owner requests changes, Lane returns to Gate 1. If Owner blocks, Lane is closed. |
 | Rollback Behaviour | Owner may accept Codex caveats (CODEX_APPROVED_WITH_CAVEATS). Override rationale must be recorded and does not retroactively pass skipped or failed gates. |
 
@@ -303,24 +303,24 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 
 | Field | Value |
 |-------|-------|
-| Purpose | Open a PR to main containing the scoped changes. The PR body references the scope document, test evidence, runtime evidence, Codex audit, and Owner approval. |
+| Purpose | Open a PR to main containing the scoped changes. The PR body references the scope document, test evidence, runtime evidence, Codex audit, and Owner PR authorization. |
 | Owner | DeepSeek / OpenCode |
-| Entry Criteria | Gate 7 passed. |
-| Exit Criteria | GitHub PR is open against main. PR body documents scope, test results, runtime evidence, and audit/approval trail. |
+| Entry Criteria | Gate 7 passed (Owner PR authorization). |
+| Exit Criteria | GitHub PR is open against main. PR body documents scope, test results, runtime evidence, and audit/PR-authorization trail. |
 | Evidence Required | GitHub PR URL. |
 | Failure Behaviour | If PR cannot be opened (branch conflict, base divergence), resolve conflict and re-enter Gate 8. |
 | Rollback Behaviour | Close PR without merging; return to Gate 1. |
 
-### Gate 9 — Merge
+### Gate 9 — Owner Merge Approval + Merge
 
 | Field | Value |
 |-------|-------|
-| Purpose | Merge the approved PR into main using a standard merge commit (not squash, not rebase unless the project convention requires otherwise). |
-| Owner | Owner (authorises); OpenCode or GitHub (executes). |
-| Entry Criteria | Gate 8 passed; PR is open; merge checks pass; Owner has authorised merge. |
-| Exit Criteria | Normal merge commit exists on main. |
-| Evidence Required | Merge commit SHA; merged timestamp. |
-| Failure Behaviour | If merge conflicts or CI failures occur, lane returns to Gate 1 for conflict resolution. |
+| Purpose | Owner separately authorizes the merge of the open PR, then merge executes. This is a distinct authorization from Gate 7 (PR creation authorization). |
+| Owner | Owner (authorises merge); OpenCode or GitHub (executes). |
+| Entry Criteria | Gate 8 passed (PR exists); base SHA; head SHA; proposed diff matches Gate 7 scope; merge checks pass; audit reference recorded. |
+| Exit Criteria | Owner merge authorization recorded; merge commit exists on main. |
+| Evidence Required | Owner merge approval record (separate from PR authorization); merge commit SHA; merged timestamp. |
+| Failure Behaviour | If merge conflicts or CI failures occur, lane returns to Gate 1 for conflict resolution. Owner must re-authorize. |
 | Rollback Behaviour | `git revert` the merge commit; create a new branch for fixes. |
 
 ### Gate 10 — Post-Merge Verification
@@ -366,11 +366,11 @@ Gate 5  Self Review Complete
   ↓
 Gate 6  Independent Codex Audit
   ↓
-Gate 7  Owner Approval
-  ↓
+Gate 7  Owner PR Authorization
+   ↓
 Gate 8  Pull Request
-  ↓
-Gate 9  Merge
+   ↓
+Gate 9  Owner Merge Approval + Merge
   ↓
 Gate 10 Post-Merge Verification
   ↓
@@ -409,9 +409,9 @@ Every audit must declare exactly one of:
 
 No PR may be opened before Gate 6 (Independent Codex Audit) passes. Opening a PR earlier creates premature review overhead and bypasses the implementation-to-audit sequence.
 
-### Rule 5 — No Merge Before Owner Approval
+### Rule 5 — Separate Owner PR and Merge Authorizations
 
-No merge may occur before Gate 7 (Owner Approval) passes. Owner is the final decision-maker. No agent may override this gate.
+Gate 7 (Owner PR Authorization) authorizes PR creation only. Gate 9 (Owner Merge Approval) separately authorizes the merge. No single Owner action may serve both gates. This ensures the Owner has an explicit review opportunity after the PR is open and before the merge.
 
 ### Rule 6 — Branch Cleanup is Part of Lane Completion
 

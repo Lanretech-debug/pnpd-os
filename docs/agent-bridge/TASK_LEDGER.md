@@ -27,9 +27,11 @@ CODEX_AUDIT_REQUESTED
   ↓
 CODEX_APPROVED
   ↓
-OWNER_APPROVED
+OWNER_PR_AUTHORIZED
   ↓
 PR_OPENED
+  ↓
+OWNER_MERGE_APPROVED
   ↓
 MERGED
   ↓
@@ -96,7 +98,7 @@ CLOSED
 - **Who can enter:** DeepSeek.
 - **Required evidence:** Self-review log with all gates checked; diff summary; handoff to Hermes written.
 - **Allowed next states:** `HERMES_VERIFIED`, `REQUEST_CHANGES`, `BLOCKED`.
-- **Forbidden next states:** `CODEX_APPROVED`, `OWNER_APPROVED`, `MERGED`.
+- **Forbidden next states:** `CODEX_APPROVED`, `OWNER_PR_AUTHORIZED`, `MERGED`.
 - **Anti-drift:** DeepSeek self-review is NOT formal audit. Cannot skip to Codex.
 
 ### HERMES_VERIFIED
@@ -105,7 +107,7 @@ CLOSED
 - **Who can enter:** Hermes.
 - **Required evidence:** Hermes verification log; all anti-drift controls checked; clean worktree confirmed.
 - **Allowed next states:** `CODEX_AUDIT_REQUESTED`, `REQUEST_CHANGES`, `BLOCKED`.
-- **Forbidden next states:** `OWNER_APPROVED`, `MERGED`.
+- **Forbidden next states:** `OWNER_PR_AUTHORIZED`, `MERGED`.
 - **Anti-drift:** Hermes verification is NOT Codex audit. Cannot skip to owner decision.
 
 ### CODEX_AUDIT_REQUESTED
@@ -114,38 +116,48 @@ CLOSED
 - **Who can enter:** Hermes (routing to Codex).
 - **Required evidence:** Full branch/proposed diff; Hermes verification result; DeepSeek self-review.
 - **Allowed next states:** `CODEX_APPROVED`, `REQUEST_CHANGES`, `BLOCKED`.
-- **Forbidden next states:** `OWNER_APPROVED`, `MERGED`.
+- **Forbidden next states:** `OWNER_PR_AUTHORIZED`, `MERGED`.
 
 ### CODEX_APPROVED
 
 - **Meaning:** Codex has completed audit. Result may include caveats.
 - **Who can enter:** Codex.
 - **Required evidence:** Codex audit report; merge recommendation; caveats list (if any).
-- **Allowed next states:** `OWNER_APPROVED`, `REQUEST_CHANGES`, `BLOCKED`.
-- **Forbidden next states:** `MERGED` (merge requires owner, not Codex).
+- **Allowed next states:** `OWNER_PR_AUTHORIZED`, `REQUEST_CHANGES`, `BLOCKED`.
+- **Forbidden next states:** `MERGED`, `OWNER_MERGE_APPROVED` (merge requires owner and PR, not Codex).
 
-### OWNER_APPROVED
+### OWNER_PR_AUTHORIZED
 
-- **Meaning:** Owner has reviewed and approved the changes. A pull request must now be opened.
+- **Meaning:** Owner has authorized that a pull request may be created. This is NOT a merge authorization.
 - **Who can enter:** Owner.
-- **Required evidence:** Owner decision record with rationale; merge authorization.
+- **Required evidence:** Owner decision record with rationale; PR authorization (not merge authorization).
 - **Allowed next states:** `PR_OPENED`, `BLOCKED`.
-- **Forbidden next states:** `MERGED` (PR must be opened first), `CLOSED` (merge must occur before closure), reversion to any pre-approval state without new REQUEST_CHANGES.
+- **Forbidden next states:** `OWNER_MERGE_APPROVED`, `MERGED`, `CLOSED`, reversion to any pre-authorization state without new REQUEST_CHANGES.
+- **Anti-drift:** OWNER_PR_AUTHORIZED only permits PR creation. Merge requires separate OWNER_MERGE_APPROVED after PR review and checks.
 
 ### PR_OPENED
 
 - **Meaning:** A pull request has been opened against the target branch. The PR body documents the scope, test results, runtime evidence, Hermes verification, Codex audit, and Owner approval trail.
 - **Who can enter:** DeepSeek / OpenCode (opens PR).
 - **Required evidence:** PR number; PR URL; base branch; base SHA; head branch; head SHA; draft or ready status; proposed diff verified against approved scope; Owner approval reference.
-- **Allowed next states:** `MERGED`, `REQUEST_CHANGES` (if the proposed diff changes materially), `BLOCKED`.
-- **Forbidden next states:** `CLOSED` (PR must be merged before closure), `POST_MERGE_VERIFIED` (merge has not occurred), `BRANCH_CLEANUP` (merge has not occurred).
+- **Allowed next states:** `OWNER_MERGE_APPROVED`, `REQUEST_CHANGES` (if the proposed diff changes materially), `BLOCKED`.
+- **Forbidden next states:** `MERGED` (merge requires explicit owner merge authorization), `CLOSED` (PR must be merged before closure), `POST_MERGE_VERIFIED` (merge has not occurred), `BRANCH_CLEANUP` (merge has not occurred).
 - **Failure behaviour:** If the PR diff does not match the approved scope, the lane returns to `REQUEST_CHANGES` for correction. If the PR cannot be opened (branch conflict, base divergence), the issue must be resolved before re-entry.
+
+### OWNER_MERGE_APPROVED
+
+- **Meaning:** Owner has explicitly authorized the merge of an open PR. This is separate from PR creation authorization. Merge must be executed after this approval.
+- **Who can enter:** Owner.
+- **Required evidence:** Owner merge decision record; PR number; PR URL; base SHA; head SHA; checks passed reference; audit reference.
+- **Allowed next states:** `MERGED`, `BLOCKED`.
+- **Forbidden next states:** `PR_OPENED` (PR already exists), `REQUEST_CHANGES` (merge approval cannot be followed by changes; if changes needed, return to PR_OPENED/REQUEST_CHANGES), reversion to OWNER_PR_AUTHORIZED.
+- **Anti-drift:** OWNER_MERGE_APPROVED is merge-specific. If further changes are required, a new REQUEST_CHANGES cycle must begin from PR_OPENED.
 
 ### MERGED
 
 - **Meaning:** PR has been merged into target branch.
-- **Who can enter:** Owner (authorizes merge); DeepSeek or GitHub executes.
-- **Required evidence:** Merge commit hash; merge timestamp.
+- **Who can enter:** DeepSeek or GitHub executes merge after OWNER_MERGE_APPROVED.
+- **Required evidence:** Merge commit hash; merge timestamp; owner merge approval reference.
 - **Allowed next states:** `POST_MERGE_AUDIT_REQUESTED`.
 - **Forbidden next states:** `CLOSED` (post-merge audit is mandatory before closing), reversion to pre-merge states.
 
@@ -274,7 +286,8 @@ Every task ledger entry MUST record the following lifecycle fields. Each field r
 | `scopeLocked` | Gate 0 | Before implementation begins |
 | `runtimeSmoke` | RUNTIME_SMOKE_TESTED | Before self-review |
 | `auditCompleted` | CODEX_APPROVED / CODEX_REQUEST_CHANGES | After Codex audit |
-| `ownerApproval` | OWNER_APPROVED | Before PR is opened |
+| `ownerPrAuthorization` | OWNER_PR_AUTHORIZED | Before PR is opened |
+| `ownerMergeApproval` | OWNER_MERGE_APPROVED | Before merge |
 | `prOpened` | PR_OPENED | Before merge |
 | `merge` | MERGED | After merge |
 | `verification` | POST_MERGE_VERIFIED | After post-merge audit |
