@@ -45,6 +45,7 @@ CLOSED
 
 (any state) → BLOCKED
 (any pre-merge state) → REQUEST_CHANGES
+(any state) → CANCELLED (terminal, lane abandoned)
 ```
 
 ---
@@ -56,7 +57,7 @@ CLOSED
 - **Meaning:** Task has been proposed but not yet routed to an agent.
 - **Who can enter:** Owner or any agent proposing a new task.
 - **Required evidence:** Task proposal with scope, allowed_files, forbidden_files.
-- **Allowed next states:** `ROUTED`, `CLOSED`.
+- **Allowed next states:** `ROUTED`, `CANCELLED`.
 - **Forbidden next states:** `IN_PROGRESS`, `IMPLEMENTED`, `MERGED`.
 
 ### ROUTED
@@ -64,7 +65,7 @@ CLOSED
 - **Meaning:** Task assigned to DeepSeek. Implementation may begin.
 - **Who can enter:** Owner or Hermes (routing).
 - **Required evidence:** Routing decision recorded; scope confirmed.
-- **Allowed next states:** `IN_PROGRESS`, `BLOCKED`, `CLOSED`.
+- **Allowed next states:** `IN_PROGRESS`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `IMPLEMENTED`, `MERGED`.
 
 ### IN_PROGRESS
@@ -212,7 +213,7 @@ CLOSED
 - **Meaning:** Codex post-merge audit complete. No issues or follow-ups recorded.
 - **Who can enter:** Codex.
 - **Required evidence:** Post-merge audit report; rollback recommendation (if any).
-- **Allowed next states:** `BRANCH_CLEANUP`.
+- **Allowed next states:** `BRANCH_CLEANUP`, `CANCELLED`.
 - **Forbidden next states:** `CLOSED` (branch cleanup is mandatory before closing), `MERGED` (already merged).
 
 ### BLOCKED
@@ -220,7 +221,7 @@ CLOSED
 - **Meaning:** Task cannot proceed due to a blocker.
 - **Who can enter:** Any agent.
 - **Required evidence:** Blocker record in BLOCKER_LOG.md; blocker ID.
-- **Allowed next states:** Return to previous state when blocker resolved; or `CLOSED`.
+- **Allowed next states:** Return to previous state when blocker resolved; or `CANCELLED` (if lane is abandoned).
 - **Forbidden next states:** Any advancement while blocker is unresolved.
 
 ### REQUEST_CHANGES
@@ -228,7 +229,7 @@ CLOSED
 - **Meaning:** Changes requested by Hermes, Codex, or Owner.
 - **Who can enter:** Hermes, Codex, or Owner.
 - **Required evidence:** Specific change requests listed; handoff back to DeepSeek.
-- **Allowed next states:** `IN_PROGRESS` (DeepSeek implements changes); `CLOSED`.
+- **Allowed next states:** `IN_PROGRESS` (DeepSeek implements changes); `CANCELLED`.
 - **Forbidden next states:** Advancement without addressing change requests.
 
 ### BRANCH_CLEANUP
@@ -249,6 +250,14 @@ CLOSED
 - **Forbidden next states:** Reversion to any pre-CLEANUP state.
 - **Failure behaviour:** An existing branch must not remain merely for reference. An already-absent branch must not be recreated merely to delete it. A no-branch lane must explicitly record `not_applicable_with_reason` and the reason.
 
+### CANCELLED
+
+- **Meaning:** Task or lane abandoned before completion. No further action. Distinct from CLOSED — a cancelled lane did not reach completion.
+- **Who can enter:** Owner.
+- **Required evidence:** Cancellation reason recorded; lane abandoned before CLOSED.
+- **Allowed next states:** None (terminal state).
+- **Forbidden next states:** Reopening requires new task proposal.
+
 ### CLOSED
 
 - **Meaning:** Task complete and all gates satisfied. No further action.
@@ -265,7 +274,8 @@ CLOSED
 2. `BLOCKED` can be entered from any state and returns to the previous state upon resolution.
 3. `REQUEST_CHANGES` can be entered from `SELF_REVIEWED`, `HERMES_VERIFIED`, `CODEX_AUDIT_REQUESTED`, or `CODEX_AUDIT_COMPLETED`.
 4. No state may be skipped in the forward path.
-5. `CLOSED` is terminal. A closed task cannot be reopened — a new task must be proposed.
+5. `CLOSED` is terminal and indicates successful completion. A closed task cannot be reopened — a new task must be proposed.
+6. `CANCELLED` is terminal and indicates the lane was abandoned before completion. A cancelled task cannot be reopened — a new task must be proposed.
 
 ---
 
@@ -330,7 +340,8 @@ Every task ledger entry MUST record the following lifecycle fields. Each field r
 | `merge` | MERGED | After merge |
 | `verification` | POST_MERGE_VERIFIED | After post-merge audit |
 | `cleanup` | BRANCH_CLEANUP | Before CLOSED |
-| `closed` | CLOSED | Terminal state |
+| `closed` | CLOSED | Terminal state (successful completion) |
+| `cancelled` | CANCELLED | Terminal state (lane abandoned) |
 
 A task with missing recording fields is incomplete and must not be closed.
 

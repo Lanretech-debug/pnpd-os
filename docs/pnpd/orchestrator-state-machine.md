@@ -64,6 +64,6 @@ Mapping guidance:
 | `OWNER_REVIEW_REQUIRED` | `CODEX_AUDIT_COMPLETED` or owner decision pending |
 | `DONE` | `CLOSED` |
 | `BLOCKED` | `BLOCKED` |
-| `WONTFIX` | `CLOSED` with rationale |
+| `WONTFIX` | `CANCELLED` with rationale |
 
 The Orchestrator may recommend a mapping, but only the relevant authority layer can record the actual gate result.

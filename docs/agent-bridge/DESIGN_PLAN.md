@@ -131,6 +131,7 @@ BRANCH_CLEANUP
 BLOCKED
 REQUEST_CHANGES
 CLOSED
+CANCELLED
 ```
 
 Full state definitions, transitions, and anti-drift controls are in `TASK_LEDGER.md`.

@@ -400,6 +400,30 @@ evidence_refs:
 
 ---
 
+## Schema 11: Branch Cleanup Record
+
+```yaml
+schema: branch_cleanup_record
+cleanup_id: "CLN-001"
+task_id: "TASK-001"
+pr_number: "PR-001"
+branch_cleanup_status: "completed"  # completed | already_absent | not_applicable_with_reason
+local_branch_status: "deleted"
+remote_branch_status: "deleted"
+verification_command_or_source: "git branch -d governance/execution-gates-patch && git push origin --delete governance/execution-gates-patch"
+canonical_main_sha: "ghi789jkl012"
+merged_head_reachable_from_main: true
+reason_if_not_applicable: ""
+verified_by: "opencode"
+verified_at: "2026-07-10T12:00:00Z"
+next_action: "Record BRANCH_CLEANUP state in task ledger; lane ready for CLOSED"
+timestamp: "2026-07-10T12:00:00Z"
+evidence_refs:
+  - "audits/cleanup-CLN-001.md"
+```
+
+---
+
 ## Schema Validation Rules
 
 1. Every task-scoped schema MUST include all common task identification fields.

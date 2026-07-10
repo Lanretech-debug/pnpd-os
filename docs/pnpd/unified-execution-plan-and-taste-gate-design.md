@@ -198,7 +198,7 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Entry Criteria | Task contract or UEP exists with explicit scope, allowed files, forbidden files, and boundary conditions. |
 | Exit Criteria | Scope is documented, approved by Owner, and branched from canonical main. |
 | Evidence Required | UEP or task contract file committed; Owner approval recorded. |
-| Failure Behaviour | If scope is ambiguous, Lane returns to proposal phase. If scope is rejected by Owner, Lane is closed. |
+| Failure Behaviour | If scope is ambiguous, Lane returns to proposal phase. If scope is rejected by Owner, Lane enters `CANCELLED` terminal state. `CLOSED` is reserved for lanes that complete all gates successfully. |
 | Rollback Behaviour | Scope lock may be amended only by Owner-approved scope amendment. |
 
 ### Gate 1 — Implementation Complete
@@ -297,7 +297,7 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Entry Criteria | Gate 6 passed; Codex audit report available. |
 | Exit Criteria | Owner issues PR authorization decision with rationale. |
 | Evidence Required | Owner PR authorization recorded (GitHub review, signed comment, or owner-decision log). |
-| Failure Behaviour | If Owner requests changes, Lane returns to Gate 1. If Owner blocks, Lane is closed. |
+| Failure Behaviour | If Owner requests changes, Lane returns to Gate 1. If Owner blocks, Lane enters `BLOCKED` state. If Owner cancels the lane, Lane enters `CANCELLED` terminal state. `CLOSED` is reserved for lanes that complete all gates successfully. |
 | Rollback Behaviour | Owner may accept Codex caveats (CODEX_AUDIT_COMPLETED_WITH_CAVEATS). Override rationale must be recorded and does not retroactively pass skipped or failed gates. |
 
 ### Gate 8 — Pull Request
@@ -361,7 +361,7 @@ Gate 2  Unit Tests Green
   ↓
 Gate 3  Integration Tests Green
   ↓
-Gate 4  Runtime Smoke Passed
+Gate 4  Runtime Evidence Satisfied
   ↓
 Gate 5  Self Review Complete
   ↓

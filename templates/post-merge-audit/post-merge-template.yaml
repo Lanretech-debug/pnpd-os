@@ -21,6 +21,22 @@
 
 ---
 
+## Mandatory Layer 4 Confirmation Fields
+
+Every post-merge audit SHALL confirm and record all seven fields below. A post-merge audit that omits any field is incomplete.
+
+| # | Field | Value |
+|---|-------|-------|
+| 1 | **Merged SHA** | |
+| 2 | **Main SHA** | |
+| 3 | **Scope Check** | |
+| 4 | **CI Status** | |
+| 5 | **Runtime Status** | |
+| 6 | **Branch Cleanup** | |
+| 7 | **Lane Closure** | |
+
+---
+
 ## Merge Verification
 
 - [ ] Merge commit present in target branch history
