@@ -17,6 +17,8 @@ IN_PROGRESS
   ↓
 IMPLEMENTED
   ↓
+RUNTIME_SMOKE_TESTED
+  ↓
 SELF_REVIEWED
   ↓
 HERMES_VERIFIED
@@ -72,8 +74,17 @@ CLOSED
 - **Meaning:** Code changes complete. Self-review pending.
 - **Who can enter:** DeepSeek.
 - **Required evidence:** All commits staged; diff summary available.
+- **Allowed next states:** `RUNTIME_SMOKE_TESTED`, `BLOCKED`.
+- **Forbidden next states:** `SELF_REVIEWED`, `HERMES_VERIFIED`, `CODEX_APPROVED`, `MERGED`.
+
+### RUNTIME_SMOKE_TESTED
+
+- **Meaning:** The implementation has been verified at runtime (local dev server, staging, or browser smoke). This gate prevents entering self-review or audit without runtime evidence.
+- **Who can enter:** DeepSeek / OpenCode.
+- **Required evidence:** Runtime smoke evidence recorded (screenshots, terminal output, console logs, or HTTP response codes proving the app starts and responds).
 - **Allowed next states:** `SELF_REVIEWED`, `BLOCKED`.
 - **Forbidden next states:** `HERMES_VERIFIED`, `CODEX_APPROVED`, `MERGED`.
+- **Anti-drift:** Runtime smoke is NOT a substitute for self-review, Hermes verification, or Codex audit. It is a prerequisite only.
 
 ### SELF_REVIEWED
 
@@ -224,6 +235,21 @@ The following controls are enforced at every state transition. Any violation blo
 ## Task Ledger Entry Template
 
 See `MESSAGE_SCHEMA.md` — Schema 2: Task Ledger Entry.
+
+Every task ledger entry MUST record the following lifecycle fields. Each field records the transition timestamp and the agent or person who performed the transition.
+
+| Recording Field | State / Event | Required When |
+|----------------|---------------|---------------|
+| `scopeLocked` | Gate 0 | Before implementation begins |
+| `runtimeSmoke` | RUNTIME_SMOKE_TESTED | Before self-review |
+| `auditCompleted` | CODEX_APPROVED / CODEX_REQUEST_CHANGES | After Codex audit |
+| `ownerApproval` | OWNER_APPROVED | Before merge |
+| `merge` | MERGED | After merge |
+| `verification` | POST_MERGE_VERIFIED | After post-merge audit |
+| `cleanup` | BRANCH_CLEANUP | Before CLOSED |
+| `closed` | CLOSED | Terminal state |
+
+A task with missing recording fields is incomplete and must not be closed.
 
 ---
 

@@ -2,8 +2,8 @@
 
 ## Current Status
 
-Status: docs-only governance design
-Canonical status: advisory until Codex audit, merge, push, CI success, and Owner/GitHub verification
+Status: governance design with normative execution gates and mandatory governance rules
+Canonical status: advisory until the full 8-step canonicalization chain completes (design → owner approval → implementation → Codex audit → merge → push → CI success → Owner/GitHub verification)
 Runtime authority: none
 Schema authority: none
 Validator authority: none
@@ -13,7 +13,7 @@ AgentBridge authority: none
 
 ## Purpose
 
-This document defines the Unified Execution Plan (UEP) model and Taste Gate model for PNPD Phase 1P-M. It establishes how execution-ready governance artifacts are structured, how Definition of Done is bound to evidence, how agent autonomy is bounded, what triggers a check-in, what constitutes exit criteria, and how taste-sensitive decisions are gated behind human authority. This is a design document only. It does not implement runtime behavior, schema changes, validator additions, fixtures, CI enforcement, or any other executable surface.
+This document defines the Unified Execution Plan (UEP) model, the Taste Gate model, and the Execution Gates pipeline for PNPD Phase 1P-M. It establishes how execution-ready governance artifacts are structured, how Definition of Done is bound to evidence, how agent autonomy is bounded, what triggers a check-in, what constitutes exit criteria, how taste-sensitive decisions are gated behind human authority, and the mandatory execution gates that every implementation lane SHALL follow. This is a governance design document. It does not implement runtime behavior, schema changes, validator additions, fixtures, CI enforcement, or any other executable surface. The execution gates and mandatory rules within this document carry normative force for all implementation lanes.
 
 ## Baseline
 
@@ -184,6 +184,254 @@ Canonical completion requires later verification:
 - Codex audit
 - GitHub/App verification
 - Owner approval
+
+## Execution Gates
+
+Every implementation lane SHALL execute the following gates in order. Each gate is a mandatory checkpoint. No gate may be skipped. A lane that fails a gate returns to the appropriate earlier gate.
+
+### Gate 0 — Scope Locked
+
+| Field | Value |
+|-------|-------|
+| Purpose | Lock the implementation scope before any code is written. Ensure all agents agree on what is in scope, out of scope, allowed files, forbidden files, and exit criteria. |
+| Owner | Hermes |
+| Entry Criteria | Task contract or UEP exists with explicit scope, allowed files, forbidden files, and boundary conditions. |
+| Exit Criteria | Scope is documented, approved by Owner, and branched from canonical main. |
+| Evidence Required | UEP or task contract file committed; Owner approval recorded. |
+| Failure Behaviour | If scope is ambiguous, Lane returns to proposal phase. If scope is rejected by Owner, Lane is closed. |
+| Rollback Behaviour | Scope lock may be amended only by Owner-approved scope amendment. |
+
+### Gate 1 — Implementation Complete
+
+| Field | Value |
+|-------|-------|
+| Purpose | All code changes for the scoped increment are complete and committed to the working branch. |
+| Owner | DeepSeek / OpenCode |
+| Entry Criteria | Scope locked (Gate 0 passed); working branch created from canonical main. |
+| Exit Criteria | All in-scope changes implemented; working tree clean; no untracked files remain (except allowed ignores). |
+| Evidence Required | `git status --short` shows clean working tree; `git log --oneline` shows scoped commits. |
+| Failure Behaviour | If scope was exceeded, return to Gate 0 for scope amendment. If implementation is incomplete, return to implementation. |
+| Rollback Behaviour | `git reset --hard` to last known-good commit; re-implement. |
+
+### Gate 2 — Unit Tests Green
+
+| Field | Value |
+|-------|-------|
+| Purpose | Confirm that all unit tests pass on the working branch before proceeding to integration or runtime verification. |
+| Owner | DeepSeek / OpenCode |
+| Entry Criteria | Gate 1 passed. |
+| Exit Criteria | All unit tests pass; no new unit test failures beyond pre-existing baselines. |
+| Evidence Required | Full `npm test` or equivalent unit test runner output showing pass/fail counts. |
+| Failure Behaviour | Lane returns to Gate 1 for test repair. Failed gates stay failed until rerun; new failures must be addressed before re-entry. |
+| Rollback Behaviour | Revert failing test commits; re-run gate. |
+
+### Gate 3 — Integration Tests Green
+
+| Field | Value |
+|-------|-------|
+| Purpose | Confirm that integration tests (cross-module, API, database, or auth-dependent) pass on the working branch. |
+| Owner | DeepSeek / OpenCode |
+| Entry Criteria | Gate 2 passed. |
+| Exit Criteria | All integration tests pass; no regressions introduced. |
+| Evidence Required | Full integration test runner output with pass/fail counts. |
+| Failure Behaviour | Lane returns to Gate 1. Integration failures indicate scope drift, missing configuration, or incorrect assumptions — all require implementation repair before re-entry. |
+| Rollback Behaviour | Revert integration-affecting commits; re-run gate. |
+
+### Gate 4 — Runtime Smoke Passed
+
+| Field | Value |
+|-------|-------|
+| Purpose | Prove that the implementation runs correctly in a real or simulated deployment environment. Browser-based smoke, API endpoint calls, or local dev-server verification. |
+| Owner | DeepSeek / OpenCode |
+| Entry Criteria | Gates 1–3 passed; local dev environment or staging can run the application. |
+| Exit Criteria | All critical user flows accessible; no crash-loop or startup error. |
+| Evidence Required | Screenshots, console logs, HTTP response codes, or recorded terminal output proving the app starts and responds. |
+| Failure Behaviour | Lane returns to Gate 1. Runtime defects are always implementation defects and must be fixed before proceeding. |
+| Rollback Behaviour | Revert runtime-breaking commits; re-run Gate 2 and Gate 3 before re-entering Gate 4. |
+
+### Gate 5 — Self Review Complete
+
+| Field | Value |
+|-------|-------|
+| Purpose | The implementing agent performs a structured self-review against scope, diff, tests, and boundaries before requesting external review. |
+| Owner | DeepSeek / OpenCode |
+| Entry Criteria | Gates 1–4 passed. |
+| Exit Criteria | Self-review log documents scope check, diff review, test gate results, runtime evidence, and any caveats or assumptions. |
+| Evidence Required | Self-review log entry committed or recorded. |
+| Failure Behaviour | If self-review reveals unresolved issues, Lane returns to Gate 1 for fixes, then re-runs Gates 2–4. |
+| Rollback Behaviour | Revert problematic commits before re-entering Gate 1. |
+
+### Gate 6 — Independent Codex Audit
+
+| Field | Value |
+|-------|-------|
+| Purpose | Independent formal audit by Codex. Validates implementation, scope fidelity, safety, governance compliance, and runtime evidence. |
+| Owner | Codex |
+| Entry Criteria | Gate 5 passed; self-review log available; full PR diff available. |
+| Exit Criteria | Codex issues one of: `CODEX_APPROVED`, `CODEX_APPROVED_WITH_CAVEATS`, `CODEX_REQUEST_CHANGES`, or `CODEX_BLOCKED`. |
+| Evidence Required | Codex audit report documenting verdict, caveats (if any), and merge recommendation. |
+| Failure Behaviour | `CODEX_REQUEST_CHANGES` returns Lane to Gate 1. `CODEX_BLOCKED` holds Lane until blocker is resolved. |
+| Rollback Behaviour | Revert implementation commits if Codex finds uncorrectable issues; re-propose from Gate 0. |
+
+### Gate 7 — Owner Approval
+
+| Field | Value |
+|-------|-------|
+| Purpose | Owner reviews the Codex audit result and either approves merge, requests changes, or blocks. |
+| Owner | Owner |
+| Entry Criteria | Gate 6 passed; Codex audit report available. |
+| Exit Criteria | Owner issues approval decision with rationale. |
+| Evidence Required | Owner decision recorded (GitHub review, signed comment, or owner-decision log). |
+| Failure Behaviour | If Owner requests changes, Lane returns to Gate 1. If Owner blocks, Lane is closed. |
+| Rollback Behaviour | Owner may accept Codex caveats (CODEX_APPROVED_WITH_CAVEATS). Override rationale must be recorded and does not retroactively pass skipped or failed gates. |
+
+### Gate 8 — Pull Request
+
+| Field | Value |
+|-------|-------|
+| Purpose | Open a PR to main containing the scoped changes. The PR body references the scope document, test evidence, runtime evidence, Codex audit, and Owner approval. |
+| Owner | DeepSeek / OpenCode |
+| Entry Criteria | Gate 7 passed. |
+| Exit Criteria | GitHub PR is open against main. PR body documents scope, test results, runtime evidence, and audit/approval trail. |
+| Evidence Required | GitHub PR URL. |
+| Failure Behaviour | If PR cannot be opened (branch conflict, base divergence), resolve conflict and re-enter Gate 8. |
+| Rollback Behaviour | Close PR without merging; return to Gate 1. |
+
+### Gate 9 — Merge
+
+| Field | Value |
+|-------|-------|
+| Purpose | Merge the approved PR into main using a standard merge commit (not squash, not rebase unless the project convention requires otherwise). |
+| Owner | Owner (authorises); OpenCode or GitHub (executes). |
+| Entry Criteria | Gate 8 passed; PR is open; merge checks pass; Owner has authorised merge. |
+| Exit Criteria | Normal merge commit exists on main. |
+| Evidence Required | Merge commit SHA; merged timestamp. |
+| Failure Behaviour | If merge conflicts or CI failures occur, lane returns to Gate 1 for conflict resolution. |
+| Rollback Behaviour | `git revert` the merge commit; create a new branch for fixes. |
+
+### Gate 10 — Post-Merge Verification
+
+| Field | Value |
+|-------|-------|
+| Purpose | Confirm that the merge did not break main. Verify the merged commit, main SHA, scope fidelity, CI status, and runtime behaviour. |
+| Owner | Codex |
+| Entry Criteria | Gate 9 passed; merge commit exists on main. |
+| Exit Criteria | Post-merge audit report documents: merged SHA, main SHA, scope check result, CI status, runtime status, branch cleanup status, and lane closure recommendation. |
+| Evidence Required | Post-merge audit report with all 7 confirmation fields. |
+| Failure Behaviour | If post-merge verification detects critical drift, recommend rollback to Owner. Non-critical drift creates a follow-up issue. |
+| Rollback Behaviour | Owner decides: rollback (`git revert`), hotfix, or follow-up. |
+
+### Gate 11 — Branch Cleanup
+
+| Field | Value |
+|-------|-------|
+| Purpose | Remove the working branch after the merge is verified and stable. |
+| Owner | DeepSeek / OpenCode |
+| Entry Criteria | Gate 10 passed; post-merge audit confirms no critical drift. |
+| Exit Criteria | Remote branch deleted; local branch deleted (optional, may be kept for reference). |
+| Evidence Required | `git branch -r` shows no remote branch; `git branch` shows no local working branch. |
+| Failure Behaviour | If branch cannot be deleted (e.g., branch protection), record exception and escalate to Owner. |
+| Rollback Behaviour | N/A — branch cleanup is safe once merge is verified. Branch can be recreated from merge commit if needed. |
+
+### Gate Flow Diagram
+
+```
+Gate 0  Scope Locked
+  ↓
+Gate 1  Implementation Complete
+  ↓
+Gate 2  Unit Tests Green
+  ↓
+Gate 3  Integration Tests Green
+  ↓
+Gate 4  Runtime Smoke Passed
+  ↓
+Gate 5  Self Review Complete
+  ↓
+Gate 6  Independent Codex Audit
+  ↓
+Gate 7  Owner Approval
+  ↓
+Gate 8  Pull Request
+  ↓
+Gate 9  Merge
+  ↓
+Gate 10 Post-Merge Verification
+  ↓
+Gate 11 Branch Cleanup
+  ↓
+        Lane Closed
+```
+
+---
+
+## Mandatory Governance Rules
+
+The following rules are mandatory for every implementation lane. They replace any prior advisory language.
+
+### Rule 1 — Runtime before Audit
+
+No implementation lane may enter Codex audit before Runtime Smoke succeeds.
+
+Audit checks implementation, scope, safety, and governance — it never replaces runtime verification.
+
+### Rule 2 — Runtime Defect Returns Lane to Implementation
+
+Runtime defects discovered after implementation (at any gate from Gate 4 onward) automatically return the lane to Gate 1 (Implementation Complete). The lane must re-pass Gates 2–4 before proceeding.
+
+### Rule 3 — Codex Validates Implementation, Not Runtime
+
+Codex audit validates implementation correctness, scope fidelity, and governance compliance. It does not replace or certify runtime verification.
+
+Every audit must declare one of:
+
+- `Runtime Verified` — runtime smoke evidence was reviewed and is acceptable.
+- `Runtime Not Verified` — runtime smoke evidence was missing, insufficient, or not reviewed. When Runtime Not Verified is declared, the Pre-Merge Audit SHALL reject the PR.
+
+### Rule 4 — No PR Before Gate 6
+
+No PR may be opened before Gate 6 (Independent Codex Audit) passes. Opening a PR earlier creates premature review overhead and bypasses the implementation-to-audit sequence.
+
+### Rule 5 — No Merge Before Owner Approval
+
+No merge may occur before Gate 7 (Owner Approval) passes. Owner is the final decision-maker. No agent may override this gate.
+
+### Rule 6 — Branch Cleanup is Part of Lane Completion
+
+Branch cleanup (Gate 11) is a required step in every lane. The working branch must be deleted after merge verification completes. An undeleted branch is evidence of an incomplete lane.
+
+### Rule 7 — Lane Completion Requires Post-Merge Verification
+
+No lane is complete until Gate 10 (Post-Merge Verification) passes. Merge alone does not close a lane.
+
+### Rule 8 — Audit Declares Runtime Status
+
+Every Codex audit output must explicitly declare `Runtime Verified` or `Runtime Not Verified` as part of the audit verdict. A blank or absent runtime field is treated as Runtime Not Verified.
+
+### Rule 9 — Review Comments Must Distinguish Defect Types
+
+All review and audit comments must classify defects into exactly one of:
+
+- **Implementation defect** — code logic, structure, or correctness issue.
+- **Runtime defect** — app behaviour, startup, or integration issue that only manifests at runtime.
+- **Governance defect** — scope drift, boundary violation, or process skip.
+- **Environment defect** — config, dependency, or infra issue.
+
+No defect may carry multiple classifications. Misclassification is a governance defect.
+
+### Rule 10 — Execution Contracts Declare All Five Mandatory Fields
+
+Every execution contract (task contract, UEP, or equivalent) must explicitly declare:
+
+1. **Executor** — who implements (e.g., DeepSeek, OpenCode).
+2. **Auditor** — who audits (e.g., Codex).
+3. **Owner** — who approves (e.g., Owner / named human).
+4. **Boundary** — allowed files, forbidden files, and scope limits.
+5. **Exit Criteria** — conditions that define lane completion.
+
+A contract missing any of the five fields is incomplete. No agent may begin implementation on an incomplete contract.
+
+---
 
 ## Taste Gate Model
 

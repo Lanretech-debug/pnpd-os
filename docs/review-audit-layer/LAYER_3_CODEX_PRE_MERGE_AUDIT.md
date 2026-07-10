@@ -21,6 +21,21 @@ Codex is the formal pre-merge auditor. Required before merging material product,
 | DO_NOT_MERGE_REQUEST_CHANGES | Must not merge until changes implemented |
 | DO_NOT_MERGE_BLOCKED | Blocked; cannot merge while blocker exists |
 
+## Mandatory Audit Rules
+
+### Rule 1 — Runtime Evidence Required
+
+Pre-Merge Audit SHALL reject any PR that lacks runtime evidence. Runtime evidence means screenshots, terminal output, console logs, or HTTP response codes proving that the application starts and responds as expected for the scoped changes.
+
+### Rule 2 — Every Audit Must Declare Runtime Status
+
+Every Codex pre-merge audit must explicitly declare one of:
+
+- `Runtime Verified` — runtime smoke evidence was reviewed and is acceptable.
+- `Runtime Not Verified` — runtime smoke evidence was missing, insufficient, or not reviewed.
+
+A verdict of `Runtime Not Verified` SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`.
+
 ## Can Do:
 - Audit the full PR diff
 - Verify scope against task intent
@@ -28,9 +43,12 @@ Codex is the formal pre-merge auditor. Required before merging material product,
 - Review tests, gates, smoke evidence, and skipped checks
 - Detect governance contradictions
 - Approve, request changes, or block merge readiness
+- Declare `Runtime Verified` or `Runtime Not Verified` as part of every audit verdict
 
 ## Cannot Do:
 - Approve without evidence
 - Override the owner's final decision
 - Merge without owner approval
 - Silently waive failed gates or treat skipped checks as passed
+- Certify runtime behaviour as production-safe (runtime smoke evidence confirms basic operability, not production readiness)
+- Approve a PR with `Runtime Not Verified` status

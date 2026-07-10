@@ -86,6 +86,12 @@ If an agent's role is unknown, it must default to READ_ONLY_VERIFY_AND_REPORT un
 
 ---
 
+## Execution Gates
+
+Every implementation lane SHALL follow the 12-gate execution pipeline defined in `docs/pnpd/unified-execution-plan-and-taste-gate-design.md`. The pipeline makes runtime verification mandatory before any audit, and branch cleanup mandatory before lane closure.
+
+---
+
 ## Review & Audit Layer
 
 PNPD-OS operates five distinct review and audit layers. Each layer has a different scope, authority, and escalation path.

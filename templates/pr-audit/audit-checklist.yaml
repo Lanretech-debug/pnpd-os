@@ -54,7 +54,20 @@
 
 ---
 
-### 4. Secret Scan
+### 4. Runtime Verification
+
+- [ ] Runtime smoke test completed and passed on working branch
+- [ ] Runtime evidence documented (screenshots, logs, terminal output, or HTTP responses)
+- [ ] Runtime evidence proves the app starts and the affected flows respond correctly
+- [ ] Runtime status declared in audit verdict (`Runtime Verified` or `Runtime Not Verified`)
+
+**Notes:**
+
+If `Runtime Not Verified` is declared, the Pre-Merge Audit SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`.
+
+---
+
+### 5. Secret Scan
 
 - [ ] No API keys, tokens, or credentials in diff
 - [ ] No private keys or certificates
@@ -65,7 +78,7 @@
 
 ---
 
-### 5. Authority Drift Scan
+### 6. Authority Drift Scan
 
 - [ ] No agent certified its own work as final
 - [ ] Merge-authorized only by owner (not by implementing agent)
@@ -76,7 +89,7 @@
 
 ---
 
-### 6. Merge Recommendation
+### 7. Merge Recommendation
 
 - [ ] `MERGE_OK` — PR is safe to merge as-is
 - [ ] `MERGE_OK_OWNER_ACCEPTS_CAVEATS` — Owner must accept listed caveats
@@ -96,6 +109,7 @@
 | Scope Check | |
 | File Diff Check | |
 | Test / Gate Check | |
+| Runtime Verification | |
 | Secret Scan | |
 | Authority Drift Scan | |
 | **Overall** | |
