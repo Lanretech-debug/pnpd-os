@@ -204,7 +204,7 @@ handoff:
     - base_sha: "abc123def456"
     - head_branch: "governance/example"
     - head_sha: "ghi789jkl012"
-    - codex_audit_reference: "ARES-001"
+    - codex_audit_reference: "ARES-002"
     - required_checks_status: "all_passed"
   blockers: []
   next_action: "Owner review current PR state and authorize merge (separate from PR authorization)"
@@ -231,7 +231,7 @@ handoff:
   base_sha: "abc123def456"
   head_branch: "governance/example"
   head_sha: "ghi789jkl012"
-  codex_audit_reference: "ARES-001"
+  codex_audit_reference: "ARES-002"
   codex_verdict: PASS
   required_checks_status: all_passed
   approved_merge_method: squash
@@ -287,7 +287,7 @@ handoff:
     - pr_number: "PR-001"
     - pr_url: "https://github.com/org/repo/pull/1"
     - head_sha: "ghi789jkl012"
-    - codex_audit_reference: "ARES-001"
+    - codex_audit_reference: "ARES-002"
   next_action: "Codex post-merge audit of merged diff in target branch"
 ```
 
@@ -371,7 +371,7 @@ handoff:
   status: CANCELLED
   decision_type: owner_cancellation
   owner_cancelled: true
-  owner_decision_reference: "DEC-005"
+  owner_decision_reference: "DEC-006"
   cancellation_reason: "Owner ended the lane before merge because its scope is no longer required."
   last_valid_state: PR_OPENED
   unresolved_findings:
@@ -381,6 +381,7 @@ handoff:
   branch_name_if_any: "governance/execution-gates-patch"
   branch_state: retained_pending_safety_cleanup
   repository_state: "clean_worktree; main unchanged"
+  runtime_verification_reached: true
   required_safety_cleanup:
     - "Close the unmerged PR only with separate Owner authority"
   cancelled_by: owner
@@ -397,11 +398,12 @@ handoff:
 
 Cancellation is not `PASS` or `CLOSED`, does not erase unresolved findings, cannot occur after `MERGED`, and is terminal. It records safety cleanup obligations without authorizing those actions.
 
-Cancellation at any pre-merge stage (including before Gate 4) must still carry the
-complete six-field runtime record. Even when no runtime verification was performed
-before cancellation, `runtime_status: "Runtime Not Applicable"` with an explicit
-reason is required. Omission of any canonical runtime field makes the cancellation
-handoff incomplete and prohibits routing.
+Cancellation at any pre-merge stage must carry `runtime_verification_reached: true`
+if Gate 4 was passed (runtime was verified or declared N/A before cancellation);
+`runtime_verification_reached: false` if cancellation occurred before Gate 4.
+When `runtime_verification_reached` is true, the complete six-field runtime record
+is required. When false, only `runtime_verification_reached` is required. The field
+is mandatory in every cancellation handoff.
 
 ---
 

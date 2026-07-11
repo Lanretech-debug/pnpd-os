@@ -106,6 +106,16 @@ If `Runtime Not Applicable` is declared, the canonical six-key N/A evidence cont
 
 ---
 
+### Head SHA Integrity
+
+- [ ] Audited head SHA matches the actual PR head SHA at time of audit
+- [ ] Audited base SHA matches the actual PR base SHA at time of audit
+- [ ] No commits pushed to the PR branch after the audit head SHA was recorded
+- [ ] SHA binding is exact (prefix match is insufficient — full 40-character SHA)
+- [ ] Any material head change invalidates this audit and requires a fresh run
+
+---
+
 ## Audit Summary
 
 | Check | Result |

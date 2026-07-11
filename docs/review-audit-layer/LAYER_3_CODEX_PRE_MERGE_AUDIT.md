@@ -7,10 +7,9 @@ Codex is the formal pre-merge auditor. Required before merging material product,
 | Status | Meaning |
 |--------|---------|
 | PENDING_CODEX_FINAL_AUDIT | Audit requested but not yet started |
-| CODEX_AUDIT_COMPLETED | Audit passed with no caveats |
+| CODEX_AUDIT_COMPLETED | Audit completed; carries `audit_outcome` (PASS / PASS_WITH_CAVEATS) |
 | CODEX_REQUEST_CHANGES | Audit found issues; changes requested |
 | CODEX_BLOCKED | Audit cannot proceed due to blocker |
-| CODEX_AUDIT_COMPLETED_WITH_CAVEATS | Audit passed but owner must accept listed caveats |
 
 ## Merge Recommendations
 
@@ -53,22 +52,14 @@ A verdict of `Runtime Not Verified` SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`
 
 ### Rule 3 — Runtime Not Applicable Evidence Contract
 
-When `Runtime Not Applicable` is declared, both evidence and process checks are
-required. Evidence attests to correctness; process checks attest to governance
-compliance. Missing either category makes the contract incomplete.
-
-#### Evidence Fields
+When `Runtime Not Applicable` is declared, all six canonical fields below are
+required. All six are Runtime Truth evidence — there is no evidence/process split.
 
 | Field | Description |
 |-------|-------------|
 | `runtime_status` | `Runtime Not Applicable` |
 | `runtime_reason` | Why runtime is not applicable (e.g., governance-only docs change) |
 | `runtime_surface` | Classification of affected surface (e.g., governance, templates, schemas) |
-
-#### Process Check Fields
-
-| Field | Description |
-|-------|-------------|
 | `runtime_evidence_or_substitute_evidence` | Alternative validation that confirms correctness (e.g., `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-doc contradiction analysis, state-machine transition review) |
 | `runtime_verified_by` | Agent or human who confirmed |
 | `runtime_verified_at` | ISO 8601 timestamp |

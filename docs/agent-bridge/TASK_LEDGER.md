@@ -85,7 +85,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 
 - **Meaning:** Code changes complete. Self-review pending.
 - **Who can enter:** DeepSeek.
-- **Required evidence:** All commits staged; diff summary available; scope-check confirmation against task contract; all changed files listed and verified against allowed_files.
+- **Required evidence:** All scoped changes committed; clean worktree; commit list available; scope-check confirmation against task contract; all changed files listed and verified against allowed_files.
 - **Allowed next states:** `RUNTIME_SMOKE_TESTED`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `SELF_REVIEWED`, `HERMES_VERIFIED`, `CODEX_AUDIT_COMPLETED`, `MERGED`.
 
@@ -325,6 +325,7 @@ POST_MERGE_VERIFIED
   - `branch_name_if_any`
   - `branch_state`
   - `repository_state`
+  - `runtime_verification_reached`  # true if Gate 4 was passed before cancellation; false otherwise
   - `required_safety_cleanup`
   - `cancelled_by`
   - `cancelled_at`
@@ -388,7 +389,7 @@ The following controls are enforced at every state transition. Any violation blo
 ### Merge Gate
 
 11. **Merge requires Codex audit or explicit owner override rationale.** No merge without Codex audit result OR a recorded owner override with rationale. A material head-SHA change after Codex audit invalidates the audit — a new audit is required before merge.
-12. **Post-merge audit is required for all merges.** No merge may close without a post-merge audit recording all 21 mandatory fields grouped into seven evidence categories, followed by Gate 11 cleanup verification. See `POST_MERGE_QUEUE.md` for high-risk categories (which require additional scrutiny, not triggering).
+12. **Post-merge audit is required for all merges.** No merge may close without a post-merge audit recording all 22 mandatory fields grouped into seven evidence categories, followed by Gate 11 cleanup verification. See `POST_MERGE_QUEUE.md` for high-risk categories (which require additional scrutiny, not triggering).
 
 ### Handoff Integrity
 

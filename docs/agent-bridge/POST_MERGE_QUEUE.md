@@ -7,9 +7,9 @@
 
 ## When Post-Merge Audit Is Required
 
-Post-merge audit is **required for all merges**. No merge may close without Gate 10 recording all 21 mandatory fields grouped into seven evidence categories and Gate 11 verifying cleanup.
+Post-merge audit is **required for all merges**. No merge may close without Gate 10 recording all 22 mandatory fields grouped into seven evidence categories and Gate 11 verifying cleanup.
 
-The seven categories and 21 fields are: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`).
+The seven categories and 22 fields are: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_evidence_reference`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`).
 
 High-risk categories (see below) trigger **additional scrutiny** within the post-merge audit — not the audit itself, which is mandatory regardless.
 
@@ -123,18 +123,18 @@ pr_url: "https://github.com/org/repo/pull/2"
 pr_merged_state: "MERGED"
 merge_commit_sha: "def456ghi789"
 canonical_main_sha: "def456ghi789"
-merged_scope: "minor_drift_found"
+merged_scope: "drift_found_blocking"
 ci_status: "all_passed"
 runtime_status: "Runtime Verified"
 runtime_evidence_reference: "audits/runtime-TASK-002.md"
 branch_cleanup_status: "pending"
 cleanup_eligibility: "ineligible"
 cleanup_required_actions:
-  - "Owner decides disposition of the config drift"
+  - "Remediate auth session exposure before Gate 11"
 cleanup_evidence_reference: "pending_gate_11"
 lane_closure_ready: false
 blocking_findings:
-  - "Minor config.py drift requires Owner disposition"
+  - "Auth session token exposed in merged production config — CV-002"
 next_state: "BLOCKED"
 remediation_required: true
 verified_by: "codex"
@@ -142,19 +142,25 @@ verified_at: "2026-06-10T13:00:00Z"
 findings:
   - finding: "Merged diff generally matches approved scope"
     severity: "PASS"
-  - finding: "One file drifted from approved scope: src/config.py line 42"
-    severity: "MEDIUM"
+  - finding: "Auth session secret leaked into src/config/production.py — P0 security exposure"
+    severity: "CRITICAL"
 issues_found:
-  - issue: "Minor drift in config.py — non-critical, adds debug flag"
-    severity: "LOW"
-    recommendation: "File follow-up cleanup task or revert if undesired"
-rollback_recommended: false
-rollback_rationale: ""
+  - issue: "Production auth session token committed in config file"
+    severity: "CRITICAL"
+    recommendation: "Immediately rotate session secret, revert the leaked config, and re-audit"
+rollback_recommended: true
+rollback_rationale: "Auth session secret exposed in merged production config. Rollback the config change immediately, rotate the secret, and re-audit before further merges."
 follow_up_actions:
-  - action: "Create TASK-010 to remove debug flag if not needed"
-    assigned_to: "deepseek"
-    priority: "LOW"
-next_action: "Enter BLOCKED, remediate the recorded finding, then rerun post-merge verification before Gate 11"
+  - action: "Revert merge commit def456ghi789"
+    assigned_to: "owner"
+    priority: "CRITICAL"
+  - action: "Rotate exposed auth session secret"
+    assigned_to: "owner"
+    priority: "CRITICAL"
+  - action: "Re-audit after remediation"
+    assigned_to: "codex"
+    priority: "HIGH"
+next_action: "CRITICAL: Enter BLOCKED. Owner must immediately rotate the exposed auth session secret and revert the merge before any further action."
 timestamp: "2026-06-10T13:00:00Z"
 evidence_refs:
   - "audits/post-merge-audit-TASK-002.md"
@@ -206,7 +212,7 @@ CLOSED — terminal state, successful completion only
 4. If `blocking_findings` is empty, `next_state` is `BRANCH_CLEANUP`. Non-blocking findings may proceed; zero findings are not required.
 5. If `blocking_findings` is non-empty, `next_state` is `BLOCKED`, `remediation_required` is `true`, Gate 11 is forbidden, and post-merge verification must be rerun after remediation.
 6. Post-merge audit results go to the **Owner** for decision, but Owner review does not replace the required `BLOCKED` lifecycle state.
-7. Gate 10 records all 21 mandatory fields, keeps `lane_closure_ready: false`, may record cleanup as pending, performs no normal branch deletion, and never closes the lane.
+7. Gate 10 records all 22 mandatory fields, keeps `lane_closure_ready: false`, may record cleanup as pending, performs no normal branch deletion, and never closes the lane.
 8. Gate 11 performs or verifies exactly one cleanup outcome (`completed`, `already_absent`, or `not_applicable_with_reason`). Even already-absent and not-applicable outcomes require Gate 11 verification. Only Gate 11 may set `lane_closure_ready: true` and permit `BRANCH_CLEANUP` to transition to `CLOSED`.
 
 ---

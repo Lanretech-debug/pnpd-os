@@ -106,7 +106,7 @@ authority_level: advisory
 can_do:
   - Audit PR scope, diff, and evidence
   - Request changes (REQUEST_CHANGES)
-  - Approve with caveats (CODEX_AUDIT_COMPLETED_WITH_CAVEATS)
+  - Approve with caveats (audit_outcome: PASS_WITH_CAVEATS)
   - Block merges that fail audit gates
   - Write audit results to AgentBridge audit queue
   - Recommend merge action to owner

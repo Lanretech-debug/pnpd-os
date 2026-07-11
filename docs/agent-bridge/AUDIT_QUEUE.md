@@ -68,10 +68,9 @@ timestamp: "2026-06-10T12:30:00Z"
 | Status                        | Meaning                                              |
 | ----------------------------- | ---------------------------------------------------- |
 | `PENDING_CODEX_FINAL_AUDIT`   | Audit requested but not yet started                  |
-| `CODEX_AUDIT_COMPLETED`              | Audit passed with no caveats                         |
-| `CODEX_REQUEST_CHANGES`              | Audit found issues; changes requested                |
-| `CODEX_BLOCKED`                      | Audit cannot proceed due to blocker                  |
-| `CODEX_AUDIT_COMPLETED_WITH_CAVEATS` | Audit passed with caveats; owner must accept listed caveats    |
+| `CODEX_AUDIT_COMPLETED`   | Audit completed; carries `audit_outcome` (PASS / PASS_WITH_CAVEATS) |
+| `CODEX_REQUEST_CHANGES`   | Audit found issues; changes requested                  |
+| `CODEX_BLOCKED`           | Audit cannot proceed due to blocker                    |
 
 ---
 
@@ -109,8 +108,8 @@ Codex MUST provide exactly one merge recommendation per audit:
 PENDING_CODEX_FINAL_AUDIT
   ↓
   ├── CODEX_AUDIT_COMPLETED
-  │     ├── (audit_outcome: PASS)       → MERGE_OK
-  │     └── CODEX_AUDIT_COMPLETED_WITH_CAVEATS (audit_outcome: PASS_WITH_CAVEATS) → MERGE_OK_OWNER_ACCEPTS_CAVEATS
+  │     ├── (audit_outcome: PASS)              → MERGE_OK
+  │     └── (audit_outcome: PASS_WITH_CAVEATS) → MERGE_OK_OWNER_ACCEPTS_CAVEATS
   ├── CODEX_REQUEST_CHANGES     → DO_NOT_MERGE_REQUEST_CHANGES
   └── CODEX_BLOCKED             → DO_NOT_MERGE_BLOCKED
 ```
@@ -125,7 +124,7 @@ audit_result_id: "ARES-001"
 audit_request_id: "AR-001"
 task_id: "TASK-001"
 auditor: "codex"
-codex_status: "CODEX_AUDIT_COMPLETED_WITH_CAVEATS"
+codex_status: "CODEX_AUDIT_COMPLETED"
 audit_outcome: "PASS_WITH_CAVEATS"
 merge_recommendation: "MERGE_OK_OWNER_ACCEPTS_CAVEATS"
 caveats:
@@ -146,6 +145,35 @@ next_action: "Owner review caveat CV-001 and decide merge"
 timestamp: "2026-06-10T12:15:00Z"
 evidence_refs:
   - "audits/codex-audit-TASK-001.md"
+```
+
+---
+
+## Clean-Pass Audit Result Template (ARES-002)
+
+```yaml
+schema: audit_result
+audit_result_id: "ARES-002"
+audit_request_id: "AR-002"
+task_id: "TASK-002"
+auditor: "codex"
+codex_status: "CODEX_AUDIT_COMPLETED"
+audit_outcome: "PASS"
+merge_recommendation: "MERGE_OK"
+caveats: []
+change_requests: []
+findings:
+  - finding: "PR scope matches approved task scope"
+    severity: "PASS"
+  - finding: "No secrets detected in diff"
+    severity: "PASS"
+full_pr_audited: true
+commits_audited: 2
+owner_decision_needed: false
+next_action: "No caveats. Ready for owner merge authorization."
+timestamp: "2026-06-10T12:20:00Z"
+evidence_refs:
+  - "audits/codex-audit-TASK-002.md"
 ```
 
 ---

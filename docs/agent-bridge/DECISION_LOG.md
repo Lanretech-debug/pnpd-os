@@ -31,6 +31,8 @@ evidence_refs:
 
 ## Decision Types
 
+These are decision types (values of `decision_type`), not Task Ledger lifecycle states. A single owner decision may reference but does not replace lifecycle state.
+
 | Type                 | Meaning                                                              |
 | -------------------- | -------------------------------------------------------------------- |
 | `owner_merge_authorization` | Approve one exact PR head for merge into the target branch    |
@@ -101,7 +103,7 @@ base_branch: "main"
 base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
 head_branch: "feat/example"
 head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
-codex_audit_reference: "ARES-001"
+codex_audit_reference: "ARES-002"
 codex_verdict: "CODEX_AUDIT_COMPLETED"
 required_checks_status: "all_passed"
 approved_merge_method: "squash"  # squash | merge | rebase
@@ -163,7 +165,7 @@ pr_creation_only: true
 authorized_branch: "feat/example-feature"
 authorized_base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
 authorized_head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
-codex_audit_reference: "ARES-001"
+codex_audit_reference: "ARES-002"
 owner_decision_reference: "DEC-001"
 authorized_at: "2026-06-10T12:30:00Z"
 rationale: "Codex audit passed with no caveats. Hermes verification clean. PR scope matches approved task. PR may be opened."
@@ -191,7 +193,7 @@ base_branch: "main"
 base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
 head_branch: "feat/example-feature"
 head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
-codex_audit_reference: "ARES-001"
+codex_audit_reference: "ARES-002"
 codex_verdict: "CODEX_AUDIT_COMPLETED"
 required_checks_status: "all_passed"
 approved_merge_method: "squash"

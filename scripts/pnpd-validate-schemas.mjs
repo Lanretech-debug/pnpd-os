@@ -260,11 +260,11 @@ function parseArgs(argv) {
         throw new Error("--bug-forecast is a standalone validator and cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, 1q-bug-forecast, 1q-bug-forecast-example, 1q-bug-forecast-example-negative, or 1q-bug-forecast-summary).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, 1q-bug-forecast, 1q-bug-forecast-example, 1q-bug-forecast-example-negative, 1q-bug-forecast-summary, or governance-recovery).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast" && phaseVal !== "1q-bug-forecast-example" && phaseVal !== "1q-bug-forecast-example-negative" && phaseVal !== "1q-bug-forecast-summary") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", "1q-bug-forecast", "1q-bug-forecast-example", "1q-bug-forecast-example-negative", or "1q-bug-forecast-summary".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast" && phaseVal !== "1q-bug-forecast-example" && phaseVal !== "1q-bug-forecast-example-negative" && phaseVal !== "1q-bug-forecast-summary" && phaseVal !== "governance-recovery") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", "1q-bug-forecast", "1q-bug-forecast-example", "1q-bug-forecast-example-negative", "1q-bug-forecast-summary", or "governance-recovery".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -449,7 +449,7 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast|1q-bug-forecast-example|1q-bug-forecast-example-negative|1q-bug-forecast-summary]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast|1q-bug-forecast-example|1q-bug-forecast-example-negative|1q-bug-forecast-summary|governance-recovery]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
@@ -6407,6 +6407,207 @@ function validateBugForecastSummaryPhase() {
   console.log("non-capability: no production readiness claim");
 }
 
+// ── Phase: Governance Recovery ──────────────────────────────────────────────────
+
+function validateGovernanceRecoveryPhase() {
+  const ROOT = process.cwd();
+  let failures = [];
+
+  function assert(condition, msg) {
+    if (!condition) failures.push(msg);
+  }
+
+  function file(path) { return path; }
+
+  function grep(filePath, pattern) {
+    try {
+      const content = fs.readFileSync(path.join(ROOT, filePath), "utf-8");
+      return pattern.test(content);
+    } catch { return false; }
+  }
+
+  function countOccurrences(filePath, pattern) {
+    try {
+      const content = fs.readFileSync(path.join(ROOT, filePath), "utf-8");
+      return (content.match(pattern) || []).length;
+    } catch { return 0; }
+  }
+
+  // 1. No CODEX_AUDIT_COMPLETED_WITH_CAVEATS as lifecycle status
+  const lifecycleFiles = [
+    "docs/agent-bridge/AUDIT_QUEUE.md",
+    "docs/review-audit-layer/LAYER_3_CODEX_PRE_MERGE_AUDIT.md",
+    "docs/pnpd/unified-execution-plan-and-taste-gate-design.md",
+    "docs/agent-bridge/AGENT_REGISTRY.md",
+    "docs/governance/ROLES.md"
+  ];
+  for (const f of lifecycleFiles) {
+    const c = countOccurrences(f, /CODEX_AUDIT_COMPLETED_WITH_CAVEATS/g);
+    assert(c === 0, `${f}: contains ${c} occurrence(s) of CODEX_AUDIT_COMPLETED_WITH_CAVEATS; must be 0`);
+  }
+
+  // 2. Caveat-bearing completed audits use codex_status: CODEX_AUDIT_COMPLETED + audit_outcome: PASS_WITH_CAVEATS
+  // Check that ARES-001 (caveat-bearing) uses correct pattern
+  const ares1 = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/AUDIT_QUEUE.md"), "utf-8");
+  const ares1Codex = ares1.match(/audit_result_id: "ARES-001"[\s\S]*?codex_status: "([^"]+)"/);
+  assert(ares1Codex !== null, "AUDIT_QUEUE.md: ARES-001 codex_status not found");
+  assert(ares1Codex !== null && ares1Codex[1] === "CODEX_AUDIT_COMPLETED",
+    `AUDIT_QUEUE.md: ARES-001 codex_status is "${ares1Codex ? ares1Codex[1] : "not found"}", expected CODEX_AUDIT_COMPLETED`);
+  const ares1Outcome = ares1.match(/audit_result_id: "ARES-001"[\s\S]*?audit_outcome: "([^"]+)"/);
+  assert(ares1Outcome !== null && ares1Outcome[1] === "PASS_WITH_CAVEATS",
+    `AUDIT_QUEUE.md: ARES-001 audit_outcome is "${ares1Outcome ? ares1Outcome[1] : "not found"}", expected PASS_WITH_CAVEATS`);
+
+  // 3. ARES-002 is clean pass
+  const ares2Outcome = ares1.match(/audit_result_id: "ARES-002"[\s\S]*?audit_outcome: "([^"]+)"/);
+  assert(ares2Outcome !== null, "AUDIT_QUEUE.md: ARES-002 not found");
+  assert(ares2Outcome !== null && ares2Outcome[1] === "PASS",
+    `AUDIT_QUEUE.md: ARES-002 audit_outcome is "${ares2Outcome ? ares2Outcome[1] : "not found"}", expected PASS`);
+  const ares2Codex = ares1.match(/audit_result_id: "ARES-002"[\s\S]*?codex_status: "([^"]+)"/);
+  assert(ares2Codex !== null && ares2Codex[1] === "CODEX_AUDIT_COMPLETED",
+    `AUDIT_QUEUE.md: ARES-002 codex_status is "${ares2Codex ? ares2Codex[1] : "not found"}", expected CODEX_AUDIT_COMPLETED`);
+
+  // 4. IMPLEMENTED does not contain "All commits staged"
+  const ledger = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/TASK_LEDGER.md"), "utf-8");
+  assert(!/All commits staged/.test(ledger),
+    "TASK_LEDGER.md: IMPLEMENTED evidence still uses 'All commits staged'");
+
+  // 5. IMPLEMENTED requires committed scope and clean worktree
+  assert(/ll scoped changes committed/i.test(ledger),
+    "TASK_LEDGER.md: IMPLEMENTED evidence missing 'all scoped changes committed'");
+  assert(/clean worktree/.test(ledger),
+    "TASK_LEDGER.md: IMPLEMENTED evidence missing 'clean worktree'");
+  assert(/commit list/.test(ledger),
+    "TASK_LEDGER.md: IMPLEMENTED evidence missing 'commit list'");
+
+  // 6. CANCELLED includes runtime_verification_reached
+  assert(/runtime_verification_reached/.test(ledger),
+    "TASK_LEDGER.md: CANCELLED missing runtime_verification_reached");
+
+  // 7. Owner routing uses owner_pr_authorization and owner_merge_authorization
+  const sm = fs.readFileSync(path.join(ROOT, "docs/pnpd/orchestrator-state-machine.md"), "utf-8");
+  assert(!/\bpr_authorization\b/.test(sm) || /owner_pr_authorization/.test(sm),
+    "orchestrator-state-machine.md: contains bare 'pr_authorization' without owner_ prefix");
+  assert(!/\bmerge_authorization\b/.test(sm) || /owner_merge_authorization/.test(sm),
+    "orchestrator-state-machine.md: contains bare 'merge_authorization' without owner_ prefix");
+
+  // 8. High-risk enum: production_integration present in Layer 4
+  const layer4 = fs.readFileSync(path.join(ROOT, "docs/review-audit-layer/LAYER_4_CODEX_POST_MERGE_AUDIT.md"), "utf-8");
+  assert(/production_integration/.test(layer4),
+    "LAYER_4.md: high-risk enum missing production_integration");
+
+  // 9. Queue and Layer 4 enum parity — key categories match
+  const queue = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/POST_MERGE_QUEUE.md"), "utf-8");
+  for (const cat of ["auth", "domain_data", "production_integration", "ai_safety", "rules_security"]) {
+    assert(layer4.includes(cat), `LAYER_4.md: high-risk enum missing "${cat}"`);
+    assert(queue.includes(cat), `POST_MERGE_QUEUE.md: high-risk enum missing "${cat}"`);
+  }
+
+  // 10. Post-merge template: pr_merged_state uses merged / reverted_after_merge
+  const template = fs.readFileSync(path.join(ROOT, "templates/post-merge-audit/post-merge-template.yaml"), "utf-8");
+  assert(/merged.*reverted_after_merge/.test(template),
+    "post-merge-template.yaml: pr_merged_state not using 'merged / reverted_after_merge'");
+  assert(!/Merged, closed, or reverted/.test(template),
+    "post-merge-template.yaml: still contains 'Merged, closed, or reverted'");
+
+  // 11. 22 mandatory fields in post-merge template — count only the Layer 4 field table
+  const fieldTableSection = template.match(/^\| # \| Category.*(?:\n\|.*)*?(?=\n\n\*\*Rules)/m);
+  const fieldTableRows = fieldTableSection ? (fieldTableSection[0].match(/^\| \d+ \|/gm) || []).length : 0;
+  assert(fieldTableRows === 22,
+    `post-merge-template.yaml: expected 22 field rows in Layer 4 table, found ${fieldTableRows}`);
+
+  // 12. runtime_evidence_reference and runtime_evidence_or_substitute_evidence both present in template
+  assert(/runtime_evidence_reference/.test(template) || /Runtime Evidence Reference/.test(template),
+    "post-merge-template.yaml: missing runtime_evidence_reference");
+  assert(/runtime_evidence_or_substitute_evidence/.test(template) || /Runtime Evidence \/ Substitute Evidence/.test(template),
+    "post-merge-template.yaml: missing runtime_evidence_or_substitute_evidence");
+
+  // 13. Audit checklist has SHA-binding section
+  const checklist = fs.readFileSync(path.join(ROOT, "templates/pr-audit/audit-checklist.yaml"), "utf-8");
+  assert(/Head SHA Integrity/.test(checklist),
+    "audit-checklist.yaml: missing Head SHA Integrity section");
+  assert(/audited_head_sha/.test(checklist) || /audited.*head.*sha/i.test(checklist),
+    "audit-checklist.yaml: missing audited_head_sha binding");
+
+  // 14. Route B has genuinely blocking finding (not config drift)
+  assert(!/Minor config\.py drift/.test(queue),
+    "POST_MERGE_QUEUE.md: Route B still contains non-blocking config drift example");
+  assert(/Auth session/.test(queue) || /CRITICAL/.test(queue),
+    "POST_MERGE_QUEUE.md: Route B missing genuinely blocking finding");
+
+  // 15. HANDOFF_PROTOCOL cancellation uses DEC-006
+  const handoff = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/HANDOFF_PROTOCOL.md"), "utf-8");
+  const dec005Cancellation = handoff.match(/owner_decision_reference: "DEC-005"/g);
+  assert(!dec005Cancellation || dec005Cancellation.length === 0,
+    `HANDOFF_PROTOCOL.md: ${dec005Cancellation ? dec005Cancellation.length : 0} DEC-005 cancellation ref(s) remain`);
+  assert(/owner_decision_reference: "DEC-006"/.test(handoff),
+    "HANDOFF_PROTOCOL.md: cancellation missing DEC-006");
+
+  // 16. Pre-Gate-4 cancellation text replaced with runtime_verification_reached
+  assert(!/before Gate 4.*Runtime Not Applicable/.test(handoff),
+    "HANDOFF_PROTOCOL.md: still has pre-Gate-4 Runtime Not Applicable text");
+  assert(/runtime_verification_reached/.test(handoff),
+    "HANDOFF_PROTOCOL.md: missing runtime_verification_reached in cancellation");
+
+  // 17. 22 fields in message schema description
+  const schema = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/MESSAGE_SCHEMA.md"), "utf-8");
+  assert(/22 mandatory fields/.test(schema),
+    "MESSAGE_SCHEMA.md: missing '22 mandatory fields' count");
+  assert(!/21 mandatory fields/.test(schema),
+    "MESSAGE_SCHEMA.md: still contains '21 mandatory fields'");
+
+  // 18. Schema 6 uses CODEX_AUDIT_COMPLETED not CODEX_AUDIT_COMPLETED_WITH_CAVEATS
+  const schema6 = schema.match(/audit_result_id: "ARES-001"[\s\S]*?codex_status: "([^"]+)"/);
+  assert(schema6 !== null && schema6[1] === "CODEX_AUDIT_COMPLETED",
+    `MESSAGE_SCHEMA.md: Schema 6 codex_status is "${schema6 ? schema6[1] : "not found"}", expected CODEX_AUDIT_COMPLETED`);
+
+  // 19. Schema 8a and 8b use ARES-002
+  const aresRefs = schema.match(/codex_audit_reference: "ARES-001"/g);
+  assert(!aresRefs || aresRefs.length === 0,
+    `MESSAGE_SCHEMA.md: ${aresRefs ? aresRefs.length : 0} ARES-001 ref(s) remain in schemas 8a/8b`);
+
+  // 20. Schema 10 timestamps: verified_at after request timestamp
+  const reqTime = schema.match(/audit_request_id: "PMAR-001"[\s\S]*?timestamp: "([^"]+)"/);
+  const verTime = schema.match(/schema: post_merge_audit_result[\s\S]*?\nverified_at: "([^"]+)"/);
+  if (reqTime && verTime) {
+    const req = new Date(reqTime[1]);
+    const ver = new Date(verTime[1]);
+    assert(ver > req,
+      `MESSAGE_SCHEMA.md: Schema 10 verified_at (${verTime[1]}) must be after request timestamp (${reqTime[1]})`);
+  }
+
+  // 21. LAYER_3: all six fields are evidence (no evidence/process split)
+  const layer3 = fs.readFileSync(path.join(ROOT, "docs/review-audit-layer/LAYER_3_CODEX_PRE_MERGE_AUDIT.md"), "utf-8");
+  assert(!/Process Check Fields/.test(layer3),
+    "LAYER_3.md: still has 'Process Check Fields' split");
+  assert(!/Evidence Fields/.test(layer3) || /All six are Runtime Truth evidence/.test(layer3),
+    "LAYER_3.md: evidence/process split not unified");
+
+  // 22. 22 fields in POST_MERGE_QUEUE
+  assert(/22 mandatory fields/.test(queue),
+    "POST_MERGE_QUEUE.md: missing '22 mandatory fields'");
+
+  // 23. 22 fields in LAYER_4
+  assert(/22 mandatory/.test(layer4),
+    "LAYER_4.md: missing '22 mandatory'");
+
+  // 24. 22 fields in UEP Gate 10
+  const uep = fs.readFileSync(path.join(ROOT, "docs/pnpd/unified-execution-plan-and-taste-gate-design.md"), "utf-8");
+  const uep22Occurrences = (uep.match(/22 mandatory/g) || []).length;
+  assert(uep22Occurrences >= 2,
+    `UEP.md: expected ≥2 occurrences of '22 mandatory', found ${uep22Occurrences}`);
+
+  // 25. DECISION_LOG: ARES-001 not used as clean-pass reference
+  const dlog = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/DECISION_LOG.md"), "utf-8");
+  const dlogAres001 = (dlog.match(/codex_audit_reference: "ARES-001"/g) || []).length;
+  assert(dlogAres001 === 0,
+    `DECISION_LOG.md: ${dlogAres001} ARES-001 references remain; should use ARES-002 for clean-pass examples`);
+
+  if (failures.length > 0) {
+    throw new Error("Governance recovery contract failures:\n  - " + failures.join("\n  - "));
+  }
+
+  console.log("Governance recovery: 25 contract assertions passed");
+}
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
@@ -6537,6 +6738,12 @@ try {
 
   if (runPhase1qBugForecastSummary) {
     validateBugForecastSummaryPhase();
+  }
+
+  const runGovernanceRecovery = args.phase === "governance-recovery";
+
+  if (runGovernanceRecovery) {
+    validateGovernanceRecoveryPhase();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";

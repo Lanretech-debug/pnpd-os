@@ -33,6 +33,7 @@ owner_decision_needed: # true | false
 runtime_status:       # Runtime Verified | Runtime Not Verified | Runtime Not Applicable
 runtime_reason:       # Why runtime is or is not applicable
 runtime_surface:      # Classification of affected surface
+runtime_evidence_reference:   # Reference URI or canonical evidence path (mandatory — not an alias for runtime_evidence_or_substitute_evidence)
 runtime_evidence_or_substitute_evidence: # Paths to runtime or substitute evidence
 runtime_verified_by:  # Agent or human who confirmed runtime
 runtime_verified_at:  # ISO 8601 timestamp of runtime verification
@@ -237,7 +238,7 @@ audit_result_id: "ARES-001"
 audit_request_id: "AR-001"
 task_id: "TASK-001"
 auditor: "codex"
-codex_status: "CODEX_AUDIT_COMPLETED_WITH_CAVEATS"
+codex_status: "CODEX_AUDIT_COMPLETED"
 audit_outcome: "PASS_WITH_CAVEATS"
 merge_recommendation: "MERGE_OK_OWNER_ACCEPTS_CAVEATS"
 caveats:
@@ -306,10 +307,10 @@ pr_creation_only: true
 authorized_branch: "governance/execution-gates-patch"
 authorized_base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
 authorized_head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
-codex_audit_reference: "ARES-001"
+codex_audit_reference: "ARES-002"
 owner_decision_reference: "DEC-001"
 authorized_at: "2026-06-10T12:30:00Z"
-rationale: "Codex audit passed. Governance-only scope. PR may be opened."
+rationale: "Codex audit passed with no caveats. Governance-only scope. PR may be opened."
 accepted_risks: []
 rejected_recommendations: []
 next_state: "PR_OPENED"
@@ -334,7 +335,7 @@ base_branch: "main"
 base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
 head_branch: "governance/execution-gates-patch"
 head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
-codex_audit_reference: "ARES-001"
+codex_audit_reference: "ARES-002"
 codex_verdict: "CODEX_AUDIT_COMPLETED"
 required_checks_status: "all_passed"
 approved_merge_method: "squash"
@@ -441,7 +442,7 @@ blocking_findings: []
 next_state: "BRANCH_CLEANUP"
 remediation_required: false
 verified_by: "codex"
-verified_at: "2026-06-10T12:45:00Z"
+verified_at: "2026-06-10T13:00:00Z"
 findings:
   - finding: "Merged diff matches approved PR scope"
     severity: "PASS"
@@ -452,7 +453,7 @@ rollback_recommended: false
 rollback_rationale: ""
 follow_up_actions: []
 next_action: "Post-merge verification passed. Branch cleanup is now required. Lane remains open until cleanup evidence recorded."
-timestamp: "2026-06-10T12:45:00Z"
+timestamp: "2026-06-10T13:00:00Z"
 evidence_refs:
   - "audits/post-merge-audit-TASK-001.md"
 ```
@@ -469,7 +470,7 @@ lane_closure_ready: false
 next_action: "Owner records BLOCKED; remediation must complete before a fresh post-merge audit request and Gate 10 execution"
 ```
 
-Schema 10 normatively represents the Codex → Owner Post-Merge Audit Result. It records 21 mandatory fields grouped into seven evidence categories: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`). `runtime_evidence_reference` does not replace `runtime_evidence_or_substitute_evidence`.
+Schema 10 normatively represents the Codex → Owner Post-Merge Audit Result. It records 22 mandatory fields grouped into seven evidence categories: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_evidence_reference`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`). `runtime_evidence_reference` is mandatory and distinct from `runtime_evidence_or_substitute_evidence`.
 
 When `runtime_status` is `Runtime Not Applicable`, any missing canonical runtime field makes the result incomplete and prohibits routing. `next_state: BRANCH_CLEANUP` is valid only when `blocking_findings` is empty; non-blocking entries may remain in `findings`. A non-empty `blocking_findings` requires `next_state: BLOCKED`, `remediation_required: true`, and a matching single `next_action`. Gate 11 is forbidden while remediation is required. After remediation, a fresh post-merge audit request and Gate 10 execution are mandatory; the previous `POST_MERGE_VERIFIED` record cannot be reused. No `POST_MERGE_ISSUES_FOUND` lifecycle state is permitted.
 

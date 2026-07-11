@@ -17,7 +17,7 @@ The Orchestrator state model classifies work so agents can decide what to inspec
 | `AGENT_DONE` | Agent reports work complete. | Route to verification. |
 | `AUTOREVIEW_REQUIRED` | Local self-review gate is needed. | Run available autoreview/check gate. |
 | `CODEX_REVIEW_REQUIRED` | Formal Codex audit is required. | Route to Codex with full evidence. |
-| `OWNER_REVIEW_REQUIRED` | Owner decision or approval is required. Must carry `pending_owner_decision_type` to discriminate the awaited decision (e.g., `pr_authorization`, `merge_authorization`, `cancellation`, `accept_caveat`, `override_gate`). | Owner decides approve/patch/reject. |
+| `OWNER_REVIEW_REQUIRED` | Owner decision or approval is required. Must carry `pending_owner_decision_type` to discriminate the awaited decision (e.g., `owner_pr_authorization`, `owner_merge_authorization`, `cancellation`, `accept_caveat`, `override_gate`). | Owner decides approve/patch/reject. |
 | `APPROVED_FOR_MERGE` | Owner has approved merge after required gates. | Merge may occur outside AgentBridge authority. |
 | `DONE` | No current action is needed. | Keep durable record. |
 | `BLOCKED` | Work cannot proceed. | Record blocker and stop advancement. |
@@ -39,7 +39,7 @@ Allowed dry-run recommendations:
 | Any | `BLOCKED` | Missing repo, non-Git path, lock conflict, or unsafe gate. |
 | Any | `DONE` | No pending task and all inspected gates are clear. |
 
-Every transition to `OWNER_REVIEW_REQUIRED` MUST record `pending_owner_decision_type` with one of: `pr_authorization`, `merge_authorization`, `cancellation`, `accept_caveat`, `override_gate`. A missing or ambiguous `pending_owner_decision_type` blocks the transition.
+Every transition to `OWNER_REVIEW_REQUIRED` MUST record `pending_owner_decision_type` with one of: `owner_pr_authorization`, `owner_merge_authorization`, `cancellation`, `accept_caveat`, `override_gate`. A missing or ambiguous `pending_owner_decision_type` blocks the transition.
 
 Forbidden Phase 0 transitions:
 
