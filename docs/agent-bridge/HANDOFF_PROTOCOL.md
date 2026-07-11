@@ -397,6 +397,12 @@ handoff:
 
 Cancellation is not `PASS` or `CLOSED`, does not erase unresolved findings, cannot occur after `MERGED`, and is terminal. It records safety cleanup obligations without authorizing those actions.
 
+Cancellation at any pre-merge stage (including before Gate 4) must still carry the
+complete six-field runtime record. Even when no runtime verification was performed
+before cancellation, `runtime_status: "Runtime Not Applicable"` with an explicit
+reason is required. Omission of any canonical runtime field makes the cancellation
+handoff incomplete and prohibits routing.
+
 ---
 
 ## Required Evidence Per Handoff

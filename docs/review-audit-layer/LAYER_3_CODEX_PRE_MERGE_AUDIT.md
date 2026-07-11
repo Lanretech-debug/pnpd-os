@@ -53,13 +53,22 @@ A verdict of `Runtime Not Verified` SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`
 
 ### Rule 3 — Runtime Not Applicable Evidence Contract
 
-When `Runtime Not Applicable` is declared, the following evidence is required:
+When `Runtime Not Applicable` is declared, both evidence and process checks are
+required. Evidence attests to correctness; process checks attest to governance
+compliance. Missing either category makes the contract incomplete.
+
+#### Evidence Fields
 
 | Field | Description |
 |-------|-------------|
 | `runtime_status` | `Runtime Not Applicable` |
 | `runtime_reason` | Why runtime is not applicable (e.g., governance-only docs change) |
 | `runtime_surface` | Classification of affected surface (e.g., governance, templates, schemas) |
+
+#### Process Check Fields
+
+| Field | Description |
+|-------|-------------|
 | `runtime_evidence_or_substitute_evidence` | Alternative validation that confirms correctness (e.g., `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-doc contradiction analysis, state-machine transition review) |
 | `runtime_verified_by` | Agent or human who confirmed |
 | `runtime_verified_at` | ISO 8601 timestamp |

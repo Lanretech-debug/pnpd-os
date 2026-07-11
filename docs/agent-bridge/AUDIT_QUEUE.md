@@ -71,7 +71,22 @@ timestamp: "2026-06-10T12:30:00Z"
 | `CODEX_AUDIT_COMPLETED`              | Audit passed with no caveats                         |
 | `CODEX_REQUEST_CHANGES`              | Audit found issues; changes requested                |
 | `CODEX_BLOCKED`                      | Audit cannot proceed due to blocker                  |
-| `CODEX_AUDIT_COMPLETED_WITH_CAVEATS` | Audit passed but owner must accept listed caveats    |
+| `CODEX_AUDIT_COMPLETED_WITH_CAVEATS` | Audit passed with caveats; owner must accept listed caveats    |
+
+---
+
+## Audit Outcome Values
+
+Every audit result MUST carry an `audit_outcome` field that discriminates the verdict:
+
+| Outcome | Meaning |
+|---------|---------|
+| `PASS` | Audit passed with no caveats |
+| `PASS_WITH_CAVEATS` | Audit passed but owner must accept listed caveats |
+| `REQUEST_CHANGES` | Audit found issues; changes requested |
+| `BLOCKED` | Audit blocked; cannot proceed |
+
+`audit_outcome` is distinct from `codex_status`. The status is the lifecycle state; the outcome is the verdict discriminator.
 
 ---
 
@@ -93,10 +108,11 @@ Codex MUST provide exactly one merge recommendation per audit:
 ```
 PENDING_CODEX_FINAL_AUDIT
   ↓
-  ├── CODEX_AUDIT_COMPLETED           → MERGE_OK or MERGE_OK_OWNER_ACCEPTS_CAVEATS
-  ├── CODEX_AUDIT_COMPLETED_WITH_CAVEATS → MERGE_OK_OWNER_ACCEPTS_CAVEATS
-  ├── CODEX_REQUEST_CHANGES    → DO_NOT_MERGE_REQUEST_CHANGES
-  └── CODEX_BLOCKED            → DO_NOT_MERGE_BLOCKED
+  ├── CODEX_AUDIT_COMPLETED
+  │     ├── (audit_outcome: PASS)       → MERGE_OK
+  │     └── CODEX_AUDIT_COMPLETED_WITH_CAVEATS (audit_outcome: PASS_WITH_CAVEATS) → MERGE_OK_OWNER_ACCEPTS_CAVEATS
+  ├── CODEX_REQUEST_CHANGES     → DO_NOT_MERGE_REQUEST_CHANGES
+  └── CODEX_BLOCKED             → DO_NOT_MERGE_BLOCKED
 ```
 
 ---
@@ -110,6 +126,7 @@ audit_request_id: "AR-001"
 task_id: "TASK-001"
 auditor: "codex"
 codex_status: "CODEX_AUDIT_COMPLETED_WITH_CAVEATS"
+audit_outcome: "PASS_WITH_CAVEATS"
 merge_recommendation: "MERGE_OK_OWNER_ACCEPTS_CAVEATS"
 caveats:
   - caveat_id: "CV-001"

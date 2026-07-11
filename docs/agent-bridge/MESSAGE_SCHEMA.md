@@ -238,6 +238,7 @@ audit_request_id: "AR-001"
 task_id: "TASK-001"
 auditor: "codex"
 codex_status: "CODEX_AUDIT_COMPLETED_WITH_CAVEATS"
+audit_outcome: "PASS_WITH_CAVEATS"
 merge_recommendation: "MERGE_OK_OWNER_ACCEPTS_CAVEATS"
 caveats:
   - id: "CV-001"
@@ -468,7 +469,7 @@ lane_closure_ready: false
 next_action: "Owner records BLOCKED; remediation must complete before a fresh post-merge audit request and Gate 10 execution"
 ```
 
-Schema 10 normatively represents the Codex → Owner Post-Merge Audit Result. It records 17 mandatory fields grouped into seven evidence categories: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_evidence_reference`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`). It additionally carries the complete canonical runtime record: `runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, and `runtime_verified_at`. `runtime_evidence_reference` does not replace `runtime_evidence_or_substitute_evidence`.
+Schema 10 normatively represents the Codex → Owner Post-Merge Audit Result. It records 21 mandatory fields grouped into seven evidence categories: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`). `runtime_evidence_reference` does not replace `runtime_evidence_or_substitute_evidence`.
 
 When `runtime_status` is `Runtime Not Applicable`, any missing canonical runtime field makes the result incomplete and prohibits routing. `next_state: BRANCH_CLEANUP` is valid only when `blocking_findings` is empty; non-blocking entries may remain in `findings`. A non-empty `blocking_findings` requires `next_state: BLOCKED`, `remediation_required: true`, and a matching single `next_action`. Gate 11 is forbidden while remediation is required. After remediation, a fresh post-merge audit request and Gate 10 execution are mandatory; the previous `POST_MERGE_VERIFIED` record cannot be reused. No `POST_MERGE_ISSUES_FOUND` lifecycle state is permitted.
 

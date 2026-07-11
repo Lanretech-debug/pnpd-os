@@ -120,7 +120,7 @@ Only the Owner may authorize cancellation; agents may recommend it but cannot au
 ```yaml
 decision_type: "owner_cancellation"
 owner_cancelled: true
-owner_decision_reference: "DEC-005"
+owner_decision_reference: "DEC-006"
 cancellation_reason: "Owner ended the lane before merge because its scope is no longer required."
 last_valid_state: "PR_OPENED"
 unresolved_findings:
@@ -251,7 +251,7 @@ base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
 head_branch: "example-governance-branch"
 head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
 codex_audit_reference: "ARES-003"
-codex_verdict: "CODEX_BLOCKED_EXTERNAL"
+codex_verdict: "CODEX_BLOCKED"
 required_checks_status: "all_passed"
 approved_merge_method: "merge"
 approved_by: "owner"
@@ -272,7 +272,7 @@ evidence_refs:
 
 ```yaml
 schema: owner_decision
-decision_id: "DEC-004"
+decision_id: "DEC-005"
 task_id: "TASK-004"
 owner: "owner"
 decision_type: "reject_merge"
@@ -284,7 +284,7 @@ merge_authorized: false
 next_action: "DeepSeek remove credential, rotate secret, re-self-review, resubmit to Hermes"
 timestamp: "2026-06-10T15:00:00Z"
 evidence_refs:
-  - "audits/decision-DEC-004.md"
+  - "audits/decision-DEC-005.md"
 ```
 
 ---

@@ -85,7 +85,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 
 - **Meaning:** Code changes complete. Self-review pending.
 - **Who can enter:** DeepSeek.
-- **Required evidence:** All commits staged; diff summary available.
+- **Required evidence:** All commits staged; diff summary available; scope-check confirmation against task contract; all changed files listed and verified against allowed_files.
 - **Allowed next states:** `RUNTIME_SMOKE_TESTED`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `SELF_REVIEWED`, `HERMES_VERIFIED`, `CODEX_AUDIT_COMPLETED`, `MERGED`.
 
@@ -131,6 +131,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 - **Required evidence:**
   - `codex_audit_reference`
   - `codex_verdict`
+  - `audit_outcome`
   - `audited_base_sha`
   - `audited_head_sha`
   - `audit_timestamp`
@@ -175,7 +176,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 - **Allowed next states:** `OWNER_MERGE_APPROVED`, `REQUEST_CHANGES` (if the proposed diff changes materially), `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `MERGED` (merge requires explicit owner merge authorization), `POST_MERGE_AUDIT_REQUESTED`, `POST_MERGE_VERIFIED`, `BRANCH_CLEANUP`, `CLOSED`.
 - **Failure behaviour:** If the PR diff does not match the approved scope, the lane returns to `REQUEST_CHANGES` for correction. If the PR cannot be opened (branch conflict, base divergence), the issue must be resolved before re-entry.
-- **Head-Change Rule:** If the PR head changes materially after the recorded Codex audit, the previous audit is stale. Any existing merge authorization is invalid. The lane returns to appropriate self-review, Hermes verification, and Codex audit stages.
+- **Head-Change Rule:** If the PR head changes materially after the recorded Codex audit (identified by `audited_head_sha`), the previous audit is stale. Any existing merge authorization is invalid. The lane returns to appropriate self-review, Hermes verification, and Codex audit stages.
 
 ### OWNER_MERGE_APPROVED
 
@@ -387,7 +388,7 @@ The following controls are enforced at every state transition. Any violation blo
 ### Merge Gate
 
 11. **Merge requires Codex audit or explicit owner override rationale.** No merge without Codex audit result OR a recorded owner override with rationale. A material head-SHA change after Codex audit invalidates the audit — a new audit is required before merge.
-12. **Post-merge audit is required for all merges.** No merge may close without a post-merge audit recording all 17 mandatory fields grouped into seven evidence categories, followed by Gate 11 cleanup verification. See `POST_MERGE_QUEUE.md` for high-risk categories (which require additional scrutiny, not triggering).
+12. **Post-merge audit is required for all merges.** No merge may close without a post-merge audit recording all 21 mandatory fields grouped into seven evidence categories, followed by Gate 11 cleanup verification. See `POST_MERGE_QUEUE.md` for high-risk categories (which require additional scrutiny, not triggering).
 
 ### Handoff Integrity
 

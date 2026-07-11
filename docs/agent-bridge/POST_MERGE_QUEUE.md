@@ -7,9 +7,9 @@
 
 ## When Post-Merge Audit Is Required
 
-Post-merge audit is **required for all merges**. No merge may close without Gate 10 recording all 17 mandatory fields grouped into seven evidence categories and Gate 11 verifying cleanup.
+Post-merge audit is **required for all merges**. No merge may close without Gate 10 recording all 21 mandatory fields grouped into seven evidence categories and Gate 11 verifying cleanup.
 
-The seven categories and 17 fields are: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_evidence_reference`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`).
+The seven categories and 21 fields are: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`).
 
 High-risk categories (see below) trigger **additional scrutiny** within the post-merge audit — not the audit itself, which is mandatory regardless.
 
@@ -128,7 +128,7 @@ ci_status: "all_passed"
 runtime_status: "Runtime Verified"
 runtime_evidence_reference: "audits/runtime-TASK-002.md"
 branch_cleanup_status: "pending"
-cleanup_eligibility: "blocked"
+cleanup_eligibility: "ineligible"
 cleanup_required_actions:
   - "Owner decides disposition of the config drift"
 cleanup_evidence_reference: "pending_gate_11"
@@ -206,7 +206,7 @@ CLOSED — terminal state, successful completion only
 4. If `blocking_findings` is empty, `next_state` is `BRANCH_CLEANUP`. Non-blocking findings may proceed; zero findings are not required.
 5. If `blocking_findings` is non-empty, `next_state` is `BLOCKED`, `remediation_required` is `true`, Gate 11 is forbidden, and post-merge verification must be rerun after remediation.
 6. Post-merge audit results go to the **Owner** for decision, but Owner review does not replace the required `BLOCKED` lifecycle state.
-7. Gate 10 records all 17 mandatory fields, keeps `lane_closure_ready: false`, may record cleanup as pending, performs no normal branch deletion, and never closes the lane.
+7. Gate 10 records all 21 mandatory fields, keeps `lane_closure_ready: false`, may record cleanup as pending, performs no normal branch deletion, and never closes the lane.
 8. Gate 11 performs or verifies exactly one cleanup outcome (`completed`, `already_absent`, or `not_applicable_with_reason`). Even already-absent and not-applicable outcomes require Gate 11 verification. Only Gate 11 may set `lane_closure_ready: true` and permit `BRANCH_CLEANUP` to transition to `CLOSED`.
 
 ---
