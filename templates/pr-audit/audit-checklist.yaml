@@ -93,20 +93,7 @@ If `Runtime Not Applicable` is declared, the canonical six-key N/A evidence cont
 
 ---
 
-### 7. Head SHA Integrity
-
-- [ ] Audited head SHA matches the actual PR head SHA at time of audit
-- [ ] Audited base SHA matches the actual PR base SHA at time of audit
-- [ ] No commits pushed to the PR branch after the audit head SHA was recorded
-- [ ] SHA binding is exact (prefix match is insufficient — full 40-character SHA)
-- [ ] Any material head change invalidates this audit and requires a fresh run
-- [ ] Runtime evidence was captured at the audited HEAD SHA
-
-**Notes:**
-
----
-
-### 8. Merge Recommendation
+### 7. Merge Recommendation
 
 - [ ] `MERGE_OK` — PR is safe to merge as-is
 - [ ] `MERGE_OK_OWNER_ACCEPTS_CAVEATS` — Owner must accept listed caveats
@@ -116,6 +103,27 @@ If `Runtime Not Applicable` is declared, the canonical six-key N/A evidence cont
 **Recommendation:**
 
 **Caveats (if any):**
+
+---
+
+### Head SHA Integrity — Exact Evidence Binding
+
+Every evidence artifact referenced in this audit MUST be bound to the exact audited head SHA. Evidence collected at a different SHA is invalid.
+
+**SHA Binding Evidence** (record the commands and their output):
+
+| Field | Evidence Command/Reference | Value |
+|---|---|---|
+| Audited Head SHA | `git rev-parse HEAD` or `gh pr view <PR> --json headRefOid` | |
+| Audited Base SHA | `git merge-base HEAD <target>` or `gh pr view <PR> --json baseRefOid` | |
+| Evidence bound to SHA | All evidence files referenced contain the audited head SHA inline or are committed at that SHA | |
+
+- [ ] Audited head SHA matches the actual PR head SHA at time of audit
+- [ ] Audited base SHA matches the actual PR base SHA at time of audit
+- [ ] No commits pushed to the PR branch after the audit head SHA was recorded
+- [ ] SHA binding is exact (prefix match is insufficient — full 40-character SHA required)
+- [ ] Every evidence artifact referenced in this audit is bound to the exact audited head SHA
+- [ ] Any material head change invalidates this audit and requires a fresh run
 
 ---
 
@@ -129,7 +137,6 @@ If `Runtime Not Applicable` is declared, the canonical six-key N/A evidence cont
 | Runtime Verification | |
 | Secret Scan | |
 | Authority Drift Scan | |
-| Head SHA Integrity | |
 | **Overall** | |
 
 ---

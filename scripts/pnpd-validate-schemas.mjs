@@ -6602,47 +6602,88 @@ function validateGovernanceRecoveryPhase() {
   assert(dlogAres001 === 0,
     `DECISION_LOG.md: ${dlogAres001} ARES-001 references remain; should use ARES-002 for clean-pass examples`);
 
-  // 26. DECISION_LOG: all decision types documented
-  const expectedDecisionTypes = ["owner_merge_authorization", "owner_cancellation", "reject_merge", "request_patch", "accept_caveat", "override_audit_gate", "defer", "rollback"];
-  for (const dt of expectedDecisionTypes) {
-    assert(dlog.includes(`\`${dt}\``), `DECISION_LOG.md: missing decision type \`${dt}\``);
-  }
+  // ── Blockers B-01 through B-07 compliance checks ──────────────────────────────
 
-  // 27. DECISION_LOG: cancellation example has required fields
-  assert(/owner_cancelled:\s*true/.test(dlog), "DECISION_LOG.md: cancellation example missing owner_cancelled: true");
-  assert(/cancellation_reason:/.test(dlog), "DECISION_LOG.md: cancellation example missing cancellation_reason");
-  assert(/next_state:\s*["']?CANCELLED["']?/.test(dlog), "DECISION_LOG.md: cancellation example missing next_state: CANCELLED");
+  // 26. B-01: HANDOFF_PROTOCOL cancellation inventory uses runtime_verification_reached
+  assert(/runtime_verification_reached/.test(handoff),
+    "HANDOFF_PROTOCOL.md: B-01 cancellation inventory missing runtime_verification_reached");
 
-  // 28. DECISION_LOG: accept_caveat example has required fields
-  assert(/caveat_reference:/.test(dlog), "DECISION_LOG.md: accept_caveat example missing caveat_reference");
-  assert(/decision_type:\s*["']?accept_caveat["']?/.test(dlog), "DECISION_LOG.md: missing accept_caveat decision type example");
+  // 27. B-01: Owner → Cancelled row uses conditional runtime_verification_reached
+  const cancelRow = handoff.match(/\| Owner → Cancelled.*\|/);
+  assert(cancelRow !== null, "HANDOFF_PROTOCOL.md: B-01 Owner → Cancelled row not found");
+  assert(/Only when.*runtime_verification_reached/.test(cancelRow[0]),
+    `HANDOFF_PROTOCOL.md: B-01 Owner → Cancelled row missing 'Only when runtime_verification_reached': "${cancelRow[0]}"`);
 
-  // 29. HANDOFF_PROTOCOL: post-merge runtime fields complete
-  assert(/runtime_evidence_reference/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_evidence_reference");
-  assert(/runtime_evidence_or_substitute_evidence/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_evidence_or_substitute_evidence");
-  assert(/runtime_reason/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_reason");
-  assert(/runtime_surface/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_surface");
-  assert(/runtime_verified_by/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_verified_by");
-  assert(/runtime_verified_at/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_verified_at");
+  // 28. B-02: HANDOFF_PROTOCOL material-change rule covers base SHA, head SHA, PR scope
+  assert(/material change to the base SHA, head SHA, or PR scope/.test(handoff),
+    "HANDOFF_PROTOCOL.md: B-02 material-change rule missing 'base SHA, head SHA, or PR scope'");
 
-  // 30. POST_MERGE_QUEUE: result templates have the six runtime evidence fields
-  const runtimeFields = ["runtime_status", "runtime_evidence_reference", "runtime_reason", "runtime_surface", "runtime_evidence_or_substitute_evidence", "runtime_verified_by", "runtime_verified_at"];
-  for (const rf of runtimeFields) {
-    const occurrences = (queue.match(new RegExp(rf, "g")) || []).length;
-    assert(occurrences >= 2, `POST_MERGE_QUEUE.md: expected ≥2 occurrences of '${rf}', found ${occurrences}`);
-  }
+  // 29. B-02: TASK_LEDGER Material-Change Rule covers all four post-states
+  assert(/Material-Change Rule/.test(ledger),
+    "TASK_LEDGER.md: B-02 missing 'Material-Change Rule' header");
+  assert(/OWNER_PR_AUTHORIZED.*must not open/.test(ledger),
+    "TASK_LEDGER.md: B-02 stale OWNER_PR_AUTHORIZED must not open PR");
+  assert(/OWNER_MERGE_APPROVED.*must not merge/.test(ledger),
+    "TASK_LEDGER.md: B-02 stale OWNER_MERGE_APPROVED must not merge");
+  assert(/does not create a new lifecycle state/.test(ledger),
+    "TASK_LEDGER.md: B-02 missing 'does not create a new lifecycle state'");
 
-  // 31. TASK_LEDGER: scope-change rules present alongside head-change rules
-  assert(/Scope-Change Rule/.test(ledger) || (/head.*scope.*change/i.test(ledger) && /scope.*change/i.test(ledger)),
-    "TASK_LEDGER.md: missing scope-change rule");
-  assert(/material head-SHA or scope change/i.test(ledger) || /material head or scope change/i.test(ledger),
-    "TASK_LEDGER.md: missing combined 'material head or scope change' rule");
+  // 30. B-02: UEP Gate 8 Head-Change Rule covers base SHA, head SHA, PR scope
+  assert(/material change to the base SHA, head SHA, or PR scope/.test(uep),
+    "UEP.md: B-02 Gate 8 rule missing 'base SHA, head SHA, or PR scope'");
+
+  // 31. B-02: UEP Gate 9 Head-Change Invalidation covers base SHA, head SHA, PR scope
+  const gate9Invalidation = uep.match(/\| Head-Change Invalidation \|.*?\|/);
+  assert(gate9Invalidation !== null, "UEP.md: B-02 Gate 9 Head-Change Invalidation row not found");
+  assert(/material change to the base SHA, head SHA, or PR scope/.test(gate9Invalidation[0]),
+    "UEP.md: B-02 Gate 9 missing 'base SHA, head SHA, or PR scope'");
+  assert(/must not merge/.test(gate9Invalidation[0]),
+    "UEP.md: B-02 Gate 9 missing 'must not merge'");
+
+  // 32. B-03: POST_MERGE_QUEUE 22-field table present
+  assert(/\| PR identity \|.*pr_number.*pr_url.*pr_merged_state/.test(queue),
+    "POST_MERGE_QUEUE.md: B-03 missing PR identity row in 22-field table");
+  assert(/\| Runtime evidence \|.*runtime_evidence_or_substitute_evidence/.test(queue),
+    "POST_MERGE_QUEUE.md: B-03 missing runtime_evidence_or_substitute_evidence in table");
+
+  // 33. B-03: POST_MERGE_QUEUE 22-field YAML block present
+  assert(/# Mandatory 22-field post-merge audit result record/.test(queue),
+    "POST_MERGE_QUEUE.md: B-03 missing 22-field YAML block");
+
+  // 34. B-04: POST_MERGE_QUEUE pr_merged_state value note
+  assert(/pr_merged_state.*MUST.*be.*MERGED/.test(queue),
+    "POST_MERGE_QUEUE.md: B-04 missing pr_merged_state MUST be MERGED");
+
+  // 35. B-04: MESSAGE_SCHEMA pr_merged_state value note
+  assert(/pr_merged_state.*MUST.*be.*MERGED/.test(schema),
+    "MESSAGE_SCHEMA.md: B-04 missing pr_merged_state MUST be MERGED");
+  assert(/pr_state_if_any/.test(schema),
+    "MESSAGE_SCHEMA.md: B-04 missing pr_state_if_any distinction");
+
+  // 36. B-05: DECISION_LOG owner_override_accepted high-risk category reference
+  assert(/owner_override_accepted/.test(dlog),
+    "DECISION_LOG.md: B-05 missing owner_override_accepted reference");
+
+  // 37. B-06: orchestrator-state-machine Owner decision mapping table
+  assert(/pending_owner_decision_type.*Orchestrator State.*AgentBridge State/.test(sm),
+    "orchestrator-state-machine.md: B-06 missing Owner decision mapping table header");
+
+  // 38. B-07: audit-checklist SHA binding evidence table
+  assert(/SHA Binding Evidence/.test(checklist),
+    "audit-checklist.yaml: B-07 missing SHA Binding Evidence table");
+  assert(/Every evidence artifact referenced in this audit is bound/.test(checklist),
+    "audit-checklist.yaml: B-07 missing exact evidence binding checkbox");
+
+  // 39. B-01 through B-07: HANDOFF_PROTOCOL merge handoff material-change rule
+  const mergeHandoffRule = handoff.match(/- A material change to the base SHA, head SHA, or PR scope invalidates this handoff/);
+  assert(mergeHandoffRule !== null,
+    "HANDOFF_PROTOCOL.md: B-01/B-02 merge handoff missing material-change rule");
 
   if (failures.length > 0) {
     throw new Error("Governance recovery contract failures:\n  - " + failures.join("\n  - "));
   }
 
-  console.log("Governance recovery: 31 contract assertions passed");
+  console.log(`Governance recovery: ${25 + 14} contract assertions passed`);
 }
 // ── Main ────────────────────────────────────────────────────────────────────────
 

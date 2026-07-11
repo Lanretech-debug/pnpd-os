@@ -35,10 +35,14 @@ from the currently verified exact-head evidence:
 - `runtime_verified_at`
 
 When `runtime_status` is `Runtime Not Applicable`, omission of any field makes
-the handoff incomplete and prohibits routing. A material head or scope change
-invalidates the inherited runtime record; the affected evidence must be
-re-verified before the handoff can route. See TASK_LEDGER.md for the
-corresponding lane-lifecycle rules on material changes.
+the handoff incomplete and prohibits routing. A material change to the base SHA, head SHA, or PR scope invalidates the
+inherited runtime record (whenever the runtime classification or evidence may
+have changed), any associated Codex audit, exact-head CI results, required
+checks, Owner PR authorization, Owner merge authorization, and any routing
+that depends on them. The affected evidence must be re-verified and fresh
+authorizations obtained before the handoff can route. A stale Owner PR
+authorization must not open or continue a PR; a stale Owner merge authorization
+must not merge.
 
 The mandatory lifecycle handoff inventory is:
 
@@ -254,7 +258,7 @@ Rules:
 - `codex_audit_reference` and `codex_verdict` must apply to the recorded `head_sha`.
 - `required_checks_status` must show the required checks passing for the recorded `head_sha`.
 - The complete six-field runtime record must apply to the recorded `head_sha`; incomplete runtime evidence prevents merge routing.
-- A material head change invalidates this handoff and requires a fresh Codex audit and Owner decision.
+- A material change to the base SHA, head SHA, or PR scope invalidates this handoff, the associated Codex audit, exact-head CI results, required checks, any Owner authorization, and any routing that depends on them. Fresh affected evidence, a fresh Codex audit, and fresh Owner authorization are required before merge may proceed. A stale Owner merge authorization must not merge.
 - A stale or incomplete handoff cannot route merge execution.
 - Only a complete handoff with `owner_merge_approved: true` may route merge execution.
 
@@ -307,7 +311,7 @@ handoff:
   post_merge_result: findings_recorded
   pr_number: "PR-001"
   pr_url: "https://github.com/org/repo/pull/1"
-  pr_merged_state: "MERGED"
+  pr_merged_state: MERGED
   merge_commit_sha: "abc123def456"
   canonical_main_sha: "abc123def456"
   merged_scope: "matches_approved_scope"

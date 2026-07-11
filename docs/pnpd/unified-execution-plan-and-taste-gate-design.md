@@ -317,7 +317,7 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Evidence Required | `pr_number`, `pr_url`, `base_branch`, `base_sha`, `head_branch`, `head_sha`, `draft_or_ready_status`, `proposed_diff_reference`, `owner_pr_authorization_reference`, `opened_at`. |
 | Failure Behaviour | If PR cannot be opened (branch conflict, base divergence), resolve conflict and re-enter Gate 8. |
 | Rollback Behaviour | Close PR without merging; return to Gate 1. |
-| Head-Change Rule | If the PR head changes materially after the recorded Codex audit, the previous audit is stale. Any existing merge authorization is invalid. The lane returns to self-review, Hermes verification, and Codex audit stages. |
+| Head-Change Rule | A material change to the base SHA, head SHA, or PR scope invalidates the affected Codex audit, exact-head CI results, required checks, Runtime Truth evidence, Owner PR authorization, Owner merge authorization, and any routing that depends on them. After a material change: if in an equivalent post-audit gate stage, the audit is stale and return to self-review and Hermes verification is required before a fresh audit. If in an Owner PR authorization stage, the authorization is stale and must not open or continue a PR. If the PR is already open, the diff no longer matches the authorized scope and the lane returns to conflict resolution or scope correction. If in a merge-authorization stage, the authorization is stale and must not merge. Recovery always requires fresh affected evidence, a fresh Codex audit, and fresh applicable Owner authorization. |
 
 ### Gate 9 — Owner Merge Approval + Merge
 
@@ -329,7 +329,7 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Exit Criteria | Owner merge authorization recorded; merge commit exists on main. |
 | Evidence Required | Complete Owner merge authorization record (separate from PR authorization): `decision_type: owner_merge_authorization`, `owner_merge_approved: true`, `owner_decision_reference`, `pr_number`, `pr_url`, `base_branch`, `base_sha`, `head_branch`, `head_sha`, `codex_audit_reference`, `codex_verdict`, `required_checks_status`, `approved_merge_method`, `approved_by`, and `approved_at`; merge commit SHA; merged timestamp. `pr_number` cannot be `N/A`. |
 | Failure Behaviour | If merge conflicts or CI failures occur, lane returns to Gate 1 for conflict resolution. Owner must re-authorize. |
-| Head-Change Invalidation | Merge authorization is bound to the recorded `pr_number`, `base_sha`, `head_sha`, current Codex audit, and current required-check status. Any material head-SHA change invalidates the previous merge authorization. A new audit and new Owner merge authorization are required before merge. |
+| Head-Change Invalidation | Merge authorization is bound to the recorded `pr_number`, `base_sha`, `head_sha`, current Codex audit, and current required-check status. Any material change to the base SHA, head SHA, or PR scope invalidates the previous merge authorization, the Codex audit, exact-head CI, and required checks. A stale Owner merge authorization must not merge. Fresh affected evidence, a fresh Codex audit, and fresh Owner merge authorization are required before merge. |
 | Rollback Behaviour | `git revert` the merge commit; create a new branch for fixes. |
 
 ### Gate 10 — Post-Merge Verification

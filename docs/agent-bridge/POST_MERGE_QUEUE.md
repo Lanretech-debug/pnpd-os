@@ -9,7 +9,48 @@
 
 Post-merge audit is **required for all merges**. No merge may close without Gate 10 recording all 22 mandatory fields grouped into seven evidence categories and Gate 11 verifying cleanup.
 
-The seven categories and 22 fields are: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_evidence_reference`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`).
+The seven categories and 22 mandatory fields are:
+
+| Category | Fields |
+|---|---|
+| PR identity | `pr_number`, `pr_url`, `pr_merged_state` |
+| Merge identity | `merge_commit_sha`, `canonical_main_sha`, `merged_scope` |
+| CI evidence | `ci_status` |
+| Runtime evidence | `runtime_status`, `runtime_evidence_reference`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at` |
+| Cleanup evidence | `branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference` |
+| Closure evidence | `lane_closure_ready`, `blocking_findings` |
+| Verification attribution | `verified_by`, `verified_at` |
+
+The complete mandatory record MUST include all 22 fields:
+
+```yaml
+# Mandatory 22-field post-merge audit result record
+pr_number: "PR-001"
+pr_url: "https://github.com/org/repo/pull/1"
+pr_merged_state: "MERGED"
+merge_commit_sha: "abc123def456"
+canonical_main_sha: "abc123def456"
+merged_scope: "matches_approved_scope"
+ci_status: "all_passed"
+runtime_status: "Runtime Verified"
+runtime_evidence_reference: "audits/runtime-TASK-001.md"
+runtime_reason: "All runtime checks passed"
+runtime_surface: "production"
+runtime_evidence_or_substitute_evidence: "audits/runtime-TASK-001-evidence.md"
+runtime_verified_by: "codex"
+runtime_verified_at: "2026-06-10T12:45:00Z"
+branch_cleanup_status: "pending"
+cleanup_eligibility: "eligible"
+cleanup_required_actions:
+  - "Verify one valid cleanup outcome at Gate 11"
+cleanup_evidence_reference: "pending_gate_11"
+lane_closure_ready: false
+blocking_findings: []
+verified_by: "codex"
+verified_at: "2026-06-10T12:45:00Z"
+```
+
+`pr_merged_state` MUST be `MERGED` in the post-merge audit context. This field records whether the PR was merged into the target branch; no other value is valid at this stage. The separate `pr_state_if_any` field (used in cancellation contexts) tracks arbitrary GitHub PR states (`OPEN`, `DRAFT`, `CLOSED`, `MERGED`) and is not a substitute.
 
 High-risk categories (see below) trigger **additional scrutiny** within the post-merge audit — not the audit itself, which is mandatory regardless.
 
@@ -78,11 +119,6 @@ merged_scope: "matches_approved_scope"
 ci_status: "all_passed"
 runtime_status: "Runtime Verified"
 runtime_evidence_reference: "audits/runtime-TASK-001.md"
-runtime_reason: "Inherited verified merged-scope runtime classification reason"
-runtime_surface: "Inherited verified merged-scope affected-surface classification"
-runtime_evidence_or_substitute_evidence: "audits/runtime-TASK-001.md"
-runtime_verified_by: "deepseek"
-runtime_verified_at: "2026-06-10T12:00:00Z"
 branch_cleanup_status: "pending"
 cleanup_eligibility: "eligible"
 cleanup_required_actions:
@@ -132,11 +168,6 @@ merged_scope: "drift_found_blocking"
 ci_status: "all_passed"
 runtime_status: "Runtime Verified"
 runtime_evidence_reference: "audits/runtime-TASK-002.md"
-runtime_reason: "Inherited verified merged-scope runtime classification reason"
-runtime_surface: "Inherited verified merged-scope affected-surface classification"
-runtime_evidence_or_substitute_evidence: "audits/runtime-TASK-002.md"
-runtime_verified_by: "deepseek"
-runtime_verified_at: "2026-06-10T12:00:00Z"
 branch_cleanup_status: "pending"
 cleanup_eligibility: "ineligible"
 cleanup_required_actions:
