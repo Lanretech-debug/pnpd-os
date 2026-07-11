@@ -415,6 +415,7 @@ audit_request_id: "PMAR-001"
 task_id: "TASK-001"
 auditor: "codex"
 post_merge_status: "POST_MERGE_VERIFIED"
+post_merge_result: "findings_recorded"
 pr_number: "PR-001"
 pr_url: "https://github.com/Lanretech-debug/pnpd-os/pull/1"
 pr_merged_state: "MERGED"
@@ -424,6 +425,11 @@ merged_scope: "matches_approved_scope"
 ci_status: "all_passed"
 runtime_status: "Runtime Not Applicable"
 runtime_evidence_reference: "audits/substitute-evidence-TASK-001.md"
+runtime_reason: "Governance-only merged scope has no executable runtime surface"
+runtime_surface: "Merged governance documentation and template changes"
+runtime_evidence_or_substitute_evidence: "audits/substitute-evidence-TASK-001.md"
+runtime_verified_by: "deepseek"
+runtime_verified_at: "2026-06-10T12:00:00Z"
 branch_cleanup_status: "pending"
 cleanup_eligibility: "eligible"
 cleanup_required_actions:
@@ -431,6 +437,8 @@ cleanup_required_actions:
 cleanup_evidence_reference: "pending_gate_11"
 lane_closure_ready: false
 blocking_findings: []
+next_state: "BRANCH_CLEANUP"
+remediation_required: false
 verified_by: "codex"
 verified_at: "2026-06-10T12:45:00Z"
 findings:
@@ -448,7 +456,23 @@ evidence_refs:
   - "audits/post-merge-audit-TASK-001.md"
 ```
 
-Schema 10 records 17 mandatory fields grouped into seven evidence categories: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_evidence_reference`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`). Gate 10 keeps `lane_closure_ready: false`, may record cleanup as pending, does not perform normal branch deletion, and does not close the lane. Gate 11 must perform or independently verify `completed`, `already_absent`, or `not_applicable_with_reason` cleanup before setting `lane_closure_ready: true` and permitting `BRANCH_CLEANUP` to transition to `CLOSED`.
+The example above is Route A. Route B replaces the route-dependent fields with:
+
+```yaml
+post_merge_result: "findings_recorded"
+blocking_findings:
+  - "<recorded blocker>"
+next_state: "BLOCKED"
+remediation_required: true
+lane_closure_ready: false
+next_action: "Owner records BLOCKED; remediation must complete before a fresh post-merge audit request and Gate 10 execution"
+```
+
+Schema 10 normatively represents the Codex → Owner Post-Merge Audit Result. It records 17 mandatory fields grouped into seven evidence categories: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_evidence_reference`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`). It additionally carries the complete canonical runtime record: `runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, and `runtime_verified_at`. `runtime_evidence_reference` does not replace `runtime_evidence_or_substitute_evidence`.
+
+When `runtime_status` is `Runtime Not Applicable`, any missing canonical runtime field makes the result incomplete and prohibits routing. `next_state: BRANCH_CLEANUP` is valid only when `blocking_findings` is empty; non-blocking entries may remain in `findings`. A non-empty `blocking_findings` requires `next_state: BLOCKED`, `remediation_required: true`, and a matching single `next_action`. Gate 11 is forbidden while remediation is required. After remediation, a fresh post-merge audit request and Gate 10 execution are mandatory; the previous `POST_MERGE_VERIFIED` record cannot be reused. No `POST_MERGE_ISSUES_FOUND` lifecycle state is permitted.
+
+Gate 10 keeps `lane_closure_ready: false`, may record cleanup as pending, does not perform normal branch deletion, and does not close the lane. Gate 11 must perform or independently verify `completed`, `already_absent`, or `not_applicable_with_reason` cleanup before setting `lane_closure_ready: true` and permitting `BRANCH_CLEANUP` to transition to `CLOSED`.
 
 ---
 

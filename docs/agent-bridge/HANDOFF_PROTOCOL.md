@@ -40,6 +40,21 @@ invalidates the inherited runtime record whenever the runtime classification or
 evidence may have changed; the affected evidence must be re-verified before the
 handoff can route.
 
+The mandatory lifecycle handoff inventory is:
+
+| Handoff | Mandatory | Carries complete six-field runtime record |
+| --- | ---: | ---: |
+| DeepSeek → Hermes | Yes | Yes |
+| Hermes → DeepSeek | Yes | Yes |
+| Hermes → Codex | Yes | Yes |
+| Codex → DeepSeek | Yes | Yes |
+| Codex → Owner (PR Authorization) | Yes | Yes |
+| Codex → Owner (Merge Authorization Request) | Yes | Yes |
+| Owner / AgentBridge → Authorized Merge Executor | Yes | Yes |
+| Owner → Post-Merge Audit | Yes | Yes |
+| Codex → Owner (Post-Merge Audit Result) | Yes | Yes |
+| Owner → Cancelled | Yes | Yes |
+
 ### DeepSeek → Hermes
 
 **Trigger:** Implementation done. Self-review complete.
@@ -276,6 +291,74 @@ handoff:
   next_action: "Codex post-merge audit of merged diff in target branch"
 ```
 
+### Codex → Owner (Post-Merge Audit Result)
+
+**Trigger:** Gate 10 completed and Codex recorded the mandatory post-merge
+evidence and findings. Codex Auditor sends this evidence handoff to the Owner
+through AgentBridge.
+
+```yaml
+handoff:
+  from: codex_auditor
+  to: owner
+  via: agent_bridge
+  task_id: "TASK-001"
+  status: POST_MERGE_VERIFIED
+  post_merge_result: findings_recorded
+  pr_number: "PR-001"
+  pr_url: "https://github.com/org/repo/pull/1"
+  pr_merged_state: MERGED
+  merge_commit_sha: "abc123def456"
+  canonical_main_sha: "abc123def456"
+  merged_scope: "matches_approved_scope"
+  ci_status: all_passed
+  runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+  runtime_evidence_reference: "audits/runtime-TASK-001.md"
+  runtime_reason: "Inherited verified merged-scope runtime classification reason"
+  runtime_surface: "Inherited verified merged-scope affected-surface classification"
+  runtime_evidence_or_substitute_evidence: "audits/runtime-TASK-001.md"
+  runtime_verified_by: "deepseek"
+  runtime_verified_at: "2026-06-10T12:00:00Z"
+  branch_cleanup_status: pending
+  cleanup_eligibility: eligible
+  cleanup_required_actions:
+    - "Verify one valid cleanup outcome at Gate 11"
+  cleanup_evidence_reference: pending_gate_11
+  lane_closure_ready: false
+  blocking_findings: []
+  next_state: BRANCH_CLEANUP
+  remediation_required: false
+  verified_by: codex_auditor
+  verified_at: "2026-06-10T12:45:00Z"
+  next_action: "Owner records the blocker-free Gate 10 result and routes Gate 11 branch cleanup verification"
+```
+
+The payload above is Route A. Route B replaces only the route-dependent fields:
+
+```yaml
+post_merge_result: findings_recorded
+blocking_findings:
+  - "<recorded blocker>"
+next_state: BLOCKED
+remediation_required: true
+lane_closure_ready: false
+next_action: "Owner records BLOCKED; remediation must complete before a fresh Gate 10 audit request"
+```
+
+This handoff carries evidence only. `POST_MERGE_VERIFIED` means the audit
+completed and findings were recorded; it does not mean zero findings or a clean
+merged state. Non-blocking findings may use Route A. Any blocking finding
+requires Route B, forbids Gate 11, and requires remediation followed by a fresh
+Gate 10 run. Owner review cannot replace the `BLOCKED` lifecycle state.
+
+Codex cannot use this handoff to approve remediation, perform cleanup, close the
+lane, roll back, merge, or deploy. The complete runtime record must bind to the
+verified merged scope and `canonical_main_sha`. `runtime_evidence_reference`
+and `runtime_evidence_or_substitute_evidence` are distinct mandatory fields.
+When `runtime_status` is `Runtime Not Applicable`, omission of any canonical
+runtime field prohibits routing. Each emitted handoff selects exactly one route
+and contains exactly one route-corresponding `next_action`.
+
 ### Owner → Cancelled
 
 **Trigger:** Before `MERGED`, the Owner decides to end the lane unsuccessfully. Agents may recommend cancellation but cannot authorize it.
@@ -346,6 +429,12 @@ The following handoff paths are **never permitted**:
 | Hermes   | Owner    | Codex audit must precede owner decision                   |
 | Codex    | (merge)  | Codex cannot merge; only owner authorizes merge           |
 | Any agent| (deploy) | No agent may deploy without explicit owner authorization  |
+
+An informational escalation notification is not a lifecycle handoff. Hermes
+may notify AgentBridge of drift or safety risk, and AgentBridge may surface that
+notification to the Owner for awareness. The notification cannot mutate task
+state, request approval, authorize any action, replace Codex audit, or bypass
+the mandatory Hermes → Codex → Owner lifecycle route.
 
 ---
 

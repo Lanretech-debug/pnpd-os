@@ -232,8 +232,19 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 - **Meaning:** Task cannot proceed due to a blocker.
 - **Who can enter:** Any agent.
 - **Required evidence:** Blocker record in BLOCKER_LOG.md; blocker ID.
-- **Allowed next states:** Return to previous state when blocker resolved; or `CANCELLED` only when `last_valid_state` is one of the explicitly eligible pre-merge cancellation predecessors and the complete Owner cancellation contract is recorded. A blocker arising from `MERGED` or any later state cannot route to `CANCELLED`.
+- **Allowed next states:** Return to previous state when blocker resolved, subject to the post-merge exception below; or `CANCELLED` only when `last_valid_state` is one of the explicitly eligible pre-merge cancellation predecessors and the complete Owner cancellation contract is recorded. A blocker arising from `MERGED` or any later state cannot route to `CANCELLED`.
 - **Forbidden next states:** Any advancement while blocker is unresolved.
+- **Post-merge exception:** When `BLOCKED` was entered because Gate 10 recorded blocking findings, remediation must complete and the next eligible state is `POST_MERGE_AUDIT_REQUESTED`, not `POST_MERGE_VERIFIED`. Gate 10 must run again and record fresh findings and evidence. Only a fresh result with empty `blocking_findings` may route to `BRANCH_CLEANUP`. `BLOCKED → POST_MERGE_VERIFIED` is forbidden for a post-merge blocker unless a fresh Gate 10 execution occurred through `POST_MERGE_AUDIT_REQUESTED`.
+
+```text
+POST_MERGE_VERIFIED
+  → BLOCKED
+  → remediation
+  → POST_MERGE_AUDIT_REQUESTED
+  → fresh Gate 10
+  → POST_MERGE_VERIFIED
+  → BRANCH_CLEANUP only when blocking_findings is empty
+```
 
 ### REQUEST_CHANGES
 
@@ -334,7 +345,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 ## State Transition Rules
 
 1. States advance forward only through explicit agent action with recorded evidence.
-2. `BLOCKED` can be entered from any state and returns to the previous state upon resolution.
+2. `BLOCKED` can be entered from any state and ordinarily returns to the previous state upon resolution. The post-merge exception takes precedence: a blocker recorded by Gate 10 must resume through `POST_MERGE_AUDIT_REQUESTED` and a fresh Gate 10 execution, never directly through the prior `POST_MERGE_VERIFIED` record.
 3. `REQUEST_CHANGES` can be entered only from `IN_PROGRESS`, `OWNER_PR_AUTHORIZED`, `PR_OPENED`, or `OWNER_MERGE_APPROVED`.
 4. No state may be skipped in the forward path.
 5. `CLOSED` is terminal and indicates successful completion. A closed task cannot be reopened — a new task must be proposed.
