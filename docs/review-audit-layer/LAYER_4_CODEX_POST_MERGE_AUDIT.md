@@ -1,6 +1,6 @@
 # Layer 4 — Codex Post-Merge Audit: Mandatory Gate 10 Verification
 
-Codex post-merge audit is a mandatory retrospective safety and drift check after every merge. It satisfies Gate 10 (Post-Merge Verification). No merge may close without a post-merge audit confirming the seven required fields. Gate 10 records cleanup eligibility and lane closure readiness — it does not perform cleanup or close the lane. Cleanup and closure are handled by Gate 11. The lane remains open until Gate 11 passes.
+Codex post-merge audit is a mandatory retrospective safety and drift check after every merge. It satisfies Gate 10 (Post-Merge Verification). No merge may close without Gate 10 recording all 17 mandatory fields grouped into seven evidence categories. Gate 10 records cleanup eligibility with `lane_closure_ready: false`; it does not perform normal branch deletion or close the lane. Cleanup and closure are handled by Gate 11. The lane remains open until Gate 11 verifies cleanup and passes.
 
 ## High-Risk Categories (Additional Scrutiny)
 
@@ -16,25 +16,25 @@ Codex post-merge audit is a mandatory retrospective safety and drift check after
 
 ## Post-Merge Audit Checklist
 
-Every post-merge audit SHALL confirm and record the following seven fields:
+Every post-merge audit SHALL confirm and record these 17 mandatory fields grouped into seven evidence categories:
 
-| # | Field | Description |
-|---|-------|-------------|
-| 1 | Merged SHA | The merge commit SHA on the target branch. |
-| 2 | Main SHA | The updated main branch SHA after merge. |
-| 3 | Scope Check | Whether the merged changes match the approved scope. |
-| 4 | CI Status | Whether CI checks passed on the merge commit. |
-| 5 | Runtime Status | Whether runtime smoke evidence exists and is consistent with pre-merge evidence. |
-| 6 | Branch Cleanup | Whether the working branch has been deleted (remote and local). Gate 10 records the cleanup eligibility and status — actual branch deletion is performed by Gate 11. |
-| 7 | Lane Closure | Whether the lane is ready to close or follow-up work is required. At Gate 10, `lane_closure_ready` is `false`. Gate 11 sets it to `true` after cleanup evidence passes. |
+| Category | Mandatory fields | Gate 10 meaning |
+|----------|------------------|-----------------|
+| PR identity | `pr_number`, `pr_url`, `pr_merged_state` | Identifies the merged PR and authoritative state. |
+| Merge identity | `merge_commit_sha`, `canonical_main_sha`, `merged_scope` | Binds the audit to the canonical merged state and approved scope. |
+| CI evidence | `ci_status` | Records exact-state CI evidence. |
+| Runtime evidence | `runtime_status`, `runtime_evidence_reference` | Records runtime or substitute evidence. |
+| Cleanup evidence | `branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference` | Records pending or observed cleanup state; Gate 11 performs or verifies it. |
+| Closure evidence | `lane_closure_ready`, `blocking_findings` | `lane_closure_ready` remains `false` at Gate 10. |
+| Verification attribution | `verified_by`, `verified_at` | Identifies the verifier and UTC time. |
 
-A post-merge audit that omits any of the seven fields is incomplete.
+A post-merge audit that omits any of the 17 fields is incomplete. Gate 11 must verify one valid cleanup outcome before setting `lane_closure_ready: true`; `already_absent` and `not_applicable_with_reason` still require Gate 11 verification. Only Gate 11 permits `BRANCH_CLEANUP` to transition to `CLOSED`.
 
 ## Can Do:
 - Verify main after merge
 - Confirm merged code matches the audited PR
 - Detect post-merge drift, dependency drift, branch contamination, or broken governance
-- Record all seven post-merge confirmation fields
+- Record all 17 mandatory post-merge fields
 - Recommend rollback, hotfix, or follow-up audit
 - Confirm or recommend branch cleanup
 
@@ -42,7 +42,7 @@ A post-merge audit that omits any of the seven fields is incomplete.
 - Silently roll back code
 - Override the owner
 - Erase pre-merge findings
-- Skip any of the seven required confirmation fields
+- Skip any of the 17 mandatory fields
 - Close a lane without confirming branch cleanup
 
 ## Escalation:

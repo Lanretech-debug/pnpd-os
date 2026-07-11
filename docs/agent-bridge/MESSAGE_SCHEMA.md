@@ -334,7 +334,10 @@ base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
 head_branch: "governance/execution-gates-patch"
 head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
 codex_audit_reference: "ARES-001"
+codex_verdict: "CODEX_AUDIT_COMPLETED"
 required_checks_status: "all_passed"
+approved_merge_method: "squash"
+approved_by: "owner"
 owner_decision_reference: "DEC-002"
 approved_at: "2026-06-10T12:45:00Z"
 rationale: "All checks passed. Codex audit completed. PR scope matches approved task. Merge authorized."
@@ -346,6 +349,35 @@ timestamp: "2026-06-10T12:45:00Z"
 evidence_refs:
   - "audits/decision-DEC-002.md"
 ```
+
+Every field above is mandatory. `pr_number` cannot be `N/A`. The Codex audit and required checks must apply to the exact `head_sha`. Any material head change invalidates the audit and merge authorization and requires a new audit and Owner merge decision.
+
+## Schema 8c: Owner Cancellation
+
+```yaml
+schema: owner_cancellation
+task_id: "TASK-001"
+decision_type: "owner_cancellation"
+owner_cancelled: true
+owner_decision_reference: "DEC-005"
+cancellation_reason: "Owner ended the lane before merge because its scope is no longer required."
+last_valid_state: "PR_OPENED"
+unresolved_findings:
+  - "LOW: follow-up documentation clarification remains unresolved"
+pr_number_if_any: "PR-001"
+pr_state_if_any: "OPEN"
+branch_name_if_any: "governance/execution-gates-patch"
+branch_state: "retained_pending_safety_cleanup"
+repository_state: "clean_worktree; main unchanged"
+required_safety_cleanup:
+  - "Close the unmerged PR only with separate Owner authority"
+  - "Retain the branch until evidence is archived"
+cancelled_by: "owner"
+cancelled_at: "2026-06-10T15:30:00Z"
+next_state: "CANCELLED"
+```
+
+Only the Owner may authorize this message. Agents may recommend cancellation but cannot authorize it. Cancellation is unsuccessful termination, is neither `PASS` nor `CLOSED`, retains unresolved findings and safety cleanup, is forbidden after `MERGED`, and leaves `CANCELLED` terminal.
 
 ---
 
@@ -383,6 +415,24 @@ audit_request_id: "PMAR-001"
 task_id: "TASK-001"
 auditor: "codex"
 post_merge_status: "POST_MERGE_VERIFIED"
+pr_number: "PR-001"
+pr_url: "https://github.com/Lanretech-debug/pnpd-os/pull/1"
+pr_merged_state: "MERGED"
+merge_commit_sha: "ghi789jkl012"
+canonical_main_sha: "ghi789jkl012"
+merged_scope: "matches_approved_scope"
+ci_status: "all_passed"
+runtime_status: "Runtime Not Applicable"
+runtime_evidence_reference: "audits/substitute-evidence-TASK-001.md"
+branch_cleanup_status: "pending"
+cleanup_eligibility: "eligible"
+cleanup_required_actions:
+  - "Verify one valid cleanup outcome at Gate 11"
+cleanup_evidence_reference: "pending_gate_11"
+lane_closure_ready: false
+blocking_findings: []
+verified_by: "codex"
+verified_at: "2026-06-10T12:45:00Z"
 findings:
   - finding: "Merged diff matches approved PR scope"
     severity: "PASS"
@@ -397,6 +447,8 @@ timestamp: "2026-06-10T12:45:00Z"
 evidence_refs:
   - "audits/post-merge-audit-TASK-001.md"
 ```
+
+Schema 10 records 17 mandatory fields grouped into seven evidence categories: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_evidence_reference`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`). Gate 10 keeps `lane_closure_ready: false`, may record cleanup as pending, does not perform normal branch deletion, and does not close the lane. Gate 11 must perform or independently verify `completed`, `already_absent`, or `not_applicable_with_reason` cleanup before setting `lane_closure_ready: true` and permitting `BRANCH_CLEANUP` to transition to `CLOSED`.
 
 ---
 

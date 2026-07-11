@@ -12,7 +12,7 @@ schema: owner_decision
 decision_id: "DEC-001"
 task_id: "TASK-001"
 owner: "owner"
-decision_type: "approve_merge"
+decision_type: "request_patch"
 rationale: "Full rationale explaining why this decision was made."
 accepted_risks:
   - "Risk 1: description and mitigation (if any)"
@@ -20,15 +20,8 @@ rejected_recommendations:
   - "Codex caveat CV-001: reason for rejecting"
 overridden_gates:
   - "gate_name: reason for override"
-merge_authorized: true
-merge_authorization:
-  pr_id: "PR-EXAMPLE"
-  branch: "feat/example"
-  target: "main"
-  base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
-  head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
-  timestamp: "2026-06-10T12:30:00Z"
-next_action: "Specific next action following this decision"
+merge_authorized: false
+next_action: "DeepSeek apply the requested patch and return through verification"
 timestamp: "2026-06-10T12:30:00Z"
 evidence_refs:
   - "audits/decision-DEC-001.md"
@@ -40,7 +33,8 @@ evidence_refs:
 
 | Type                 | Meaning                                                              |
 | -------------------- | -------------------------------------------------------------------- |
-| `approve_merge`      | Approve the PR for merge into target branch                          |
+| `owner_merge_authorization` | Approve one exact PR head for merge into the target branch    |
+| `owner_cancellation` | Unsuccessfully terminate an unmerged lane with retained findings     |
 | `reject_merge`       | Reject the PR; task may close or return for rework                   |
 | `request_patch`      | Request specific changes before re-review                            |
 | `accept_caveat`      | Accept a Codex caveat and proceed with merge                         |
@@ -95,27 +89,54 @@ When the owner overrides a failed or skipped gate, the override must include:
 
 ## Merge Authorization
 
-If `merge_authorized: true`, the decision MUST include:
+Every active `OWNER_MERGE_APPROVED` decision MUST include this complete contract:
 
 ```yaml
-merge_authorization:
-  pr_id: "PR-001"
-  pr_url: "https://github.com/org/repo/pull/1"
-  branch: "feat/example"
-  target: "main"
-  base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
-  head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
-  codex_audit_reference: "ARES-001"
-  codex_verdict: "CODEX_AUDIT_COMPLETED"
-  required_checks_status: "all_passed"
-  approved_merge_method: "squash"  # squash | merge | rebase
-  approved_by: "owner"
-  approved_at: "2026-06-10T12:45:00Z"
+decision_type: "owner_merge_authorization"
+owner_merge_approved: true
+owner_decision_reference: "DEC-002"
+pr_number: "PR-001"
+pr_url: "https://github.com/org/repo/pull/1"
+base_branch: "main"
+base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
+head_branch: "feat/example"
+head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
+codex_audit_reference: "ARES-001"
+codex_verdict: "CODEX_AUDIT_COMPLETED"
+required_checks_status: "all_passed"
+approved_merge_method: "squash"  # squash | merge | rebase
+approved_by: "owner"
+approved_at: "2026-06-10T12:45:00Z"
 ```
 
-Without a merge authorization block, the merge is not authorized even if `merge_authorized: true`.
+Omission of any field means merge is not authorized.
 
-A merge authorization MUST include a real PR number (`pr_id`). `pr_id: "N/A"` is never valid for merge authorization. Merge authorization is bound to the specific PR, base SHA, head SHA, current Codex audit, and current required-check status. A material head-SHA change invalidates the authorization. The `codex_verdict` field captures the Codex audit outcome (e.g., `CODEX_AUDIT_COMPLETED`, `CODEX_AUDIT_COMPLETED_WITH_CAVEATS`). `approved_merge_method` records the merge strategy (squash, merge commit, or rebase) approved by the owner.
+A merge authorization MUST include a real `pr_number`; `N/A` is never valid. The current audit and required checks must apply to the exact `head_sha`. Any material head change invalidates both the audit and merge authorization, requiring a new audit and Owner merge decision. `approved_merge_method` records the Owner-approved strategy.
+
+## Owner Cancellation
+
+Only the Owner may authorize cancellation; agents may recommend it but cannot authorize it. Cancellation is unsuccessful termination, not `PASS` or `CLOSED`, and cannot occur after `MERGED`. It does not erase unresolved findings or required safety cleanup. `CANCELLED` is terminal.
+
+```yaml
+decision_type: "owner_cancellation"
+owner_cancelled: true
+owner_decision_reference: "DEC-005"
+cancellation_reason: "Owner ended the lane before merge because its scope is no longer required."
+last_valid_state: "PR_OPENED"
+unresolved_findings:
+  - "LOW: follow-up documentation clarification remains unresolved"
+pr_number_if_any: "PR-001"
+pr_state_if_any: "OPEN"
+branch_name_if_any: "feat/example"
+branch_state: "retained_pending_safety_cleanup"
+repository_state: "clean_worktree; main unchanged"
+required_safety_cleanup:
+  - "Close the unmerged PR only with separate Owner authority"
+  - "Retain the branch until evidence is archived"
+cancelled_by: "owner"
+cancelled_at: "2026-06-10T15:30:00Z"
+next_state: "CANCELLED"
+```
 
 ---
 

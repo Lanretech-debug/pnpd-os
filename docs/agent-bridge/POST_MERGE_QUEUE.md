@@ -7,7 +7,9 @@
 
 ## When Post-Merge Audit Is Required
 
-Post-merge audit is **required for all merges**. No merge may close without a post-merge audit confirming the seven required fields (merged SHA, main SHA, scope check, CI status, runtime status, branch cleanup, lane closure).
+Post-merge audit is **required for all merges**. No merge may close without Gate 10 recording all 17 mandatory fields grouped into seven evidence categories and Gate 11 verifying cleanup.
+
+The seven categories and 17 fields are: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_evidence_reference`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`).
 
 High-risk categories (see below) trigger **additional scrutiny** within the post-merge audit — not the audit itself, which is mandatory regardless.
 
@@ -38,7 +40,7 @@ task_id: "TASK-001"
 audit_type: "post_merge"
 requested_by: "owner"
 assigned_to: "codex"
-pr_id: "PR-EXAMPLE"
+pr_number: "PR-EXAMPLE"
 merged_branch: "feat/example-feature"
 target_branch: "main"
 merge_commit: "abc123def456"
@@ -66,6 +68,24 @@ audit_request_id: "PMAR-001"
 task_id: "TASK-001"
 auditor: "codex"
 post_merge_status: "POST_MERGE_VERIFIED"
+pr_number: "PR-001"
+pr_url: "https://github.com/org/repo/pull/1"
+pr_merged_state: "MERGED"
+merge_commit_sha: "abc123def456"
+canonical_main_sha: "abc123def456"
+merged_scope: "matches_approved_scope"
+ci_status: "all_passed"
+runtime_status: "Runtime Verified"
+runtime_evidence_reference: "audits/runtime-TASK-001.md"
+branch_cleanup_status: "pending"
+cleanup_eligibility: "eligible"
+cleanup_required_actions:
+  - "Verify one valid cleanup outcome at Gate 11"
+cleanup_evidence_reference: "pending_gate_11"
+lane_closure_ready: false
+blocking_findings: []
+verified_by: "codex"
+verified_at: "2026-06-10T12:45:00Z"
 findings:
   - finding: "Merged diff matches approved PR scope"
     severity: "PASS"
@@ -94,6 +114,25 @@ audit_request_id: "PMAR-002"
 task_id: "TASK-002"
 auditor: "codex"
 post_merge_status: "POST_MERGE_VERIFIED"
+pr_number: "PR-002"
+pr_url: "https://github.com/org/repo/pull/2"
+pr_merged_state: "MERGED"
+merge_commit_sha: "def456ghi789"
+canonical_main_sha: "def456ghi789"
+merged_scope: "minor_drift_found"
+ci_status: "all_passed"
+runtime_status: "Runtime Verified"
+runtime_evidence_reference: "audits/runtime-TASK-002.md"
+branch_cleanup_status: "pending"
+cleanup_eligibility: "blocked"
+cleanup_required_actions:
+  - "Owner decides disposition of the config drift"
+cleanup_evidence_reference: "pending_gate_11"
+lane_closure_ready: false
+blocking_findings:
+  - "Minor config.py drift requires Owner disposition"
+verified_by: "codex"
+verified_at: "2026-06-10T13:00:00Z"
 findings:
   - finding: "Merged diff generally matches approved scope"
     severity: "PASS"
@@ -157,6 +196,8 @@ CLOSED — terminal state, successful completion only
 2. Post-merge audit reviews the **merged state in the target branch** — not just the PR diff. This catches merge-resolution errors and cross-PR drift.
 3. If post-merge audit finds issues, Codex MUST recommend one of: rollback, follow-up patch PR, or accept with caveats.
 4. Post-merge audit results go to the **Owner** for decision — never auto-actioned.
+5. Gate 10 records all 17 mandatory fields, keeps `lane_closure_ready: false`, may record cleanup as pending, performs no normal branch deletion, and never closes the lane.
+6. Gate 11 performs or verifies exactly one cleanup outcome (`completed`, `already_absent`, or `not_applicable_with_reason`). Even already-absent and not-applicable outcomes require Gate 11 verification. Only Gate 11 may set `lane_closure_ready: true` and permit `BRANCH_CLEANUP` to transition to `CLOSED`.
 
 ---
 

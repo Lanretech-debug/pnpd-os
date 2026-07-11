@@ -185,6 +185,12 @@ Canonical completion requires later verification:
 - GitHub/App verification
 - Owner approval
 
+### Owner Cancellation Contract
+
+Cancellation is an Owner-authorized, unsuccessful termination available only before `MERGED`. Agents may recommend cancellation but cannot authorize it. A valid decision records `decision_type: owner_cancellation`, `owner_cancelled: true`, `owner_decision_reference`, `cancellation_reason`, `last_valid_state`, `unresolved_findings`, `pr_number_if_any`, `pr_state_if_any`, `branch_name_if_any`, `branch_state`, `repository_state`, `required_safety_cleanup`, `cancelled_by`, `cancelled_at`, and `next_state: CANCELLED`.
+
+Eligible predecessors are the repository's active pre-merge states: `PROPOSED`, `ROUTED`, `IN_PROGRESS`, `IMPLEMENTED`, `RUNTIME_SMOKE_TESTED`, `SELF_REVIEWED`, `HERMES_VERIFIED`, `CODEX_AUDIT_REQUESTED`, `CODEX_AUDIT_COMPLETED`, `OWNER_PR_AUTHORIZED`, `PR_OPENED`, `OWNER_MERGE_APPROVED`, `REQUEST_CHANGES`, and `BLOCKED`. `MERGED`, `POST_MERGE_AUDIT_REQUESTED`, `POST_MERGE_VERIFIED`, `BRANCH_CLEANUP`, `CLOSED`, and `CANCELLED` cannot transition to `CANCELLED`. `CANCELLED` is terminal, is neither `PASS` nor `CLOSED`, preserves unresolved findings and safety cleanup, and cannot transition to any state. Mandatory post-merge verification and cleanup cannot be cancelled. `CLOSED` remains reachable only from `BRANCH_CLEANUP`.
+
 ## Execution Gates
 
 Every implementation lane SHALL execute the following gates in order. Each gate is a mandatory checkpoint. No gate may be skipped. A lane that fails a gate returns to the appropriate earlier gate.
@@ -321,7 +327,7 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Owner | Owner (authorises merge); OpenCode or GitHub (executes). |
 | Entry Criteria | Gate 8 passed (PR exists); `pr_number` and `pr_url` recorded; `base_sha` recorded; `head_sha` recorded; current audit applies to current head; required checks passed; separate Owner merge authorization recorded. Gate 7 authorization alone is insufficient. |
 | Exit Criteria | Owner merge authorization recorded; merge commit exists on main. |
-| Evidence Required | Owner merge approval record (separate from PR authorization); `pr_number`, `pr_url`, `base_branch`, `base_sha`, `head_branch`, `head_sha`, `codex_audit_reference`, `required_checks_status`, `approved_at`; merge commit SHA; merged timestamp. |
+| Evidence Required | Complete Owner merge authorization record (separate from PR authorization): `decision_type: owner_merge_authorization`, `owner_merge_approved: true`, `owner_decision_reference`, `pr_number`, `pr_url`, `base_branch`, `base_sha`, `head_branch`, `head_sha`, `codex_audit_reference`, `codex_verdict`, `required_checks_status`, `approved_merge_method`, `approved_by`, and `approved_at`; merge commit SHA; merged timestamp. `pr_number` cannot be `N/A`. |
 | Failure Behaviour | If merge conflicts or CI failures occur, lane returns to Gate 1 for conflict resolution. Owner must re-authorize. |
 | Head-Change Invalidation | Merge authorization is bound to the recorded `pr_number`, `base_sha`, `head_sha`, current Codex audit, and current required-check status. Any material head-SHA change invalidates the previous merge authorization. A new audit and new Owner merge authorization are required before merge. |
 | Rollback Behaviour | `git revert` the merge commit; create a new branch for fixes. |
@@ -333,8 +339,8 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 | Purpose | Confirm that the merge did not break main. Verify the merged commit, main SHA, scope fidelity, CI status, and runtime behaviour. Record cleanup eligibility — Gate 10 does NOT perform cleanup or close the lane. |
 | Owner | Codex |
 | Entry Criteria | Gate 9 passed; merge commit exists on main. |
-| Exit Criteria | Post-merge audit report documents: merged SHA, main SHA, scope check result, CI status, runtime status, branch cleanup eligibility, and lane closure recommendation. |
-| Evidence Required | Post-merge audit report with all 7 confirmation fields. Cleanup fields recorded at Gate 10: `branch_cleanup_status` (one of `pending`, `already_absent`, `not_applicable_with_reason`), `cleanup_eligibility` (eligible or blocked), `cleanup_required_actions`, `cleanup_blockers`, `lane_closure_ready` (must be `false` at Gate 10 — cleanup must complete first). |
+| Exit Criteria | Post-merge audit records all 17 mandatory fields grouped into seven evidence categories and leaves `lane_closure_ready: false` pending Gate 11. |
+| Evidence Required | PR identity: `pr_number`, `pr_url`, `pr_merged_state`. Merge identity: `merge_commit_sha`, `canonical_main_sha`, `merged_scope`. CI evidence: `ci_status`. Runtime evidence: `runtime_status`, `runtime_evidence_reference`. Cleanup evidence: `branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`. Closure evidence: `lane_closure_ready`, `blocking_findings`. Verification attribution: `verified_by`, `verified_at`. All 17 fields across these seven categories are mandatory. Gate 10 may record cleanup as pending but does not perform normal branch deletion or close the lane. |
 | Failure Behaviour | If post-merge verification detects critical drift, recommend rollback to Owner. Non-critical drift creates a follow-up issue. Gate 10 must not perform branch deletion, claim final lane closure, or transition directly to CLOSED. |
 | Rollback Behaviour | Owner decides: rollback (`git revert`), hotfix, or follow-up. |
 
@@ -344,7 +350,7 @@ Every implementation lane SHALL execute the following gates in order. Each gate 
 |-------|-------|
 | Purpose | Perform required branch deletion (if applicable), verify one valid cleanup outcome, record cleanup evidence, determine closure eligibility, and transition to CLOSED only after evidence passes. No lane may close without passing Gate 11. |
 | Owner | DeepSeek / OpenCode (executes); Owner or Hermes (confirms). |
-| Entry Criteria | Gate 10 passed; post-merge audit confirms no critical drift; cleanup fields recorded at Gate 10. |
+| Entry Criteria | Gate 10 passed; all 17 mandatory post-merge fields are recorded; post-merge audit confirms no critical drift; cleanup fields recorded at Gate 10. Already-absent and not-applicable outcomes still require Gate 11 verification. |
 | Exit Criteria | One valid cleanup outcome recorded with full outcome-specific evidence. Cleanup performed or confirmed. `lane_closure_ready` set to `true`. Lane transitions to `CLOSED` if evidence passes, or `BLOCKED` if it fails. |
 | Outcome Evidence | Evidence required depends on the specific cleanup outcome: **completed** — `branch_cleanup_status`: completed, `branch_previously_existed`: true, `branch_name`, `deletion_command_or_authoritative_source`, `local_branch_status_before`: exists, `local_branch_status_after`: deleted, `remote_branch_status_before`: exists, `remote_branch_status_after`: deleted, `canonical_main_sha`, `merged_head_sha`, `merged_head_reachable_from_main`: true, `verified_by`, `verified_at`. **already_absent** — `branch_cleanup_status`: already_absent, `branch_name`, `independent_absence_verification`, `automatic_or_prior_deletion_evidence` (where available), `local_branch_status`: absent, `remote_branch_status`: absent, `canonical_main_sha`, `merged_head_sha`, `merged_head_reachable_from_main`: true, `verified_by`, `verified_at`. **not_applicable_with_reason** — `branch_cleanup_status`: not_applicable_with_reason, `explicit_reason`, `evidence_no_feature_branch_was_used`, `change_delivery_method`, `canonical_main_sha`, `relevant_commit_or_merge_evidence`, `verified_by`, `verified_at`. |
 | Failure Behaviour | An existing branch must not remain merely for reference. An already-absent branch must not be recreated. A lane with no feature branch must record `not_applicable_with_reason`. `not_applicable_with_reason` must not be used because cleanup is inconvenient or where a branch existed. Unsupported claims route to `BLOCKED`. If branch cannot be deleted (e.g., branch protection), record exception and escalate to Owner. Gate 11 must not be skipped — it is the only gate that can set `lane_closure_ready: true`. |

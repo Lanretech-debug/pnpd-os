@@ -164,6 +164,38 @@ handoff:
   next_action: "Codex post-merge audit of merged diff in target branch"
 ```
 
+### Owner → Cancelled
+
+**Trigger:** Before `MERGED`, the Owner decides to end the lane unsuccessfully. Agents may recommend cancellation but cannot authorize it.
+
+```yaml
+handoff:
+  from: owner
+  to: agent_bridge
+  task_id: "TASK-001"
+  status: CANCELLED
+  decision_type: owner_cancellation
+  owner_cancelled: true
+  owner_decision_reference: "DEC-005"
+  cancellation_reason: "Owner ended the lane before merge because its scope is no longer required."
+  last_valid_state: PR_OPENED
+  unresolved_findings:
+    - "LOW: follow-up documentation clarification remains unresolved"
+  pr_number_if_any: "PR-001"
+  pr_state_if_any: OPEN
+  branch_name_if_any: "governance/execution-gates-patch"
+  branch_state: retained_pending_safety_cleanup
+  repository_state: "clean_worktree; main unchanged"
+  required_safety_cleanup:
+    - "Close the unmerged PR only with separate Owner authority"
+  cancelled_by: owner
+  cancelled_at: "2026-06-10T15:30:00Z"
+  next_state: CANCELLED
+  next_action: "Record CANCELLED as terminal and preserve unresolved findings and safety cleanup obligations"
+```
+
+Cancellation is not `PASS` or `CLOSED`, does not erase unresolved findings, cannot occur after `MERGED`, and is terminal. It records safety cleanup obligations without authorizing those actions.
+
 ---
 
 ## Required Evidence Per Handoff
