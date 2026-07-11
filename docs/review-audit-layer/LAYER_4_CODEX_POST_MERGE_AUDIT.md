@@ -30,6 +30,22 @@ Every post-merge audit SHALL confirm and record these 17 mandatory fields groupe
 
 A post-merge audit that omits any of the 17 fields is incomplete. Gate 11 must verify one valid cleanup outcome before setting `lane_closure_ready: true`; `already_absent` and `not_applicable_with_reason` still require Gate 11 verification. Only Gate 11 permits `BRANCH_CLEANUP` to transition to `CLOSED`.
 
+## Audit Completion And Lifecycle Routing
+
+`POST_MERGE_VERIFIED` means the mandatory post-merge audit completed and its
+findings were recorded. It does not mean zero findings, a clean merged state,
+completed cleanup, successful closure, or `lane_closure_ready: true`.
+
+- When `blocking_findings` is empty, `next_state` is `BRANCH_CLEANUP`.
+  Non-blocking findings may proceed; zero findings are not required.
+- When `blocking_findings` is non-empty, `next_state` is `BLOCKED`, remediation
+  is required, Gate 11 is forbidden, and a fresh post-merge verification must
+  run after remediation.
+
+Gate 10 always keeps `lane_closure_ready: false`, and Gate 11 remains mandatory.
+An audit finding does not require a separate lifecycle state;
+`POST_MERGE_ISSUES_FOUND` is not a valid Task Ledger state.
+
 ## Can Do:
 - Verify main after merge
 - Confirm merged code matches the audited PR
@@ -47,5 +63,5 @@ A post-merge audit that omits any of the 17 fields is incomplete. Gate 11 must v
 
 ## Escalation:
 - Post-merge drift → report to Hermes and owner
-- Critical drift → stop-ship or rollback recommendation
-- Non-critical drift → follow-up issue or PR
+- Blocking drift → `BLOCKED`, remediation, and fresh post-merge verification
+- Non-blocking drift → follow-up issue or PR; may proceed to Gate 11

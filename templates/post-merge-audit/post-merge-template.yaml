@@ -51,6 +51,9 @@ Every post-merge audit SHALL confirm and record all 17 mandatory fields below, g
 - `lane_closure_ready` **must remain `false`** until Gate 11 (Branch Cleanup and Closure) passes.
 - This template does **not** imply that Gate 10 closes the lane — closure requires Gate 11.
 - Gate 11 must verify `completed`, `already_absent`, or `not_applicable_with_reason`; already-absent and not-applicable cleanup are not self-validating.
+- `POST_MERGE_VERIFIED` records audit completion and findings; it does not mean zero findings or a clean merged state.
+- Non-blocking findings may proceed to Gate 11; zero findings are not required.
+- Any blocking finding routes to `BLOCKED`, requires remediation and fresh post-merge verification, and forbids Gate 11.
 
 ---
 
@@ -138,9 +141,31 @@ Every post-merge audit SHALL confirm and record all 17 mandatory fields below, g
 
 ## Overall Verdict
 
-- [ ] `POST_MERGE_VERIFIED` — Merged state is clean
-- [ ] `POST_MERGE_ISSUES_FOUND` — Issues found, follow-up required
-- [ ] `POST_MERGE_ROLLBACK_RECOMMENDED` — Rollback recommended
+- [ ] `POST_MERGE_VERIFIED` — Mandatory audit completed and findings recorded
+
+**Result classification:** `findings_recorded`
+
+### Route A — No Blocking Findings
+
+```yaml
+blocking_findings: []
+next_state: BRANCH_CLEANUP
+lane_closure_ready: false
+remediation_required: false
+```
+
+### Route B — Blocking Findings Present
+
+```yaml
+blocking_findings:
+  - "<recorded blocker>"
+next_state: BLOCKED
+lane_closure_ready: false
+remediation_required: true
+```
+
+Route B forbids Gate 11 until remediation completes and post-merge verification
+is rerun. Rollback remains a recommendation field, not a lifecycle state.
 
 ---
 

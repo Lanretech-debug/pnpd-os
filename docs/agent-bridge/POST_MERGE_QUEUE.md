@@ -68,6 +68,7 @@ audit_request_id: "PMAR-001"
 task_id: "TASK-001"
 auditor: "codex"
 post_merge_status: "POST_MERGE_VERIFIED"
+post_merge_result: "findings_recorded"
 pr_number: "PR-001"
 pr_url: "https://github.com/org/repo/pull/1"
 pr_merged_state: "MERGED"
@@ -84,6 +85,8 @@ cleanup_required_actions:
 cleanup_evidence_reference: "pending_gate_11"
 lane_closure_ready: false
 blocking_findings: []
+next_state: "BRANCH_CLEANUP"
+remediation_required: false
 verified_by: "codex"
 verified_at: "2026-06-10T12:45:00Z"
 findings:
@@ -97,7 +100,7 @@ issues_found: []
 rollback_recommended: false
 rollback_rationale: ""
 follow_up_actions: []
-next_action: "Post-merge verification passed. Branch cleanup is now required. Lane remains open until cleanup evidence recorded."
+next_action: "Proceed to Gate 11 branch cleanup; lane remains open until cleanup evidence is verified."
 timestamp: "2026-06-10T12:45:00Z"
 evidence_refs:
   - "audits/post-merge-audit-TASK-001.md"
@@ -114,6 +117,7 @@ audit_request_id: "PMAR-002"
 task_id: "TASK-002"
 auditor: "codex"
 post_merge_status: "POST_MERGE_VERIFIED"
+post_merge_result: "findings_recorded"
 pr_number: "PR-002"
 pr_url: "https://github.com/org/repo/pull/2"
 pr_merged_state: "MERGED"
@@ -131,6 +135,8 @@ cleanup_evidence_reference: "pending_gate_11"
 lane_closure_ready: false
 blocking_findings:
   - "Minor config.py drift requires Owner disposition"
+next_state: "BLOCKED"
+remediation_required: true
 verified_by: "codex"
 verified_at: "2026-06-10T13:00:00Z"
 findings:
@@ -148,7 +154,7 @@ follow_up_actions:
   - action: "Create TASK-010 to remove debug flag if not needed"
     assigned_to: "deepseek"
     priority: "LOW"
-next_action: "Owner review finding; decide on follow-up TASK-010"
+next_action: "Enter BLOCKED, remediate the recorded finding, then rerun post-merge verification before Gate 11"
 timestamp: "2026-06-10T13:00:00Z"
 evidence_refs:
   - "audits/post-merge-audit-TASK-002.md"
@@ -181,8 +187,10 @@ MERGED
   ↓
 POST_MERGE_AUDIT_REQUESTED — Gate 10 begins (mandatory — all merges)
   ↓
-POST_MERGE_VERIFIED — Gate 10 complete; records cleanup eligibility (lane_closure_ready=false)
-  ↓
+POST_MERGE_VERIFIED — audit complete; findings recorded; lane_closure_ready=false
+  ├── blocking_findings: [] → BRANCH_CLEANUP
+  └── blocking_findings present → BLOCKED → remediation → rerun Gate 10
+                                           └── blocker-free rerun → BRANCH_CLEANUP
 BRANCH_CLEANUP — Gate 11 performs/verifies cleanup; sets lane_closure_ready=true
   ↓
 CLOSED — terminal state, successful completion only
@@ -194,10 +202,12 @@ CLOSED — terminal state, successful completion only
 
 1. Post-merge audit is **mandatory** for all merges. It is never optional.
 2. Post-merge audit reviews the **merged state in the target branch** — not just the PR diff. This catches merge-resolution errors and cross-PR drift.
-3. If post-merge audit finds issues, Codex MUST recommend one of: rollback, follow-up patch PR, or accept with caveats.
-4. Post-merge audit results go to the **Owner** for decision — never auto-actioned.
-5. Gate 10 records all 17 mandatory fields, keeps `lane_closure_ready: false`, may record cleanup as pending, performs no normal branch deletion, and never closes the lane.
-6. Gate 11 performs or verifies exactly one cleanup outcome (`completed`, `already_absent`, or `not_applicable_with_reason`). Even already-absent and not-applicable outcomes require Gate 11 verification. Only Gate 11 may set `lane_closure_ready: true` and permit `BRANCH_CLEANUP` to transition to `CLOSED`.
+3. `POST_MERGE_VERIFIED` records completion of the mandatory audit and its findings; it does not mean zero findings or a clean merged state.
+4. If `blocking_findings` is empty, `next_state` is `BRANCH_CLEANUP`. Non-blocking findings may proceed; zero findings are not required.
+5. If `blocking_findings` is non-empty, `next_state` is `BLOCKED`, `remediation_required` is `true`, Gate 11 is forbidden, and post-merge verification must be rerun after remediation.
+6. Post-merge audit results go to the **Owner** for decision, but Owner review does not replace the required `BLOCKED` lifecycle state.
+7. Gate 10 records all 17 mandatory fields, keeps `lane_closure_ready: false`, may record cleanup as pending, performs no normal branch deletion, and never closes the lane.
+8. Gate 11 performs or verifies exactly one cleanup outcome (`completed`, `already_absent`, or `not_applicable_with_reason`). Even already-absent and not-applicable outcomes require Gate 11 verification. Only Gate 11 may set `lane_closure_ready: true` and permit `BRANCH_CLEANUP` to transition to `CLOSED`.
 
 ---
 

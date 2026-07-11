@@ -24,6 +24,22 @@ A handoff transfers task state, evidence, and routing from one agent to the next
 
 ## Required Handoff Paths
 
+Every required task handoff below carries the complete runtime record inherited
+from the currently verified exact-head evidence:
+
+- `runtime_status`
+- `runtime_reason`
+- `runtime_surface`
+- `runtime_evidence_or_substitute_evidence`
+- `runtime_verified_by`
+- `runtime_verified_at`
+
+When `runtime_status` is `Runtime Not Applicable`, omission of any field makes
+the handoff incomplete and prohibits routing. A material head or scope change
+invalidates the inherited runtime record whenever the runtime classification or
+evidence may have changed; the affected evidence must be re-verified before the
+handoff can route.
+
 ### DeepSeek → Hermes
 
 **Trigger:** Implementation done. Self-review complete.
@@ -34,6 +50,12 @@ handoff:
   to: hermes
   task_id: "TASK-001"
   status: IMPLEMENTED | SELF_REVIEWED
+  runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+  runtime_reason: "Inherited exact-head runtime classification reason"
+  runtime_surface: "Inherited exact-head affected-surface classification"
+  runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+  runtime_verified_by: "deepseek"
+  runtime_verified_at: "2026-06-10T12:00:00Z"
   evidence:
     - self_review_log: "path/to/self-review.md"
     - diff_summary: "path/to/diff-summary.txt"
@@ -51,6 +73,12 @@ handoff:
   to: deepseek
   task_id: "TASK-001"
   status: REQUEST_CHANGES | BLOCKED
+  runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+  runtime_reason: "Inherited exact-head runtime classification reason"
+  runtime_surface: "Inherited exact-head affected-surface classification"
+  runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+  runtime_verified_by: "deepseek"
+  runtime_verified_at: "2026-06-10T12:00:00Z"
   evidence:
     - herm_verification: "path/to/hermes-verification.md"
     - failed_gates: ["dirty_tree", "wrong_branch"]
@@ -69,6 +97,12 @@ handoff:
   to: codex
   task_id: "TASK-001"
   status: HERMES_VERIFIED
+  runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+  runtime_reason: "Inherited exact-head runtime classification reason"
+  runtime_surface: "Inherited exact-head affected-surface classification"
+  runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+  runtime_verified_by: "deepseek"
+  runtime_verified_at: "2026-06-10T12:00:00Z"
   evidence:
     - herm_verification: "path/to/hermes-verification.md"
     - deepseek_self_review: "path/to/deepseek-self-review.md"
@@ -87,6 +121,12 @@ handoff:
   to: deepseek
   task_id: "TASK-001"
   status: REQUEST_CHANGES
+  runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+  runtime_reason: "Inherited exact-head runtime classification reason"
+  runtime_surface: "Inherited exact-head affected-surface classification"
+  runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+  runtime_verified_by: "deepseek"
+  runtime_verified_at: "2026-06-10T12:00:00Z"
   evidence:
     - codex_audit: "path/to/codex-audit.md"
     - change_requests: ["CR-001: fix X", "CR-002: add test for Y"]
@@ -104,15 +144,15 @@ handoff:
   to: owner
   task_id: "TASK-001"
   status: CODEX_AUDIT_COMPLETED
+  runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+  runtime_reason: "Why runtime is or is not applicable"
+  runtime_surface: "Affected surface classification"
+  runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+  runtime_verified_by: "deepseek"
+  runtime_verified_at: "2026-06-10T12:00:00Z"
   evidence:
     - codex_audit: "path/to/codex-audit.md"
     - codex_status: "CODEX_AUDIT_COMPLETED"
-    - runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
-    - runtime_reason: "Why runtime is or is not applicable"
-    - runtime_surface: "Affected surface classification"
-    - runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
-    - runtime_verified_by: "deepseek"
-    - runtime_verified_at: "2026-06-10T12:00:00Z"
     - caveats: ["Caveat 1: item", "Caveat 2: item"]
   blockers: []
   next_action: "Owner review audit result and authorize PR creation (not merge)"
@@ -135,6 +175,12 @@ handoff:
   owner_merge_approved: false
   merge_authority_present: false
   may_route_merge_execution: false
+  runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+  runtime_reason: "Inherited exact-head runtime classification reason"
+  runtime_surface: "Inherited exact-head affected-surface classification"
+  runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+  runtime_verified_by: "deepseek"
+  runtime_verified_at: "2026-06-10T12:00:00Z"
   evidence:
     - codex_audit: "path/to/codex-audit.md"
     - pr_number: "PR-001"
@@ -145,8 +191,6 @@ handoff:
     - head_sha: "ghi789jkl012"
     - codex_audit_reference: "ARES-001"
     - required_checks_status: "all_passed"
-    - runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
-    - runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
   blockers: []
   next_action: "Owner review current PR state and authorize merge (separate from PR authorization)"
 ```
@@ -178,6 +222,12 @@ handoff:
   approved_merge_method: squash
   approved_by: owner
   approved_at: "2026-06-10T14:00:00Z"
+  runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+  runtime_reason: "Inherited exact-head runtime classification reason"
+  runtime_surface: "Inherited exact-head affected-surface classification"
+  runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+  runtime_verified_by: "deepseek"
+  runtime_verified_at: "2026-06-10T12:00:00Z"
   may_route_merge_execution: true
   next_action: "Authorized merge executor verifies the exact PR state and executes only the approved merge method"
 ```
@@ -188,6 +238,7 @@ Rules:
 - `base_branch`, `base_sha`, `head_branch`, and `head_sha` must match the live PR exactly.
 - `codex_audit_reference` and `codex_verdict` must apply to the recorded `head_sha`.
 - `required_checks_status` must show the required checks passing for the recorded `head_sha`.
+- The complete six-field runtime record must apply to the recorded `head_sha`; incomplete runtime evidence prevents merge routing.
 - A material head change invalidates this handoff and requires a fresh Codex audit and Owner decision.
 - A stale or incomplete handoff cannot route merge execution.
 - Only a complete handoff with `owner_merge_approved: true` may route merge execution.
@@ -209,6 +260,12 @@ handoff:
   status: MERGED
   post_merge_audit_required: true
   risk_level: "MEDIUM"
+  runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+  runtime_reason: "Inherited exact-head runtime classification reason"
+  runtime_surface: "Inherited exact-head affected-surface classification"
+  runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+  runtime_verified_by: "deepseek"
+  runtime_verified_at: "2026-06-10T12:00:00Z"
   evidence:
     - owner_decision: "path/to/decision-log.md"
     - merge_commit: "abc123def"
@@ -245,6 +302,12 @@ handoff:
     - "Close the unmerged PR only with separate Owner authority"
   cancelled_by: owner
   cancelled_at: "2026-06-10T15:30:00Z"
+  runtime_status: "Runtime Verified | Runtime Not Verified | Runtime Not Applicable"
+  runtime_reason: "Inherited exact-head runtime classification reason"
+  runtime_surface: "Inherited exact-head affected-surface classification"
+  runtime_evidence_or_substitute_evidence: "path/to/runtime-evidence.md"
+  runtime_verified_by: "deepseek"
+  runtime_verified_at: "2026-06-10T12:00:00Z"
   next_state: CANCELLED
   next_action: "Record CANCELLED as terminal and preserve unresolved findings and safety cleanup obligations"
 ```
