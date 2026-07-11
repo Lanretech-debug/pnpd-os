@@ -116,22 +116,17 @@ PROPOSED
 ROUTED
 IN_PROGRESS
 IMPLEMENTED
-RUNTIME_SMOKE_TESTED
 SELF_REVIEWED
 HERMES_VERIFIED
 CODEX_AUDIT_REQUESTED
-CODEX_AUDIT_COMPLETED
-OWNER_PR_AUTHORIZED
-PR_OPENED
-OWNER_MERGE_APPROVED
+CODEX_APPROVED
+OWNER_APPROVED
 MERGED
 POST_MERGE_AUDIT_REQUESTED
 POST_MERGE_VERIFIED
-BRANCH_CLEANUP
 BLOCKED
 REQUEST_CHANGES
 CLOSED
-CANCELLED
 ```
 
 Full state definitions, transitions, and anti-drift controls are in `TASK_LEDGER.md`.
@@ -156,7 +151,7 @@ Full state definitions, transitions, and anti-drift controls are in `TASK_LEDGER
 14. Secrets must never be written to handoff files.
 15. Handoffs must reference evidence paths, not paste secrets.
 16. Merge requires Codex audit or explicit owner override rationale.
-17. Post-merge audit is required for all merges.
+17. Post-merge audit is required for high-risk merges.
 18. Every handoff must end with one next action.
 
 ---

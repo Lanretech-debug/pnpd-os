@@ -36,9 +36,9 @@ from the currently verified exact-head evidence:
 
 When `runtime_status` is `Runtime Not Applicable`, omission of any field makes
 the handoff incomplete and prohibits routing. A material head or scope change
-invalidates the inherited runtime record whenever the runtime classification or
-evidence may have changed; the affected evidence must be re-verified before the
-handoff can route.
+invalidates the inherited runtime record; the affected evidence must be
+re-verified before the handoff can route. See TASK_LEDGER.md for the
+corresponding lane-lifecycle rules on material changes.
 
 The mandatory lifecycle handoff inventory is:
 
@@ -53,7 +53,7 @@ The mandatory lifecycle handoff inventory is:
 | Owner / AgentBridge → Authorized Merge Executor | Yes | Yes |
 | Owner → Post-Merge Audit | Yes | Yes |
 | Codex → Owner (Post-Merge Audit Result) | Yes | Yes |
-| Owner → Cancelled | Yes | Yes |
+| Owner → Cancelled | Yes | Only when `runtime_verification_reached: true` |
 
 ### DeepSeek → Hermes
 
@@ -307,7 +307,7 @@ handoff:
   post_merge_result: findings_recorded
   pr_number: "PR-001"
   pr_url: "https://github.com/org/repo/pull/1"
-  pr_merged_state: MERGED
+  pr_merged_state: "MERGED"
   merge_commit_sha: "abc123def456"
   canonical_main_sha: "abc123def456"
   merged_scope: "matches_approved_scope"

@@ -93,7 +93,20 @@ If `Runtime Not Applicable` is declared, the canonical six-key N/A evidence cont
 
 ---
 
-### 7. Merge Recommendation
+### 7. Head SHA Integrity
+
+- [ ] Audited head SHA matches the actual PR head SHA at time of audit
+- [ ] Audited base SHA matches the actual PR base SHA at time of audit
+- [ ] No commits pushed to the PR branch after the audit head SHA was recorded
+- [ ] SHA binding is exact (prefix match is insufficient — full 40-character SHA)
+- [ ] Any material head change invalidates this audit and requires a fresh run
+- [ ] Runtime evidence was captured at the audited HEAD SHA
+
+**Notes:**
+
+---
+
+### 8. Merge Recommendation
 
 - [ ] `MERGE_OK` — PR is safe to merge as-is
 - [ ] `MERGE_OK_OWNER_ACCEPTS_CAVEATS` — Owner must accept listed caveats
@@ -103,16 +116,6 @@ If `Runtime Not Applicable` is declared, the canonical six-key N/A evidence cont
 **Recommendation:**
 
 **Caveats (if any):**
-
----
-
-### Head SHA Integrity
-
-- [ ] Audited head SHA matches the actual PR head SHA at time of audit
-- [ ] Audited base SHA matches the actual PR base SHA at time of audit
-- [ ] No commits pushed to the PR branch after the audit head SHA was recorded
-- [ ] SHA binding is exact (prefix match is insufficient — full 40-character SHA)
-- [ ] Any material head change invalidates this audit and requires a fresh run
 
 ---
 
@@ -126,6 +129,7 @@ If `Runtime Not Applicable` is declared, the canonical six-key N/A evidence cont
 | Runtime Verification | |
 | Secret Scan | |
 | Authority Drift Scan | |
+| Head SHA Integrity | |
 | **Overall** | |
 
 ---

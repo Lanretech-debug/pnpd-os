@@ -86,12 +86,6 @@ If an agent's role is unknown, it must default to READ_ONLY_VERIFY_AND_REPORT un
 
 ---
 
-## Execution Gates
-
-Every implementation lane SHALL follow the 12-gate execution pipeline defined in `docs/pnpd/unified-execution-plan-and-taste-gate-design.md`. The pipeline makes runtime verification mandatory before any audit, and branch cleanup mandatory before lane closure.
-
----
-
 ## Review & Audit Layer
 
 PNPD-OS operates five distinct review and audit layers. Each layer has a different scope, authority, and escalation path.
@@ -114,14 +108,7 @@ Codex is the formal pre-merge auditor. Required before merging material changes 
 
 ### Layer 4 — Codex Post-Merge Audit: Retrospective Drift Check
 
-Retrospective safety and drift check after merge. Mandatory for every merged lane. Risk level determines the depth of verification and evidence scrutiny only — it never determines whether verification occurs.
-
-Required lifecycle:
-MERGED
-→ POST_MERGE_AUDIT_REQUESTED
-→ POST_MERGE_VERIFIED
-→ BRANCH_CLEANUP
-→ CLOSED
+Retrospective safety and drift check after merge. Required for high-risk merges.
 
 ### Layer 5 — Owner Final Decision
 

@@ -289,6 +289,28 @@ evidence_refs:
   - "audits/decision-DEC-005.md"
 ```
 
+### Example 5: Accept Caveat
+
+```yaml
+schema: owner_decision
+decision_id: "DEC-006"
+task_id: "TASK-005"
+owner: "owner"
+decision_type: "accept_caveat"
+caveat_reference: "CV-001"
+caveat_source: "codex_audit_ARES-004"
+rationale: "Codex caveat CV-001 flags that integration test coverage for the new webhook endpoint is below the 90% threshold. The endpoint is guarded by existing unit tests at 85% coverage, and the gap will be closed in the follow-up TASK-008. Accepting the caveat to unblock the release."
+accepted_risks:
+  - "CV-001: Webhook endpoint integration coverage at 85% (target 90%) — acceptable because unit test coverage is strong, endpoint is behind feature flag, and follow-up task TASK-008 is queued"
+rejected_recommendations: []
+merge_authorized: true
+next_action: "Codex record caveat acceptance and proceed with merge authorization"
+timestamp: "2026-06-10T15:30:00Z"
+evidence_refs:
+  - "audits/decision-DEC-006.md"
+  - "audits/codex-audit-TASK-005.md"
+```
+
 ---
 
 *The Decision Log is append-only. Decisions are never deleted — only superseded by new decisions with cross-references.*

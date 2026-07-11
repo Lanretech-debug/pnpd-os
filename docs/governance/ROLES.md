@@ -21,7 +21,6 @@ Hermes is the operational truth checker.
 - Override owner decisions
 - Certify correctness beyond operational verification
 - Modify product code
-- Authorize cancellation
 
 ---
 
@@ -44,7 +43,6 @@ DeepSeek is the implementation worker and local self-checker.
 - Replace Codex audit
 - Override owner decisions
 - Modify AGENTS.md without explicit owner approval
-- Authorize cancellation
 
 ---
 
@@ -55,7 +53,7 @@ Codex is the pre-merge and post-merge auditor.
 **Can do:**
 - Audit PR scope, diff, and evidence
 - Request changes (REQUEST_CHANGES)
-- Approve with caveats (audit_outcome: PASS_WITH_CAVEATS)
+- Approve with caveats (CODEX_APPROVED_WITH_CAVEATS)
 - Block merges that fail audit gates
 - Write audit results to AgentBridge audit queue
 
@@ -65,7 +63,6 @@ Codex is the pre-merge and post-merge auditor.
 - Merge silently
 - Replace Hermes verification
 - Audit a PR by inspecting only the latest commit
-- Authorize cancellation
 
 ---
 
@@ -79,20 +76,9 @@ The owner is the ultimate authority.
 - Override audit gates with recorded rationale
 - Defer decisions, rollback merges
 - Decide business and product direction
-- Alone authorize `CANCELLED` before `MERGED` through an explicit recorded Owner decision
 
 **Cannot do:**
 - Be overridden by any agent or layer
-
----
-
-## Cancellation Authority
-
-The Owner alone may authorize `CANCELLED`. Agents may recommend cancellation,
-but Hermes, Codex, DeepSeek, OpenCode, and AgentBridge cannot authorize it. The
-decision must be explicit and recorded, is valid only before `MERGED`, and cannot
-erase unresolved findings or post-merge obligations. A merged or later lane must
-continue through its required post-merge states.
 
 ---
 

@@ -13,18 +13,10 @@ Each layer has a different scope, authority, and escalation path.
 | Layer | Agent | Role | Authority |
 |-------|-------|------|-----------|
 | 1 | DeepSeek | Local autoreview — self-check only | None |
-| 2 | Hermes | Operational truth verification | Verification/Routing |
+| 2 | Hermes | Operational truth verification | Advisory |
 | 3 | Codex | Formal pre-merge audit gate | Advisory |
-| 4 | Codex | Post-merge retrospective drift check | Advisory (mandatory) |
+| 4 | Codex | Post-merge retrospective drift check | Advisory |
 | 5 | Owner | Final decision-maker | Final |
-
-### Authority vs Workflow
-
-Authority level and workflow ordering are separate dimensions:
-- **Authority level** determines whether a layer's verdict can be overridden (Owner can override Codex).
-- **Workflow ordering** determines whether a layer's step can be skipped (Codex audit is a mandatory gate that must execute before a PR may be opened; skipping it requires an Owner override with recorded rationale).
-
-Codex is **Advisory** in authority (Owner may override its verdict) but mandatory in workflow (the audit step must execute before proceeding to PR). An Owner override does not retroactively pass a skipped gate — it records the override rationale and the lane moves forward.
 
 ## Escalation Chain
 

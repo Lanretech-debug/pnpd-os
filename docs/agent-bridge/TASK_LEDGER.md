@@ -176,7 +176,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 - **Allowed next states:** `OWNER_MERGE_APPROVED`, `REQUEST_CHANGES` (if the proposed diff changes materially), `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `MERGED` (merge requires explicit owner merge authorization), `POST_MERGE_AUDIT_REQUESTED`, `POST_MERGE_VERIFIED`, `BRANCH_CLEANUP`, `CLOSED`.
 - **Failure behaviour:** If the PR diff does not match the approved scope, the lane returns to `REQUEST_CHANGES` for correction. If the PR cannot be opened (branch conflict, base divergence), the issue must be resolved before re-entry.
-- **Head-Change Rule:** If the PR head changes materially after the recorded Codex audit (identified by `audited_head_sha`), the previous audit is stale. Any existing merge authorization is invalid. The lane returns to appropriate self-review, Hermes verification, and Codex audit stages.
+- **Head-Change and Scope-Change Rule:** If the PR head or task scope changes materially after the recorded Codex audit (identified by `audited_head_sha`), the previous audit is stale. Any existing merge authorization is invalid. The lane returns to appropriate self-review, Hermes verification, and Codex audit stages. A material scope change additionally requires fresh task scoping before re-entering the pipeline.
 
 ### OWNER_MERGE_APPROVED
 
@@ -200,7 +200,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
   - `approved_at`
 - **Allowed next states:** `MERGED`, `REQUEST_CHANGES`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `PR_OPENED` (PR already exists), `POST_MERGE_VERIFIED`, `BRANCH_CLEANUP`, `CLOSED`.
-- **Anti-drift:** Merge authorization is bound to the recorded PR number, base SHA, head SHA, current Codex audit, and current required-check status. Any material head-SHA change invalidates the previous merge authorization. A new audit and new Owner merge authorization are required before merge. If further changes are required, a new REQUEST_CHANGES cycle must begin from PR_OPENED.
+- **Anti-drift:** Merge authorization is bound to the recorded PR number, base SHA, head SHA, current Codex audit, current required-check status, and approved scope. Any material head-SHA or scope change invalidates the previous merge authorization. A new audit and new Owner merge authorization are required before merge. If further changes are required, a new REQUEST_CHANGES cycle must begin from PR_OPENED.
 
 ### MERGED
 
@@ -254,7 +254,7 @@ POST_MERGE_VERIFIED
 - **Required evidence:** Specific change requests listed; handoff back to DeepSeek.
 - **Allowed predecessors:** `IN_PROGRESS`, `OWNER_PR_AUTHORIZED`, `PR_OPENED`, `OWNER_MERGE_APPROVED`.
 - **Allowed next states:** the correction-appropriate state among `IN_PROGRESS`, `OWNER_PR_AUTHORIZED`, or `PR_OPENED`; otherwise `BLOCKED`, or `CANCELLED` when the cancellation contract is satisfied.
-- **Authorization effect:** Entering from `OWNER_MERGE_APPROVED` revokes the prior merge authorization. A material head change requires a fresh Codex audit and a new Owner decision.
+- **Authorization effect:** Entering from `OWNER_MERGE_APPROVED` revokes the prior merge authorization. A material head or scope change requires a fresh Codex audit and a new Owner decision.
 - **Forbidden next states:** Merge, closure, or any advancement without addressing the requested changes.
 - **Anti-drift:** `REQUEST_CHANGES` grants no merge or closure authority.
 
@@ -388,7 +388,7 @@ The following controls are enforced at every state transition. Any violation blo
 
 ### Merge Gate
 
-11. **Merge requires Codex audit or explicit owner override rationale.** No merge without Codex audit result OR a recorded owner override with rationale. A material head-SHA change after Codex audit invalidates the audit — a new audit is required before merge.
+11. **Merge requires Codex audit or explicit owner override rationale.** No merge without Codex audit result OR a recorded owner override with rationale. A material head-SHA or scope change after Codex audit invalidates the audit — a new audit is required before merge.
 12. **Post-merge audit is required for all merges.** No merge may close without a post-merge audit recording all 22 mandatory fields grouped into seven evidence categories, followed by Gate 11 cleanup verification. See `POST_MERGE_QUEUE.md` for high-risk categories (which require additional scrutiny, not triggering).
 
 ### Handoff Integrity

@@ -49,7 +49,6 @@ cannot_do:
   - Override owner decisions
   - Modify AGENTS.md without explicit owner approval
   - Deploy to production
-  - Authorize cancellation
 required_inputs:
   - Scoped task definition with allowed_files and forbidden_files
   - Active branch and clean worktree
@@ -83,7 +82,6 @@ cannot_do:
   - Override owner decisions
   - Certify correctness beyond operational verification
   - Modify product code
-  - Authorize cancellation
 required_inputs:
   - DeepSeek handoff message with evidence paths
   - Clean, correct-branch worktree
@@ -106,7 +104,7 @@ authority_level: advisory
 can_do:
   - Audit PR scope, diff, and evidence
   - Request changes (REQUEST_CHANGES)
-  - Approve with caveats (audit_outcome: PASS_WITH_CAVEATS)
+  - Approve with caveats (CODEX_APPROVED_WITH_CAVEATS)
   - Block merges that fail audit gates
   - Write audit results to AgentBridge audit queue
   - Recommend merge action to owner
@@ -117,9 +115,8 @@ cannot_do:
   - Replace Hermes verification
   - Audit a PR by inspecting only the latest commit
   - Skip audit gates without recording rationale
-  - Authorize cancellation
 required_inputs:
-  - Full branch/proposed diff against the current base, plus commit history
+  - Full PR diff and commit history
   - Hermes verification result
   - DeepSeek self-review evidence
   - Task ledger current state
@@ -148,7 +145,6 @@ can_do:
   - Rollback merges
   - Decide business and product direction
   - Authorize push and deploy
-  - Alone authorize CANCELLED before MERGED through an explicit recorded Owner decision
 cannot_do:
   - Be overridden by any agent or layer
 required_inputs:
@@ -184,7 +180,6 @@ cannot_do:
   - Execute code or commands
   - Modify AGENTS.md or skill files
   - Communicate externally without owner approval
-  - Authorize cancellation
 required_inputs:
   - Agent-written files following schema templates
 outputs:

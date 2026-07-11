@@ -6602,11 +6602,47 @@ function validateGovernanceRecoveryPhase() {
   assert(dlogAres001 === 0,
     `DECISION_LOG.md: ${dlogAres001} ARES-001 references remain; should use ARES-002 for clean-pass examples`);
 
+  // 26. DECISION_LOG: all decision types documented
+  const expectedDecisionTypes = ["owner_merge_authorization", "owner_cancellation", "reject_merge", "request_patch", "accept_caveat", "override_audit_gate", "defer", "rollback"];
+  for (const dt of expectedDecisionTypes) {
+    assert(dlog.includes(`\`${dt}\``), `DECISION_LOG.md: missing decision type \`${dt}\``);
+  }
+
+  // 27. DECISION_LOG: cancellation example has required fields
+  assert(/owner_cancelled:\s*true/.test(dlog), "DECISION_LOG.md: cancellation example missing owner_cancelled: true");
+  assert(/cancellation_reason:/.test(dlog), "DECISION_LOG.md: cancellation example missing cancellation_reason");
+  assert(/next_state:\s*["']?CANCELLED["']?/.test(dlog), "DECISION_LOG.md: cancellation example missing next_state: CANCELLED");
+
+  // 28. DECISION_LOG: accept_caveat example has required fields
+  assert(/caveat_reference:/.test(dlog), "DECISION_LOG.md: accept_caveat example missing caveat_reference");
+  assert(/decision_type:\s*["']?accept_caveat["']?/.test(dlog), "DECISION_LOG.md: missing accept_caveat decision type example");
+
+  // 29. HANDOFF_PROTOCOL: post-merge runtime fields complete
+  assert(/runtime_evidence_reference/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_evidence_reference");
+  assert(/runtime_evidence_or_substitute_evidence/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_evidence_or_substitute_evidence");
+  assert(/runtime_reason/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_reason");
+  assert(/runtime_surface/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_surface");
+  assert(/runtime_verified_by/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_verified_by");
+  assert(/runtime_verified_at/.test(handoff), "HANDOFF_PROTOCOL.md: missing runtime_verified_at");
+
+  // 30. POST_MERGE_QUEUE: result templates have the six runtime evidence fields
+  const runtimeFields = ["runtime_status", "runtime_evidence_reference", "runtime_reason", "runtime_surface", "runtime_evidence_or_substitute_evidence", "runtime_verified_by", "runtime_verified_at"];
+  for (const rf of runtimeFields) {
+    const occurrences = (queue.match(new RegExp(rf, "g")) || []).length;
+    assert(occurrences >= 2, `POST_MERGE_QUEUE.md: expected ≥2 occurrences of '${rf}', found ${occurrences}`);
+  }
+
+  // 31. TASK_LEDGER: scope-change rules present alongside head-change rules
+  assert(/Scope-Change Rule/.test(ledger) || (/head.*scope.*change/i.test(ledger) && /scope.*change/i.test(ledger)),
+    "TASK_LEDGER.md: missing scope-change rule");
+  assert(/material head-SHA or scope change/i.test(ledger) || /material head or scope change/i.test(ledger),
+    "TASK_LEDGER.md: missing combined 'material head or scope change' rule");
+
   if (failures.length > 0) {
     throw new Error("Governance recovery contract failures:\n  - " + failures.join("\n  - "));
   }
 
-  console.log("Governance recovery: 25 contract assertions passed");
+  console.log("Governance recovery: 31 contract assertions passed");
 }
 // ── Main ────────────────────────────────────────────────────────────────────────
 
