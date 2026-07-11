@@ -60,9 +60,9 @@ When `Runtime Not Applicable` is declared, the following evidence is required:
 | `runtime_status` | `Runtime Not Applicable` |
 | `runtime_reason` | Why runtime is not applicable (e.g., governance-only docs change) |
 | `runtime_surface` | Classification of affected surface (e.g., governance, templates, schemas) |
-| `substitute_evidence` | Alternative validation that confirms correctness (e.g., `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-doc contradiction analysis, state-machine transition review) |
-| `verified_by` | Agent or human who confirmed |
-| `verified_at` | ISO 8601 timestamp |
+| `runtime_evidence_or_substitute_evidence` | Alternative validation that confirms correctness (e.g., `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-doc contradiction analysis, state-machine transition review) |
+| `runtime_verified_by` | Agent or human who confirmed |
+| `runtime_verified_at` | ISO 8601 timestamp |
 
 ## Can Do:
 - Audit the full branch/proposed diff

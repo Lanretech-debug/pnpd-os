@@ -118,21 +118,30 @@ handoff:
   next_action: "Owner review audit result and authorize PR creation (not merge)"
 ```
 
-### Codex → Owner (Merge Authorization)
+### Codex → Owner (Merge Authorization Request)
 
 **Trigger:** PR is open and live metadata is recorded. Owner separately decides whether that exact PR state may merge.
+
+This request presents the exact PR state and asks the Owner for a separate
+decision. It carries no merge authority, cannot set
+`owner_merge_approved: true`, and cannot route merge execution.
 
 ```yaml
 handoff:
   from: codex
   to: owner
   task_id: "TASK-001"
-  status: PR_OPENED | CODEX_AUDIT_COMPLETED
+  status: PR_OPENED
+  owner_merge_approved: false
+  merge_authority_present: false
+  may_route_merge_execution: false
   evidence:
     - codex_audit: "path/to/codex-audit.md"
     - pr_number: "PR-001"
     - pr_url: "https://github.com/org/repo/pull/1"
+    - base_branch: "main"
     - base_sha: "abc123def456"
+    - head_branch: "governance/example"
     - head_sha: "ghi789jkl012"
     - codex_audit_reference: "ARES-001"
     - required_checks_status: "all_passed"
@@ -141,6 +150,52 @@ handoff:
   blockers: []
   next_action: "Owner review current PR state and authorize merge (separate from PR authorization)"
 ```
+
+### Owner / AgentBridge → Authorized Merge Executor (Owner Merge Authorization Handoff)
+
+This is the only merge-authorization handoff that may route merge execution.
+AgentBridge may carry the Owner's recorded decision, but it does not create or
+approve that decision.
+
+```yaml
+handoff:
+  from: "owner | agent_bridge"
+  to: authorized_merge_executor
+  task_id: "TASK-001"
+  status: OWNER_MERGE_APPROVED
+  decision_type: owner_merge_authorization
+  owner_merge_approved: true
+  owner_decision_reference: "DEC-004"
+  pr_number: "PR-001"
+  pr_url: "https://github.com/org/repo/pull/1"
+  base_branch: "main"
+  base_sha: "abc123def456"
+  head_branch: "governance/example"
+  head_sha: "ghi789jkl012"
+  codex_audit_reference: "ARES-001"
+  codex_verdict: PASS
+  required_checks_status: all_passed
+  approved_merge_method: squash
+  approved_by: owner
+  approved_at: "2026-06-10T14:00:00Z"
+  may_route_merge_execution: true
+  next_action: "Authorized merge executor verifies the exact PR state and executes only the approved merge method"
+```
+
+Rules:
+
+- The PR must exist, and `pr_number` must not be `N/A`.
+- `base_branch`, `base_sha`, `head_branch`, and `head_sha` must match the live PR exactly.
+- `codex_audit_reference` and `codex_verdict` must apply to the recorded `head_sha`.
+- `required_checks_status` must show the required checks passing for the recorded `head_sha`.
+- A material head change invalidates this handoff and requires a fresh Codex audit and Owner decision.
+- A stale or incomplete handoff cannot route merge execution.
+- Only a complete handoff with `owner_merge_approved: true` may route merge execution.
+
+| Handoff | Purpose | Owner approval present? | May route merge execution? |
+| --- | --- | --- | --- |
+| Merge Authorization Request | Ask Owner for decision | No | No |
+| Owner Merge Authorization Handoff | Carry completed Owner approval | Yes | Yes |
 
 ### Owner → Post-Merge Audit
 
@@ -211,6 +266,7 @@ Every handoff MUST reference specific evidence file paths — never paste eviden
 | Codex audit          | `audits/codex-audit-TASK-001.md`      | Codex → Owner (merge auth) |
 | PR metadata          | `audits/pr-metadata-TASK-001.md`      | Codex → Owner (merge auth) |
 | Check status         | `audits/check-status-TASK-001.md`     | Codex → Owner (merge auth) |
+| Owner merge authorization | `audits/decision-TASK-001.md`    | Owner / AgentBridge → authorized executor |
 | Owner decision       | `audits/decision-TASK-001.md`         | Owner → Post-Merge         |
 | Post-merge audit     | `audits/post-merge-audit-TASK-001.md` | Codex → Owner              |
 

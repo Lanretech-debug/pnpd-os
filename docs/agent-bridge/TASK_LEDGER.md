@@ -44,7 +44,8 @@ BRANCH_CLEANUP
 CLOSED
 
 (any state) → BLOCKED
-(any pre-merge state) → REQUEST_CHANGES
+IN_PROGRESS | OWNER_PR_AUTHORIZED | PR_OPENED | OWNER_MERGE_APPROVED → REQUEST_CHANGES
+REQUEST_CHANGES → IN_PROGRESS | OWNER_PR_AUTHORIZED | PR_OPENED | BLOCKED | CANCELLED
 PROPOSED | ROUTED | IN_PROGRESS | IMPLEMENTED | RUNTIME_SMOKE_TESTED | SELF_REVIEWED | HERMES_VERIFIED | CODEX_AUDIT_REQUESTED | CODEX_AUDIT_COMPLETED | OWNER_PR_AUTHORIZED | PR_OPENED | OWNER_MERGE_APPROVED | REQUEST_CHANGES | BLOCKED
   → CANCELLED (Owner-authorized, pre-merge terminal state only)
 
@@ -92,7 +93,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 
 - **Meaning:** The implementation has been verified at runtime (local dev server, staging, or browser smoke), or the lane has no executable runtime surface. This gate prevents entering self-review or audit without runtime evidence or an approved N/A declaration.
 - **Who can enter:** DeepSeek / OpenCode.
-- **Required evidence:** Runtime smoke evidence recorded (screenshots, terminal output, console logs, or HTTP response codes proving the app starts and responds) **or** `Runtime Not Applicable` declaration with full N/A evidence contract (runtime_reason, runtime_surface, substitute_evidence, verified_by, verified_at).
+- **Required evidence:** Runtime smoke evidence recorded (screenshots, terminal output, console logs, or HTTP response codes proving the app starts and responds) **or** `Runtime Not Applicable` declaration with the canonical six-key N/A evidence contract: `runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`.
 - **Allowed next states:** `SELF_REVIEWED`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `HERMES_VERIFIED`, `CODEX_AUDIT_COMPLETED`, `MERGED`.
 - **Anti-drift:** Runtime smoke is NOT a substitute for self-review, Hermes verification, or Codex audit. It is a prerequisite only. `Runtime Not Applicable` requires substitute evidence and does not skip governance validation.
@@ -102,7 +103,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 - **Meaning:** DeepSeek has completed self-review. Ready for Hermes verification.
 - **Who can enter:** DeepSeek.
 - **Required evidence:** Self-review log with all gates checked; diff summary; handoff to Hermes written.
-- **Allowed next states:** `HERMES_VERIFIED`, `REQUEST_CHANGES`, `BLOCKED`, `CANCELLED`.
+- **Allowed next states:** `HERMES_VERIFIED`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `CODEX_AUDIT_COMPLETED`, `OWNER_PR_AUTHORIZED`, `MERGED`.
 - **Anti-drift:** DeepSeek self-review is NOT formal audit. Cannot skip to Codex.
 
@@ -111,7 +112,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 - **Meaning:** Hermes has verified worktree, branch, evidence, and anti-drift controls.
 - **Who can enter:** Hermes.
 - **Required evidence:** Hermes verification log; all anti-drift controls checked; clean worktree confirmed.
-- **Allowed next states:** `CODEX_AUDIT_REQUESTED`, `REQUEST_CHANGES`, `BLOCKED`, `CANCELLED`.
+- **Allowed next states:** `CODEX_AUDIT_REQUESTED`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `OWNER_PR_AUTHORIZED`, `MERGED`.
 - **Anti-drift:** Hermes verification is NOT Codex audit. Cannot skip to owner decision.
 
@@ -120,7 +121,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 - **Meaning:** Codex has been requested to perform formal audit.
 - **Who can enter:** Hermes (routing to Codex).
 - **Required evidence:** Full branch/proposed diff; Hermes verification result; DeepSeek self-review.
-- **Allowed next states:** `CODEX_AUDIT_COMPLETED`, `REQUEST_CHANGES`, `BLOCKED`, `CANCELLED`.
+- **Allowed next states:** `CODEX_AUDIT_COMPLETED`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `OWNER_PR_AUTHORIZED`, `MERGED`.
 
 ### CODEX_AUDIT_COMPLETED
@@ -136,7 +137,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
   - `runtime_status`
   - `scope_status`
   - `blocking_findings_status`
-- **Allowed next states:** `OWNER_PR_AUTHORIZED`, `REQUEST_CHANGES`, `BLOCKED`, `CANCELLED`.
+- **Allowed next states:** `OWNER_PR_AUTHORIZED`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `PR_OPENED`, `OWNER_MERGE_APPROVED`, `MERGED`, `CLOSED`.
 
 ### OWNER_PR_AUTHORIZED
@@ -218,11 +219,13 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 
 ### POST_MERGE_VERIFIED
 
-- **Meaning:** Codex post-merge audit complete. No issues or follow-ups recorded.
+- **Meaning:** The mandatory Codex post-merge audit completed and its findings were recorded.
 - **Who can enter:** Codex.
 - **Required evidence:** Post-merge audit report; rollback recommendation (if any).
 - **Allowed next states:** `BRANCH_CLEANUP`, `BLOCKED`.
 - **Forbidden next states:** `CANCELLED`, `CLOSED` (branch cleanup is mandatory before closing), `MERGED` (already merged).
+- **Routing rule:** No blocking finding routes to `BRANCH_CLEANUP`; any blocking finding routes to `BLOCKED` for remediation.
+- **Non-implication:** This state does not mean zero findings, successful closure, completed cleanup, or that closure is ready. Gate 11 remains mandatory.
 
 ### BLOCKED
 
@@ -237,8 +240,11 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 - **Meaning:** Changes requested by Hermes, Codex, or Owner.
 - **Who can enter:** Hermes, Codex, or Owner.
 - **Required evidence:** Specific change requests listed; handoff back to DeepSeek.
-- **Allowed next states:** `IN_PROGRESS` (DeepSeek implements changes); `CANCELLED`.
-- **Forbidden next states:** Advancement without addressing change requests.
+- **Allowed predecessors:** `IN_PROGRESS`, `OWNER_PR_AUTHORIZED`, `PR_OPENED`, `OWNER_MERGE_APPROVED`.
+- **Allowed next states:** the correction-appropriate state among `IN_PROGRESS`, `OWNER_PR_AUTHORIZED`, or `PR_OPENED`; otherwise `BLOCKED`, or `CANCELLED` when the cancellation contract is satisfied.
+- **Authorization effect:** Entering from `OWNER_MERGE_APPROVED` revokes the prior merge authorization. A material head change requires a fresh Codex audit and a new Owner decision.
+- **Forbidden next states:** Merge, closure, or any advancement without addressing the requested changes.
+- **Anti-drift:** `REQUEST_CHANGES` grants no merge or closure authority.
 
 ### BRANCH_CLEANUP
 
@@ -329,7 +335,7 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 
 1. States advance forward only through explicit agent action with recorded evidence.
 2. `BLOCKED` can be entered from any state and returns to the previous state upon resolution.
-3. `REQUEST_CHANGES` can be entered from `SELF_REVIEWED`, `HERMES_VERIFIED`, `CODEX_AUDIT_REQUESTED`, or `CODEX_AUDIT_COMPLETED`.
+3. `REQUEST_CHANGES` can be entered only from `IN_PROGRESS`, `OWNER_PR_AUTHORIZED`, `PR_OPENED`, or `OWNER_MERGE_APPROVED`.
 4. No state may be skipped in the forward path.
 5. `CLOSED` is terminal and indicates successful completion. A closed task cannot be reopened — a new task must be proposed.
 6. `CANCELLED` is terminal and indicates the lane was abandoned before completion. A cancelled task cannot be reopened — a new task must be proposed.

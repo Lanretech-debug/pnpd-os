@@ -65,7 +65,7 @@
 
 If `Runtime Not Verified` is declared, the Pre-Merge Audit SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`.
 
-If `Runtime Not Applicable` is declared, the full N/A evidence contract is required (runtime_reason, runtime_surface, substitute_evidence, verified_by, verified_at). Substitute evidence may include `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-document contradiction analysis, or state-machine transition review.
+If `Runtime Not Applicable` is declared, the canonical six-key N/A evidence contract is required (`runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`). Substitute evidence may include `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-document contradiction analysis, or state-machine transition review.
 
 ---
 

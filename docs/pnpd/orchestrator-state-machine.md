@@ -62,8 +62,34 @@ Mapping guidance:
 | `AGENT_DONE` | `IMPLEMENTED` or `SELF_REVIEWED` |
 | `CODEX_REVIEW_REQUIRED` | `CODEX_AUDIT_REQUESTED` |
 | `OWNER_REVIEW_REQUIRED` | `CODEX_AUDIT_COMPLETED` or owner decision pending |
-| `DONE` | `CLOSED` |
+| `DONE` | `CLOSED` only when the Gate 11 closure contract below is complete |
 | `BLOCKED` | `BLOCKED` |
-| `WONTFIX` | `CANCELLED` with rationale |
+| `WONTFIX` | `CANCELLED` only when the Owner cancellation contract below is complete |
 
 The Orchestrator may recommend a mapping, but only the relevant authority layer can record the actual gate result.
+
+### Evidence-Gated Terminal Mapping
+
+`DONE` may recommend `CLOSED` only when all of the following are recorded:
+
+- `current_state: BRANCH_CLEANUP`
+- `gate_11_evidence_complete: true`
+- `exactly_one_cleanup_outcome_verified: true`
+- `lane_closure_ready: true`
+- `blocking_findings: none`
+- `owner_closure_decision_recorded: true`
+
+If any field is missing or false, the Orchestrator must not recommend `CLOSED`.
+It must recommend `BLOCKED` or `OWNER_DECISION_REQUIRED`, as appropriate.
+Generic executor completion, successful validation, merge completion, or
+post-merge audit completion is not sufficient for `CLOSED` and is not a
+substitute for Gate 11 evidence.
+
+`WONTFIX` may recommend `CANCELLED` only when the last valid AgentBridge state is
+an eligible pre-merge cancellation state, no merge occurred, explicit Owner
+cancellation authority and complete cancellation evidence are recorded, required
+safety cleanup is recorded, and `next_state: CANCELLED`. If that evidence is
+incomplete, recommend `OWNER_DECISION_REQUIRED` or `BLOCKED`; do not recommend
+`CANCELLED`. If the lane is `MERGED` or later, cancellation is forbidden and the
+remaining post-merge obligations continue. See
+`docs/agent-bridge/TASK_LEDGER.md` for the authoritative transition contracts.
