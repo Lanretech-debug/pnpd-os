@@ -27,7 +27,7 @@ The complete mandatory record MUST include all 22 fields:
 # Mandatory 22-field post-merge audit result record
 pr_number: "PR-001"
 pr_url: "https://github.com/org/repo/pull/1"
-pr_merged_state: "MERGED"
+pr_merged_state: merged
 merge_commit_sha: "abc123def456"
 canonical_main_sha: "abc123def456"
 merged_scope: "matches_approved_scope"
@@ -50,7 +50,7 @@ verified_by: "codex"
 verified_at: "2026-06-10T12:45:00Z"
 ```
 
-`pr_merged_state` MUST be `MERGED` in the post-merge audit context. This field records whether the PR was merged into the target branch; no other value is valid at this stage. The separate `pr_state_if_any` field (used in cancellation contexts) tracks arbitrary GitHub PR states (`OPEN`, `DRAFT`, `CLOSED`, `MERGED`) and is not a substitute.
+`pr_merged_state` MUST be `merged` in the post-merge audit context. This field records whether the PR was merged into the target branch; no other value is valid at this stage. The separate `pr_state_if_any` field (used in cancellation contexts) tracks arbitrary GitHub PR states (`OPEN`, `DRAFT`, `CLOSED`, `MERGED`) and is not a substitute.
 
 High-risk categories (see below) trigger **additional scrutiny** within the post-merge audit — not the audit itself, which is mandatory regardless.
 
@@ -112,13 +112,18 @@ post_merge_status: "POST_MERGE_VERIFIED"
 post_merge_result: "findings_recorded"
 pr_number: "PR-001"
 pr_url: "https://github.com/org/repo/pull/1"
-pr_merged_state: "MERGED"
+pr_merged_state: merged
 merge_commit_sha: "abc123def456"
 canonical_main_sha: "abc123def456"
 merged_scope: "matches_approved_scope"
 ci_status: "all_passed"
 runtime_status: "Runtime Verified"
 runtime_evidence_reference: "audits/runtime-TASK-001.md"
+runtime_reason: "All runtime checks passed"
+runtime_surface: "production"
+runtime_evidence_or_substitute_evidence: "audits/runtime-TASK-001-evidence.md"
+runtime_verified_by: "codex"
+runtime_verified_at: "2026-06-10T12:45:00Z"
 branch_cleanup_status: "pending"
 cleanup_eligibility: "eligible"
 cleanup_required_actions:
@@ -161,13 +166,18 @@ post_merge_status: "POST_MERGE_VERIFIED"
 post_merge_result: "findings_recorded"
 pr_number: "PR-002"
 pr_url: "https://github.com/org/repo/pull/2"
-pr_merged_state: "MERGED"
+pr_merged_state: merged
 merge_commit_sha: "def456ghi789"
 canonical_main_sha: "def456ghi789"
 merged_scope: "drift_found_blocking"
 ci_status: "all_passed"
 runtime_status: "Runtime Verified"
 runtime_evidence_reference: "audits/runtime-TASK-002.md"
+runtime_reason: "Runtime checks found blocking issue"
+runtime_surface: "production"
+runtime_evidence_or_substitute_evidence: "audits/runtime-TASK-002-evidence.md"
+runtime_verified_by: "codex"
+runtime_verified_at: "2026-06-10T13:00:00Z"
 branch_cleanup_status: "pending"
 cleanup_eligibility: "ineligible"
 cleanup_required_actions:

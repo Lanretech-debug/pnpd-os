@@ -91,7 +91,7 @@ When the owner overrides a failed or skipped gate, the override must include:
 
 ## Merge Authorization
 
-Every active `OWNER_MERGE_APPROVED` decision MUST include this complete contract:
+`owner_merge_authorization` is the decision type. `OWNER_MERGE_APPROVED` is the lifecycle state entered by that decision. Every active `OWNER_MERGE_APPROVED` lifecycle record MUST include this complete contract:
 
 ```yaml
 decision_type: "owner_merge_authorization"
@@ -223,18 +223,23 @@ pr_creation_only: true
 authorized_branch: "feat/another-feature"
 authorized_base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
 authorized_head_sha: "ghi789jkl012"
-codex_audit_reference: "ARES-002"
+codex_audit_reference: "ARES-001"
+codex_verdict: "CODEX_AUDIT_COMPLETED"
 owner_decision_reference: "DEC-003"
 authorized_at: "2026-06-10T13:00:00Z"
 rationale: "Codex caveat CV-001 flags missing test for edge case X. Edge case X is low-frequency and covered by integration tests in CI. Authorizing PR creation. Merge authorization will be decided after PR checks."
 accepted_risks:
   - "CV-001: Missing unit test for edge case X — low risk, integration coverage exists, follow-up task created"
+accepted_by_owner: true
+caveat_acceptance_reference: "DEC-003"
+caveats_accepted_at: "2026-06-10T13:00:00Z"
 rejected_recommendations: []
 next_state: "PR_OPENED"
 next_action: "DeepSeek open PR; add follow-up TASK-007 for missing test"
 timestamp: "2026-06-10T13:00:00Z"
 evidence_refs:
   - "audits/decision-DEC-003.md"
+  - "audits/ARES-001-caveat-acceptance.md"
 ```
 
 ### Example 3: Override Audit Gate (Merge Authorization)

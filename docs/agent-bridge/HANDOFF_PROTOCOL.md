@@ -311,7 +311,7 @@ handoff:
   post_merge_result: findings_recorded
   pr_number: "PR-001"
   pr_url: "https://github.com/org/repo/pull/1"
-  pr_merged_state: MERGED
+  pr_merged_state: merged
   merge_commit_sha: "abc123def456"
   canonical_main_sha: "abc123def456"
   merged_scope: "matches_approved_scope"

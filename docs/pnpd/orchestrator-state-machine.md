@@ -17,7 +17,7 @@ The Orchestrator state model classifies work so agents can decide what to inspec
 | `AGENT_DONE` | Agent reports work complete. | Route to verification. |
 | `AUTOREVIEW_REQUIRED` | Local self-review gate is needed. | Run available autoreview/check gate. |
 | `CODEX_REVIEW_REQUIRED` | Formal Codex audit is required. | Route to Codex with full evidence. |
-| `OWNER_REVIEW_REQUIRED` | Owner decision or approval is required. Must carry `pending_owner_decision_type` to discriminate the awaited decision (e.g., `owner_pr_authorization`, `owner_merge_authorization`, `cancellation`, `accept_caveat`, `override_gate`). | Owner decides approve/patch/reject. |
+| `OWNER_REVIEW_REQUIRED` | Owner decision or approval is required. Must carry `pending_owner_decision_type` to discriminate the awaited decision: `owner_pr_authorization` (Gate 7) or `owner_merge_authorization` (Gate 9). | Owner decides approve/patch/reject. |
 | `APPROVED_FOR_MERGE` | Owner has approved merge after required gates. | Merge may occur outside AgentBridge authority. |
 | `DONE` | No current action is needed. | Keep durable record. |
 | `BLOCKED` | Work cannot proceed. | Record blocker and stop advancement. |
@@ -39,19 +39,41 @@ Allowed dry-run recommendations:
 | Any | `BLOCKED` | Missing repo, non-Git path, lock conflict, or unsafe gate. |
 | Any | `DONE` | No pending task and all inspected gates are clear. |
 
-Every transition to `OWNER_REVIEW_REQUIRED` MUST record `pending_owner_decision_type` with one of: `owner_pr_authorization`, `owner_merge_authorization`, `cancellation`, `accept_caveat`, `override_gate`. A missing or ambiguous `pending_owner_decision_type` blocks the transition.
+Every transition to `OWNER_REVIEW_REQUIRED` MUST record `pending_owner_decision_type` with one of: `owner_pr_authorization` or `owner_merge_authorization`. A missing or ambiguous `pending_owner_decision_type` blocks the transition.
 
-When the Owner fulfills the pending decision, the resulting Orchestrator state and AgentBridge state depend on the decision type:
+When the Owner fulfills the pending decision, use these exact mappings:
 
-| `pending_owner_decision_type` | Owner Decides → Orchestrator State | Owner Decides → AgentBridge State |
-|---|---|---|
-| `owner_pr_authorization` | `APPROVED_FOR_MERGE`*, or return to `OWNER_REVIEW_REQUIRED` if conditions unmet | `OWNER_PR_AUTHORIZED` (if approved); `REQUEST_CHANGES` or `BLOCKED` otherwise |
-| `owner_merge_authorization` | `APPROVED_FOR_MERGE` | `OWNER_MERGE_APPROVED` (if approved); `REQUEST_CHANGES` or `BLOCKED` otherwise |
-| `cancellation` | `DONE` or `BLOCKED` | `CANCELLED` (only when pre-merge and Owner cancellation contract complete) |
-| `accept_caveat` | `OWNER_REVIEW_REQUIRED` (if further authorization needed) or `APPROVED_FOR_MERGE` | Followed by `owner_merge_authorization` or `owner_pr_authorization` as needed |
-| `override_gate` | `OWNER_REVIEW_REQUIRED` (if further authorization needed) or `APPROVED_FOR_MERGE` | Followed by the appropriate authorization decision |
+**Mapping A (Gate 7 — PR Authorization):**
 
-\* `APPROVED_FOR_MERGE` means the Orchestrator classifies the work as approved; actual merge execution and post-merge obligations are governed by `docs/agent-bridge/TASK_LEDGER.md` and `docs/agent-bridge/POST_MERGE_QUEUE.md`.
+```
+classification: OWNER_REVIEW_REQUIRED
+pending_owner_decision_type: owner_pr_authorization
+current_lifecycle_state: CODEX_AUDIT_COMPLETED
+recommended_next_lifecycle_state: OWNER_PR_AUTHORIZED
+merge_authority: false
+approved_for_merge: false
+```
+
+**Mapping B (Gate 9 — Merge Authorization):**
+
+```
+classification: OWNER_REVIEW_REQUIRED
+pending_owner_decision_type: owner_merge_authorization
+current_lifecycle_state: PR_OPENED
+recommended_next_lifecycle_state: OWNER_MERGE_APPROVED
+merge_authority: false until the exact Owner merge decision is recorded
+```
+
+**Missing or unknown discriminator:**
+
+```
+fail_closed: true
+recommended_next_lifecycle_state: none
+protected_transition_allowed: false
+authority_granted: false
+```
+
+The orchestrator remains advisory. Only the relevant authority layer records the actual lifecycle state transition.
 
 Forbidden Phase 0 transitions:
 
