@@ -48,6 +48,15 @@ Phase 1P-U established Hermes → OpenCode → Codex as the canonical role order
 
 1P-T defines the P0 prompt asset selection and consumption protocol.
 
+## Historical Context
+
+These historical references are preserved for chronology and auditability and do not grant current role, implementation, merge, push, or canonicalization authority.
+
+Held historical Phase 1P-T branch: deepseek/phase1p-t-p0-prompt-asset-selection-and-consumption-protocol-design
+Historical initial implementation commit: f725634cdc8a60d700ad193113d98f410670ffee
+Historical matrix field wording patch commit: e14ecfba27edc50b684558d064266ff25b32ba1b
+Prior Codex audit failure: CODEX_PHASE_1P_T_CORRECTED_AUDIT_FAILED_P0_ASSET_SELECTION_MATRIX
+
 ## Governing Canonical Files
 
 The following files govern Phase 1P-T and must not be modified by this phase:
@@ -65,7 +74,7 @@ The following files govern Phase 1P-T and must not be modified by this phase:
 
 ## Problem Statement
 
-Phase 1P-S created canonical docs-only P0 prompt asset files, but it did not define how those assets are selected for a concrete PNPD task or how they are consumed within a task contract. Without a formal selection and consumption protocol, prompt assets risk being used as runtime authorities, agents may self-select assets without Owner approval, placeholders may be treated as live values, and the role boundary may be weakened. Phase 1P-T defines a manual, Owner-approved protocol that governs how P0 prompt assets are selected, resolved, bound, delivered, executed, audited, and canonicalized.
+Phase 1P-S created canonical docs-only P0 prompt asset files, but it did not define how those assets are selected for a concrete PNPD task or how they are consumed within a task contract. Without a formal selection and consumption protocol, prompt assets risk being used as runtime authorities, agents may self-select assets without Owner approval, placeholders may be treated as live values, and the role boundary may be weakened. Phase 1P-T defines a manual, Owner-approved protocol that governs how P0 prompt assets are selected, resolved, bound, delivered, executed, audited, and finalized. Phase 1P-U is recorded with canonical status PHASE_1P_U_CANONICALIZED.
 
 ## Definition Of Prompt Asset Consumption
 
@@ -84,6 +93,8 @@ The protocol defines seven distinct steps within consumption:
 Only the Owner-approved task contract may convert a prompt asset scaffold into a task-specific prompt.
 
 ## P0 Asset Selection Matrix
+
+Prompt asset selection is determined by task type, role boundary, required inputs, forbidden uses, and required final report evidence.
 
 The P0 Asset Selection Matrix defines the seven canonical P0 prompt assets, their file paths, selection authority, target roles, valid use cases, required inputs, forbidden uses, and required final report evidence.
 
@@ -367,7 +378,7 @@ Codex must audit every prompt asset consumption event for:
 - no prompt registry created
 - no prompt loader created
 - no autonomous prompt routing created
-- no generated state created
+- no generated PNPD state written by this phase
 - validation gates run
 - state gates run
 - no canonical claim before push, CI, and Owner/GitHub App verification
