@@ -6435,9 +6435,87 @@ function validateGovernanceRecoveryPhase() {
     } catch { return 0; }
   }
 
+  // ── Constants ──────────────────────────────────────────────────────────────────
+
+  const mandatoryPostMergeFields = [
+    "pr_number",
+    "pr_url",
+    "pr_merged_state",
+    "merge_commit_sha",
+    "canonical_main_sha",
+    "merged_scope",
+    "ci_status",
+    "runtime_status",
+    "runtime_evidence_reference",
+    "runtime_reason",
+    "runtime_surface",
+    "runtime_evidence_or_substitute_evidence",
+    "runtime_verified_by",
+    "runtime_verified_at",
+    "branch_cleanup_status",
+    "cleanup_eligibility",
+    "cleanup_required_actions",
+    "cleanup_evidence_reference",
+    "lane_closure_ready",
+    "blocking_findings",
+    "verified_by",
+    "verified_at"
+  ];
+
+  // ── Helpers ────────────────────────────────────────────────────────────────────
+
+  function extractYamlTopLevelKeys(sectionContent) {
+    const yamlBlock = sectionContent.match(/```yaml[\s\S]*?```/);
+    if (!yamlBlock) return [];
+    const keys = [];
+    for (const line of yamlBlock[0].split("\n")) {
+      const m = line.match(/^(\w[\w_-]*)\s*:/);
+      if (m) keys.push(m[1]);
+    }
+    return keys;
+  }
+
+  function validateRouteFields(keys, routeLabel) {
+    const missing = [];
+    for (const f of mandatoryPostMergeFields) {
+      if (!keys.includes(f)) missing.push(f);
+    }
+    check(`route-${routeLabel}-all-mandatory-fields`, missing.length === 0,
+      `POST_MERGE_QUEUE.md: ${routeLabel} missing mandatory fields: ${missing.join(", ")}`);
+    const seen = {};
+    const dupes = [];
+    for (const k of keys) {
+      if (mandatoryPostMergeFields.includes(k)) {
+        if (seen[k]) dupes.push(k);
+        seen[k] = true;
+      }
+    }
+    check(`route-${routeLabel}-no-duplicate-mandatory`, dupes.length === 0,
+      `POST_MERGE_QUEUE.md: ${routeLabel} has duplicate mandatory fields: ${dupes.join(", ")}`);
+  }
+
+  function extractOperativePRMergedStateAssignments(content) {
+    const results = [];
+    for (const line of content.split("\n")) {
+      const m = line.match(/^pr_merged_state:\s*(.+)$/);
+      if (m) {
+        results.push(m[1].replace(/"/g, "").replace(/'/g, "").trim());
+      }
+    }
+    return results;
+  }
+
+  function extractOperativeMergeCommitShaAssignments(content) {
+    const results = [];
+    for (const line of content.split("\n")) {
+      const m = line.match(/^merge_commit_sha:\s*(.+)$/);
+      if (m) results.push(m[1].replace(/"/g, "").replace(/'/g, "").trim());
+    }
+    return results;
+  }
+
   // ── File reads ─────────────────────────────────────────────────────────────────
 
-  // Read files once; reuse across checks
   const queue = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/POST_MERGE_QUEUE.md"), "utf-8");
   const schema = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/MESSAGE_SCHEMA.md"), "utf-8");
   const handoff = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/HANDOFF_PROTOCOL.md"), "utf-8");
@@ -6567,7 +6645,6 @@ function validateGovernanceRecoveryPhase() {
   check("template-no-old-phrasing", !/Merged, closed, or reverted/.test(template),
     "post-merge-template.yaml: still contains 'Merged, closed, or reverted'");
 
-  // B: 22 mandatory fields in post-merge template
   const fieldTableSection = template.match(/^\| # \| Category.*(?:\n\|.*)*?(?=\n\n\*\*Rules)/m);
   const fieldTableRows = fieldTableSection ? (fieldTableSection[0].match(/^\| \d+ \|/gm) || []).length : 0;
   check("B-template-22-fields", fieldTableRows === 22,
@@ -6578,60 +6655,146 @@ function validateGovernanceRecoveryPhase() {
   check("template-runtime-substitute", /runtime_evidence_or_substitute_evidence/.test(template) || /Runtime Evidence \/ Substitute Evidence/.test(template),
     "post-merge-template.yaml: missing runtime_evidence_or_substitute_evidence");
 
-  // ── A, U: Audit checklist 13 SHA-binding items ─────────────────────────────────
+  // ── REPAIR 3: Audit checklist — 13 named semantic checks ──────────────────────
 
-  check("U-checklist-sha-integrity-section", /Head SHA Integrity/.test(checklist),
+  check("chk-section-exists", /Head SHA Integrity/.test(checklist),
     "audit-checklist.yaml: missing Head SHA Integrity section");
-  check("U-checklist-audited-head-sha", /audited_head_sha/.test(checklist) || /audited.*head.*sha/i.test(checklist),
+  check("chk-audited-head-sha-mentioned", /audited_head_sha/.test(checklist) || /audited.*head.*sha/i.test(checklist),
     "audit-checklist.yaml: missing audited_head_sha binding");
+
+  check("chk-1-diff-bound", /diff uses.*audited_base_sha.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 1 missing diff bound to audited_base_sha...audited_head_sha");
+  check("chk-2-ci-head-bound", /CI workflow head equals.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 2 missing CI workflow head equals audited_head_sha");
+  check("chk-3-required-checks-bound", /required status check identifies.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 3 missing required checks bound to audited_head_sha");
+  check("chk-4-runtime-evidence-bound", /Runtime evidence identifies.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 4 missing runtime evidence bound to audited_head_sha");
+  check("chk-5-runtime-na-sub-bound", /Runtime N\/A substitute evidence identifies.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 5 missing N/A substitute evidence bound to audited_head_sha");
+  check("chk-6-audit-result-bound", /Codex audit result identifies.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 6 missing audit result bound to audited_head_sha");
+  check("chk-7-audit-verdict-bound", /Codex verdict identifies.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 7 missing audit verdict bound to audited_head_sha");
+  check("chk-8-comparison-base-bound", /Comparison base equals.*audited_base_sha/.test(checklist),
+    "audit-checklist.yaml: item 8 missing comparison base bound to audited_base_sha");
+  check("chk-9-different-sha-invalid", /Evidence from a different SHA is invalid/.test(checklist),
+    "audit-checklist.yaml: item 9 missing different-SHA evidence invalidation");
+  check("chk-10-base-sha-change-invalidates", /Base SHA change invalidates this checklist/.test(checklist),
+    "audit-checklist.yaml: item 10 missing base-SHA change invalidation");
+  check("chk-11-head-sha-change-invalidates", /Head SHA change invalidates this checklist/.test(checklist),
+    "audit-checklist.yaml: item 11 missing head-SHA change invalidation");
+  check("chk-12-scope-change-invalidates", /Material scope change invalidates this checklist/.test(checklist),
+    "audit-checklist.yaml: item 12 missing material-scope change invalidation");
+  check("chk-13-invalidation-requires-fresh", /Invalidation requires fresh applicable runtime evidence/.test(checklist),
+    "audit-checklist.yaml: item 13 missing invalidation-requires-fresh");
+
   const shaItems = checklist.match(/- \[ \] \d+\./g);
-  check("A-checklist-13-items", shaItems !== null && shaItems.length === 13,
+  check("chk-supplementary-count-13", shaItems !== null && shaItems.length === 13,
     `audit-checklist.yaml: expected 13 numbered SHA-binding checklist items, found ${shaItems ? shaItems.length : 0}`);
 
-  // ── B (2): POST_MERGE_QUEUE 22-field count ─────────────────────────────────────
+  // ── REPAIR 1: Route A/B field-level validation ────────────────────────────────
+
+  check("route-a-section-exists", routeA !== null,
+    "POST_MERGE_QUEUE.md: Route A section not found");
+  if (routeA) {
+    const keysA = extractYamlTopLevelKeys(routeA[0]);
+    validateRouteFields(keysA, "A");
+    const aYaml = routeA[0].match(/```yaml[\s\S]*?```/);
+    if (aYaml) {
+      check("route-a-blocking-findings-empty", /blocking_findings:\s*\[\s*\]/.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A blocking_findings must be empty");
+      check("route-a-next-state-branch-cleanup", /next_state:\s*"?BRANCH_CLEANUP"?/.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A next_state must be BRANCH_CLEANUP");
+      check("route-a-remediation-false", /remediation_required:\s*"?false"?/.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A remediation_required must be false");
+      check("route-a-lane-closure-false", /lane_closure_ready:\s*"?false"?/.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A lane_closure_ready must be false");
+    }
+  }
+
+  check("route-b-section-exists", routeB !== null,
+    "POST_MERGE_QUEUE.md: Route B section not found");
+  if (routeB) {
+    const keysB = extractYamlTopLevelKeys(routeB[0]);
+    validateRouteFields(keysB, "B");
+    const bYaml = routeB[0].match(/```yaml[\s\S]*?```/);
+    if (bYaml) {
+      check("route-b-blocking-findings-non-empty", /blocking_findings:\s*\n\s+-/.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B blocking_findings must be non-empty");
+      check("route-b-next-state-blocked", /next_state:\s*"?BLOCKED"?/.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B next_state must be BLOCKED");
+      check("route-b-remediation-true", /remediation_required:\s*"?true"?/.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B remediation_required must be true");
+      check("route-b-cleanup-ineligible", /cleanup_eligibility:\s*"?ineligible"?/.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B cleanup_eligibility must be ineligible");
+      check("route-b-lane-closure-false", /lane_closure_ready:\s*"?false"?/.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B lane_closure_ready must be false");
+    }
+  }
+
+  check("route-b-no-config-drift", !/Minor config\.py drift/.test(queue),
+    "POST_MERGE_QUEUE.md: Route B still contains non-blocking config drift example");
+  check("route-b-blocking-finding-text", /Auth session/.test(queue) || /CRITICAL/.test(queue),
+    "POST_MERGE_QUEUE.md: Route B missing genuinely blocking finding");
+
+  // ── B-03: POST_MERGE_QUEUE 22-field table + YAML block ────────────────────────
+
+  check("B03-table-pr-identity", /\| PR identity \|.*pr_number.*pr_url.*pr_merged_state/.test(queue),
+    "POST_MERGE_QUEUE.md: B-03 missing PR identity row in 22-field table");
+  check("B03-table-runtime-evidence", /\| Runtime evidence \|.*runtime_evidence_or_substitute_evidence/.test(queue),
+    "POST_MERGE_QUEUE.md: B-03 missing runtime_evidence_or_substitute_evidence in table");
+  check("B03-yaml-block", /# Mandatory 22-field post-merge audit result record/.test(queue),
+    "POST_MERGE_QUEUE.md: B-03 missing 22-field YAML block");
 
   check("B-queue-22-fields", /22 mandatory fields/.test(queue),
     "POST_MERGE_QUEUE.md: missing '22 mandatory fields'");
 
-  // ── C: Route A has all 22 fields ───────────────────────────────────────────────
+  // ── REPAIR 2: Operative pr_merged_state value validation ──────────────────────
 
-  check("C-route-a-exists", routeA !== null,
-    "POST_MERGE_QUEUE.md: Route A section not found");
-  if (routeA) {
-    const routeAYaml = routeA[0].match(/```yaml[\s\S]*?```/);
-    let routeAFieldCount = 0;
-    if (routeAYaml) {
-      routeAFieldCount = (routeAYaml[0].match(/^\w[\w_-]*(?=:)/gm) || []).length;
+  const mergedStateFiles = [
+    { name: "POST_MERGE_QUEUE.md", content: queue },
+    { name: "MESSAGE_SCHEMA.md", content: schema },
+    { name: "HANDOFF_PROTOCOL.md", content: handoff },
+    { name: "post-merge-template.yaml", content: template }
+  ];
+  const allowedMergedStateValues = ["merged", "reverted_after_merge"];
+  let totalOperativeAssignments = 0;
+  let invalidCount = 0;
+  let uppercaseMergedCount = 0;
+  for (const { name, content } of mergedStateFiles) {
+    const assignments = extractOperativePRMergedStateAssignments(content);
+    for (const val of assignments) {
+      totalOperativeAssignments++;
+      if (!allowedMergedStateValues.includes(val)) {
+        invalidCount++;
+        check(`merged-state-invalid-${name}-${totalOperativeAssignments}`, false,
+          `${name}: operative pr_merged_state value "${val}" is not allowed; must be merged or reverted_after_merge`);
+      }
+      if (val === "MERGED") uppercaseMergedCount++;
     }
-    check("C-route-a-22-fields", routeAFieldCount >= 22,
-      `POST_MERGE_QUEUE.md: Route A expected ≥22 YAML fields, found ${routeAFieldCount}`);
+  }
+  check("merged-state-operative-assignments-found", totalOperativeAssignments > 0,
+    "No operative pr_merged_state assignments found across 4 files");
+  check("merged-state-no-uppercase-MERGED", uppercaseMergedCount === 0,
+    `${uppercaseMergedCount} operative pr_merged_state assignment(s) still use uppercase MERGED`);
+
+  // Check that every result record with pr_merged_state also has merge_commit_sha
+  for (const { name, content } of mergedStateFiles) {
+    const mergedAssignments = extractOperativePRMergedStateAssignments(content);
+    if (mergedAssignments.length > 0) {
+      const shaAssignments = extractOperativeMergeCommitShaAssignments(content);
+      if (name === "post-merge-template.yaml") {
+        check(`merge-sha-${name}-present`, shaAssignments.length > 0,
+          `${name}: no merge_commit_sha assignment found alongside ${mergedAssignments.length} pr_merged_state assignments`);
+      } else {
+        check(`merge-sha-${name}-present`, shaAssignments.length >= mergedAssignments.length,
+          `${name}: expected ≥${mergedAssignments.length} merge_commit_sha assignments (found ${shaAssignments.length}) alongside ${mergedAssignments.length} pr_merged_state assignments`);
+      }
+    }
   }
 
-  // ── D: Route B has all 22 fields ───────────────────────────────────────────────
-
-  check("D-route-b-exists", routeB !== null,
-    "POST_MERGE_QUEUE.md: Route B section not found");
-  if (routeB) {
-    const routeBYaml = routeB[0].match(/```yaml[\s\S]*?```/);
-    let routeBFieldCount = 0;
-    if (routeBYaml) {
-      routeBFieldCount = (routeBYaml[0].match(/^\w[\w_-]*(?=:)/gm) || []).length;
-    }
-    check("D-route-b-22-fields", routeBFieldCount >= 22,
-      `POST_MERGE_QUEUE.md: Route B expected ≥22 YAML fields, found ${routeBFieldCount}`);
-  }
-
-  // ── E: POST_MERGE_QUEUE pr_merged_state = merged ───────────────────────────────
-
-  check("E-queue-pr-merged-state", /pr_merged_state.*MUST.*be.*MERGED/.test(queue),
-    "POST_MERGE_QUEUE.md: missing pr_merged_state MUST be MERGED");
-
-  check("route-b-no-config-drift", !/Minor config\.py drift/.test(queue),
-    "POST_MERGE_QUEUE.md: Route B still contains non-blocking config drift example");
-  check("route-b-blocking-finding", /Auth session/.test(queue) || /CRITICAL/.test(queue),
-    "POST_MERGE_QUEUE.md: Route B missing genuinely blocking finding");
-
-  // ── F: MESSAGE_SCHEMA pr_merged_state + 22 fields ──────────────────────────────
+  // ── MESSAGE_SCHEMA checks ─────────────────────────────────────────────────────
 
   check("schema-22-fields", /22 mandatory fields/.test(schema),
     "MESSAGE_SCHEMA.md: missing '22 mandatory fields' count");
@@ -6653,17 +6816,10 @@ function validateGovernanceRecoveryPhase() {
     check("schema10-timestamp-order", ver > req,
       `MESSAGE_SCHEMA.md: Schema 10 verified_at (${verTime[1]}) must be after request timestamp (${reqTime[1]})`);
   }
-  check("F-schema-pr-merged-state", /pr_merged_state.*MUST.*be.*merged/.test(schema),
-    "MESSAGE_SCHEMA.md: missing pr_merged_state MUST be merged");
   check("F-schema-pr-state-if-any", /pr_state_if_any/.test(schema),
     "MESSAGE_SCHEMA.md: missing pr_state_if_any distinction");
 
-  // ── G: HANDOFF_PROTOCOL pr_merged_state = merged ───────────────────────────────
-
-  check("G-handoff-pr-merged-state", /pr_merged_state.*merged/.test(handoff),
-    "HANDOFF_PROTOCOL.md: missing pr_merged_state = merged");
-
-  // ── HANDOFF_PROTOCOL cancellation + material-change ────────────────────────────
+  // ── HANDOFF_PROTOCOL checks ──────────────────────────────────────────────────
 
   const dec005Cancellation = handoff.match(/owner_decision_reference: "DEC-005"/g);
   check("handoff-no-dec005", !dec005Cancellation || dec005Cancellation.length === 0,
@@ -6738,7 +6894,6 @@ function validateGovernanceRecoveryPhase() {
 
   // ── H, I, J: DECISION_LOG example references ───────────────────────────────────
 
-  // H: Example 1 uses ARES-002 (clean pass)
   check("H-example1-exists", example1 !== null,
     "DECISION_LOG.md: Example 1 section not found");
   if (example1) {
@@ -6746,7 +6901,6 @@ function validateGovernanceRecoveryPhase() {
       "DECISION_LOG.md: Example 1 must use ARES-002 (clean pass)");
   }
 
-  // I: Example 2 uses ARES-001 (caveat-bearing with CODEX_AUDIT_COMPLETED)
   check("I-example2-exists", example2 !== null,
     "DECISION_LOG.md: Example 2 section not found");
   if (example2) {
@@ -6754,34 +6908,18 @@ function validateGovernanceRecoveryPhase() {
       "DECISION_LOG.md: Example 2 must use ARES-001 (caveat-bearing)");
   }
 
-  // J: No clean-pass example uses ARES-001
   if (example1) {
     check("J-example1-no-ares001", !/codex_audit_reference: "ARES-001"/.test(example1[0]),
       "DECISION_LOG.md: Example 1 (clean pass) must not reference ARES-001");
   }
 
-  // B-05: owner_override_accepted
   check("B05-owner-override", /owner_override_accepted/.test(dlog),
     "DECISION_LOG.md: B-05 missing owner_override_accepted reference");
-
-  // ── B-03: POST_MERGE_QUEUE table + YAML block ──────────────────────────────────
-
-  check("B03-table-pr-identity", /\| PR identity \|.*pr_number.*pr_url.*pr_merged_state/.test(queue),
-    "POST_MERGE_QUEUE.md: B-03 missing PR identity row in 22-field table");
-  check("B03-table-runtime-evidence", /\| Runtime evidence \|.*runtime_evidence_or_substitute_evidence/.test(queue),
-    "POST_MERGE_QUEUE.md: B-03 missing runtime_evidence_or_substitute_evidence in table");
-  check("B03-yaml-block", /# Mandatory 22-field post-merge audit result record/.test(queue),
-    "POST_MERGE_QUEUE.md: B-03 missing 22-field YAML block");
 
   // ── B-06: orchestrator-state-machine mapping table header ──────────────────────
 
   check("B06-mapping-table-header", /pending_owner_decision_type[\s\S]*Orchestrator State[\s\S]*AgentBridge State/.test(sm),
     "orchestrator-state-machine.md: B-06 missing Owner decision mapping table header");
-
-  // ── B-07: audit-checklist SHA binding evidence table ───────────────────────────
-
-  check("B07-sha-binding-table", /Head SHA Integrity/.test(checklist),
-    "audit-checklist.yaml: B-07 missing Head SHA Integrity section");
 
   // ── Final verdict ──────────────────────────────────────────────────────────────
 
