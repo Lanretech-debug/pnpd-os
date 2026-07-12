@@ -387,6 +387,66 @@ If audit fails, Codex must return:
 
 CODEX_P0_PROMPT_ASSET_CONSUMPTION_AUDIT_BLOCKED_OR_FAILED
 
+## Evidence progression and non-substitution contract
+
+### local implementation evidence
+
+Evidence that an approved implementation or docs-only patch was performed locally within the authorized branch and file scope. Examples include changed-file list, commit SHA, commit count, patch summary, and clean working-tree status. Local implementation evidence must not be described as validation, audit, merge, push, CI, or canonicalization evidence.
+
+### local validation evidence
+
+Evidence from the locally executed validation gates required by the task contract. Examples include git diff --check, validator commands, dry-run results, test results, and generated-state checks. Local validation evidence must not be described as Codex audit evidence or remote CI evidence.
+
+### Codex audit evidence
+
+An independent Codex audit or re-audit result bound to the exact branch, base, HEAD, file scope, and validation evidence. Codex audit evidence must not be described as Owner authorization, merge authorization, push authorization, or canonical acceptance.
+
+### Owner authorization
+
+The explicit Owner decision permitting the next authorized action, such as finalization, merge preparation, or push. Owner authorization must not be inferred from an OpenCode report, Codex audit verdict, local validation result, or CI result.
+
+### merge evidence
+
+Evidence that the authorized commit sequence was merged or fast-forwarded into the intended local canonical branch. Examples include resulting local main SHA, merge-base result, fast-forward result, and exact merged commit sequence. Merge evidence must not be described as push evidence or remote repository evidence.
+
+### push evidence
+
+Evidence that the intended local canonical branch and exact HEAD were pushed to the intended remote branch. Examples include remote update result, origin/main SHA, and exact pushed commit SHA. Push evidence must not be described as remote CI evidence or Owner/GitHub App verification.
+
+### remote CI evidence
+
+Evidence that the required remote workflow ran against the exact pushed commit and concluded successfully. Examples include workflow run ID, workflow job, exact tested SHA, conclusion, and completed steps. A local validation pass must not be represented as remote CI evidence.
+
+### Owner/GitHub App verification
+
+The final verification that the intended remote repository and branch contain the exact authorized commit, remote CI ran against that exact commit, the file scope is correct, no unauthorized divergence occurred, and the Owner accepts the phase as canonical. This is the final canonical acceptance boundary.
+
+### Evidence progression
+
+local implementation evidence → local validation evidence → Codex audit evidence → Owner authorization → merge evidence → push evidence → remote CI evidence → Owner/GitHub App verification
+
+The evidence progression is ordered and cumulative; a later stage requires its own evidence in addition to the preserved evidence from earlier stages.
+
+### Non-substitution safeguards
+
+Local implementation evidence does not substitute for local validation evidence.
+Local validation evidence does not substitute for Codex audit evidence.
+Codex audit evidence does not substitute for Owner authorization.
+Owner authorization does not substitute for merge evidence.
+Merge evidence does not substitute for push evidence.
+Push evidence does not substitute for remote CI evidence.
+Remote CI evidence does not substitute for Owner/GitHub App verification.
+Local success cannot substitute for remote evidence.
+Evidence from one stage must not be reused as proof that a later stage occurred.
+No agent may manufacture, infer, or report unavailable evidence as present.
+Missing evidence must be reported as unavailable, pending, blocked, or not performed.
+
+### Final-report evidence rules
+
+A final report must identify the highest evidence stage actually reached.
+A final report must identify the next evidence stage that remains unmet.
+A final report must not collapse local implementation, local validation, audit, authorization, merge, push, CI, and canonical verification into one generic success claim.
+
 ## Required GitHub/App Verification Model
 
 After finalization, GitHub/App must verify:
