@@ -6514,6 +6514,23 @@ function validateGovernanceRecoveryPhase() {
     return results;
   }
 
+  function extractOperativePRMergedStateAssignmentsWithContext(content) {
+    const results = [];
+    const lines = content.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(/^pr_merged_state:\s*(.+)$/);
+      if (m) {
+        const value = m[1].replace(/"/g, "").replace(/'/g, "").trim();
+        let start = i;
+        while (start > 0 && !/^\s*#{1,6}\s+/.test(lines[start - 1])) start--;
+        let end = i + 1;
+        while (end < lines.length && !/^\s*#{1,6}\s+/.test(lines[end])) end++;
+        results.push({ value, section: lines.slice(start, end).join("\n") });
+      }
+    }
+    return results;
+  }
+
   // ── File reads ─────────────────────────────────────────────────────────────────
 
   const queue = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/POST_MERGE_QUEUE.md"), "utf-8");
@@ -6587,6 +6604,30 @@ function validateGovernanceRecoveryPhase() {
     "TASK_LEDGER.md: IMPLEMENTED evidence missing 'commit list'");
   check("ledger-cancelled-rvr", /runtime_verification_reached/.test(ledger),
     "TASK_LEDGER.md: CANCELLED missing runtime_verification_reached");
+
+  // ── PR1 Repair: REQUEST_CHANGES routing for Gate 5/6 failure sources ─────────
+
+  check("ledger-rc-top-level-rule",
+    /IN_PROGRESS \| SELF_REVIEWED \| HERMES_VERIFIED \| CODEX_AUDIT_REQUESTED \| CODEX_AUDIT_COMPLETED \| OWNER_PR_AUTHORIZED \| PR_OPENED \| OWNER_MERGE_APPROVED → REQUEST_CHANGES/.test(ledger),
+    "TASK_LEDGER.md: top-level → REQUEST_CHANGES rule missing Gate 5/6 failure-source states (SELF_REVIEWED, HERMES_VERIFIED, CODEX_AUDIT_REQUESTED, CODEX_AUDIT_COMPLETED)");
+
+  const rcStateSections = {};
+  for (const st of ["SELF_REVIEWED", "HERMES_VERIFIED", "CODEX_AUDIT_REQUESTED", "CODEX_AUDIT_COMPLETED", "REQUEST_CHANGES"]) {
+    const m = ledger.match(new RegExp(`### ${st}[\\s\\S]*?(?=\\n### )`));
+    rcStateSections[st] = m ? m[0] : "";
+  }
+  check("ledger-rc-self-reviewed-allowed", /Allowed next states:.*REQUEST_CHANGES/.test(rcStateSections.SELF_REVIEWED),
+    "TASK_LEDGER.md: SELF_REVIEWED allowed next states missing REQUEST_CHANGES");
+  check("ledger-rc-hermes-allowed", /Allowed next states:.*REQUEST_CHANGES/.test(rcStateSections.HERMES_VERIFIED),
+    "TASK_LEDGER.md: HERMES_VERIFIED allowed next states missing REQUEST_CHANGES");
+  check("ledger-rc-codex-requested-allowed", /Allowed next states:.*REQUEST_CHANGES/.test(rcStateSections.CODEX_AUDIT_REQUESTED),
+    "TASK_LEDGER.md: CODEX_AUDIT_REQUESTED allowed next states missing REQUEST_CHANGES");
+  check("ledger-rc-codex-completed-allowed", /Allowed next states:.*REQUEST_CHANGES/.test(rcStateSections.CODEX_AUDIT_COMPLETED),
+    "TASK_LEDGER.md: CODEX_AUDIT_COMPLETED allowed next states missing REQUEST_CHANGES");
+  check("ledger-rc-predecessors", /Allowed predecessors:.*(?:`SELF_REVIEWED`|`HERMES_VERIFIED`|`CODEX_AUDIT_REQUESTED`|`CODEX_AUDIT_COMPLETED`)/.test(rcStateSections.REQUEST_CHANGES),
+    "TASK_LEDGER.md: REQUEST_CHANGES allowed predecessors missing Gate 5/6 failure-source states");
+  check("ledger-rc-rule-3", /REQUEST_CHANGES` can be entered only from `IN_PROGRESS`, `SELF_REVIEWED`/.test(ledger),
+    "TASK_LEDGER.md: State Transition Rule 3 missing Gate 5/6 failure-source states");
 
   // ── K, L: Owner routing ────────────────────────────────────────────────────────
 
@@ -6710,6 +6751,10 @@ function validateGovernanceRecoveryPhase() {
         "POST_MERGE_QUEUE.md: Route A remediation_required must be false");
       check("route-a-lane-closure-false", /lane_closure_ready:\s*"?false"?/.test(aYaml[0]),
         "POST_MERGE_QUEUE.md: Route A lane_closure_ready must be false");
+      check("route-a-merged-state-merged", /^pr_merged_state:\s*"?merged"?\s*$/m.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A pr_merged_state must equal 'merged'");
+      check("route-a-no-reverted-after-merge", !/^pr_merged_state:\s*"?reverted_after_merge"?\s*$/m.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A must not use pr_merged_state 'reverted_after_merge'");
     }
   }
 
@@ -6730,6 +6775,10 @@ function validateGovernanceRecoveryPhase() {
         "POST_MERGE_QUEUE.md: Route B cleanup_eligibility must be ineligible");
       check("route-b-lane-closure-false", /lane_closure_ready:\s*"?false"?/.test(bYaml[0]),
         "POST_MERGE_QUEUE.md: Route B lane_closure_ready must be false");
+      check("route-b-merged-state-merged", /^pr_merged_state:\s*"?merged"?\s*$/m.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B pr_merged_state must equal 'merged'");
+      check("route-b-no-reverted-after-merge", !/^pr_merged_state:\s*"?reverted_after_merge"?\s*$/m.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B must not use pr_merged_state 'reverted_after_merge'");
     }
   }
 
@@ -6750,7 +6799,13 @@ function validateGovernanceRecoveryPhase() {
   check("B-queue-22-fields", /22 mandatory fields/.test(queue),
     "POST_MERGE_QUEUE.md: missing '22 mandatory fields'");
 
-  // ── REPAIR 2: Operative pr_merged_state value validation ──────────────────────
+  // ── REPAIR 2: Context-sensitive pr_merged_state value validation ──────────────
+  // Initial post-merge audit contexts (Route A, Route B, Schema 10, post-merge
+  // result) record that the PR was merged, so `pr_merged_state` MUST equal
+  // `merged` there. `reverted_after_merge` is valid only inside an explicit
+  // post-revert context (a section whose heading explicitly denotes post-revert
+  // context). There is no global allowlist that accepts reverted_after_merge in
+  // initial audit contexts. Uppercase `MERGED` is rejected everywhere.
 
   const mergedStateFiles = [
     { name: "POST_MERGE_QUEUE.md", content: queue },
@@ -6758,26 +6813,33 @@ function validateGovernanceRecoveryPhase() {
     { name: "HANDOFF_PROTOCOL.md", content: handoff },
     { name: "post-merge-template.yaml", content: template }
   ];
-  const allowedMergedStateValues = ["merged", "reverted_after_merge"];
   let totalOperativeAssignments = 0;
-  let invalidCount = 0;
-  let uppercaseMergedCount = 0;
+  const mergedStateAssignments = [];
   for (const { name, content } of mergedStateFiles) {
-    const assignments = extractOperativePRMergedStateAssignments(content);
-    for (const val of assignments) {
+    for (const a of extractOperativePRMergedStateAssignmentsWithContext(content)) {
+      mergedStateAssignments.push({ name, ...a });
       totalOperativeAssignments++;
-      if (!allowedMergedStateValues.includes(val)) {
-        invalidCount++;
-        check(`merged-state-invalid-${name}-${totalOperativeAssignments}`, false,
-          `${name}: operative pr_merged_state value "${val}" is not allowed; must be merged or reverted_after_merge`);
-      }
-      if (val === "MERGED") uppercaseMergedCount++;
     }
   }
+  const uppercaseMergedCount = mergedStateAssignments.filter((a) => a.value === "MERGED").length;
+  const revertedAssignments = mergedStateAssignments.filter((a) => a.value === "reverted_after_merge");
   check("merged-state-operative-assignments-found", totalOperativeAssignments > 0,
     "No operative pr_merged_state assignments found across 4 files");
   check("merged-state-no-uppercase-MERGED", uppercaseMergedCount === 0,
     `${uppercaseMergedCount} operative pr_merged_state assignment(s) still use uppercase MERGED`);
+  let invalidAssignmentIndex = 0;
+  for (const a of mergedStateAssignments) {
+    if (a.value !== "merged" && a.value !== "reverted_after_merge") {
+      invalidAssignmentIndex++;
+      check(`merged-state-invalid-${a.name}-${invalidAssignmentIndex}`, false,
+        `${a.name}: operative pr_merged_state value "${a.value}" is invalid; must be 'merged' or 'reverted_after_merge'`);
+    }
+  }
+  for (const a of revertedAssignments) {
+    check(`merged-state-revert-context-${a.name}`,
+      /post-revert|post revert|revert context|after revert/i.test(a.section),
+      `${a.name}: operative pr_merged_state 'reverted_after_merge' appears outside an explicit post-revert context; initial Route A/B post-merge audit contexts require 'merged'`);
+  }
 
   // Check that every result record with pr_merged_state also has merge_commit_sha
   for (const { name, content } of mergedStateFiles) {
@@ -6826,6 +6888,14 @@ function validateGovernanceRecoveryPhase() {
     `HANDOFF_PROTOCOL.md: ${dec005Cancellation ? dec005Cancellation.length : 0} DEC-005 cancellation ref(s) remain`);
   check("handoff-dec006", /owner_decision_reference: "DEC-006"/.test(handoff),
     "HANDOFF_PROTOCOL.md: cancellation missing DEC-006");
+
+  // ── PR1 Repair: Schema 8c cancellation reference DEC-006 ──────────────────────
+
+  const schemaDec005Cancellation = schema.match(/owner_decision_reference: "DEC-005"/g);
+  check("schema8c-no-dec005", !schemaDec005Cancellation || schemaDec005Cancellation.length === 0,
+    `MESSAGE_SCHEMA.md: ${schemaDec005Cancellation ? schemaDec005Cancellation.length : 0} owner_decision_reference "DEC-005" remain(s) (DEC-005 is reserved for reject-merge; owner cancellation uses DEC-006)`);
+  check("schema8c-dec006", /schema: owner_cancellation[\s\S]*?owner_decision_reference: "DEC-006"/.test(schema),
+    "MESSAGE_SCHEMA.md: Schema 8c owner cancellation missing owner_decision_reference \"DEC-006\"");
   check("handoff-no-pre-gate4", !/before Gate 4.*Runtime Not Applicable/.test(handoff),
     "HANDOFF_PROTOCOL.md: still has pre-Gate-4 Runtime Not Applicable text");
   check("handoff-runtime-verification", /runtime_verification_reached/.test(handoff),

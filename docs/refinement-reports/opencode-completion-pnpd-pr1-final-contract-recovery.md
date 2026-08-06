@@ -38,7 +38,7 @@ Explicit authority: Sections 2 (AGENT_REGISTRY.md, ROLES.md authority expansion)
 | `docs/review-audit-layer/LAYER_4_CODEX_POST_MERGE_AUDIT.md` | `production`→`production_integration`; 22 fields; `runtime_evidence_reference` added |
 | `templates/post-merge-audit/post-merge-template.yaml` | `Merged, closed, or reverted`→`` `merged` / `reverted_after_merge` ``; 22-field table with `runtime_evidence_reference` |
 | `templates/pr-audit/audit-checklist.yaml` | Added Head SHA Integrity section with exact-binding rules |
-| `scripts/pnpd-validate-schemas.mjs` | Added `governance-recovery` phase (25 assertions); allowlisted in `parseArgs` |
+| `scripts/pnpd-validate-schemas.mjs` | Added `governance-recovery` phase; allowlisted in `parseArgs` (assertion counts recorded in the Semantic Validator section below) |
 | `package.json` | Added `&& node scripts/pnpd-validate-schemas.mjs --phase governance-recovery` to `validate` script |
 
 ### Why AGENT_REGISTRY.md and ROLES.md were necessary
@@ -66,11 +66,12 @@ Both files contained active usage of `CODEX_AUDIT_COMPLETED_WITH_CAVEATS` as a C
 ## Semantic Validator
 
 - **Path:** `scripts/pnpd-validate-schemas.mjs` (phase `governance-recovery` added)
-- **Assertions:** 25 contract assertions covering all 20 contract sections
+- **Assertions:** 131 contract assertions executed at runtime
+- **Runtime assertions vs static call sites:** the validator executes 131 assertions at runtime from 120 static `check()` call sites within the `validateGovernanceRecoveryPhase` function. The runtime count exceeds the static count because loop-carried checks (per-file lifecycle scans, per-assignment `pr_merged_state` scans, and per-route field validation) execute once per iteration. The earlier report claim of "25/25 assertions" was incorrect — the phase never ran only 25 checks; Codex independently observed 105. The authoritative figure is the count printed by the validator itself on each run: `Governance recovery: N contract assertions passed`.
 - **Wiring:** `npm run validate` chain now includes `--phase governance-recovery` as the final step
 - **Direct execution:** `node scripts/pnpd-validate-schemas.mjs --phase governance-recovery`
 - **Test wiring:** `npm test` → `npm run validate` → includes governance-recovery phase
-- **Result:** 25/25 assertions passed
+- **Result:** 131/131 assertions passed
 
 ## Local Validation Results
 
@@ -81,7 +82,7 @@ Both files contained active usage of `CODEX_AUDIT_COMPLETED_WITH_CAVEATS` as a C
 | `npm run validate` | PASS (exit 0) | All 7 phases including governance-recovery |
 | `npm run dry-run` | PASS (exit 0) | Orchestrator dry-run |
 | `npm test` | PASS (exit 0) | validate + dry-run |
-| `node scripts/pnpd-validate-schemas.mjs --phase governance-recovery` | PASS (exit 0) | 25 contract assertions |
+| `node scripts/pnpd-validate-schemas.mjs --phase governance-recovery` | PASS (exit 0) | 131 contract assertions executed at runtime |
 
 ## Durable Report Path
 

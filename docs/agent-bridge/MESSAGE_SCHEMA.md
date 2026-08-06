@@ -361,7 +361,7 @@ schema: owner_cancellation
 task_id: "TASK-001"
 decision_type: "owner_cancellation"
 owner_cancelled: true
-owner_decision_reference: "DEC-005"
+owner_decision_reference: "DEC-006"
 cancellation_reason: "Owner ended the lane before merge because its scope is no longer required."
 last_valid_state: "PR_OPENED"
 unresolved_findings:

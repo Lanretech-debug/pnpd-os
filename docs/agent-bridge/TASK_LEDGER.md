@@ -44,7 +44,7 @@ BRANCH_CLEANUP
 CLOSED
 
 (any state) → BLOCKED
-IN_PROGRESS | OWNER_PR_AUTHORIZED | PR_OPENED | OWNER_MERGE_APPROVED → REQUEST_CHANGES
+IN_PROGRESS | SELF_REVIEWED | HERMES_VERIFIED | CODEX_AUDIT_REQUESTED | CODEX_AUDIT_COMPLETED | OWNER_PR_AUTHORIZED | PR_OPENED | OWNER_MERGE_APPROVED → REQUEST_CHANGES
 REQUEST_CHANGES → IN_PROGRESS | OWNER_PR_AUTHORIZED | PR_OPENED | BLOCKED | CANCELLED
 PROPOSED | ROUTED | IN_PROGRESS | IMPLEMENTED | RUNTIME_SMOKE_TESTED | SELF_REVIEWED | HERMES_VERIFIED | CODEX_AUDIT_REQUESTED | CODEX_AUDIT_COMPLETED | OWNER_PR_AUTHORIZED | PR_OPENED | OWNER_MERGE_APPROVED | REQUEST_CHANGES | BLOCKED
   → CANCELLED (Owner-authorized, pre-merge terminal state only)
@@ -103,26 +103,29 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
 - **Meaning:** DeepSeek has completed self-review. Ready for Hermes verification.
 - **Who can enter:** DeepSeek.
 - **Required evidence:** Self-review log with all gates checked; diff summary; handoff to Hermes written.
-- **Allowed next states:** `HERMES_VERIFIED`, `BLOCKED`, `CANCELLED`.
+- **Allowed next states:** `HERMES_VERIFIED`, `REQUEST_CHANGES`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `CODEX_AUDIT_COMPLETED`, `OWNER_PR_AUTHORIZED`, `MERGED`.
 - **Anti-drift:** DeepSeek self-review is NOT formal audit. Cannot skip to Codex.
+- **Failure routing:** If self-review reveals unresolved issues (Gate 5 failure), the lane enters `REQUEST_CHANGES` for actionable corrections and returns to Gate 1; external or unresolved dependencies route to `BLOCKED` instead.
 
 ### HERMES_VERIFIED
 
 - **Meaning:** Hermes has verified worktree, branch, evidence, and anti-drift controls.
 - **Who can enter:** Hermes.
 - **Required evidence:** Hermes verification log; all anti-drift controls checked; clean worktree confirmed.
-- **Allowed next states:** `CODEX_AUDIT_REQUESTED`, `BLOCKED`, `CANCELLED`.
+- **Allowed next states:** `CODEX_AUDIT_REQUESTED`, `REQUEST_CHANGES`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `OWNER_PR_AUTHORIZED`, `MERGED`.
 - **Anti-drift:** Hermes verification is NOT Codex audit. Cannot skip to owner decision.
+- **Failure routing:** Hermes issues `REQUEST_CHANGES` to return the lane to Gate 1 for actionable corrections, or `BLOCKED` to hold the lane for an external or unresolved dependency.
 
 ### CODEX_AUDIT_REQUESTED
 
 - **Meaning:** Codex has been requested to perform formal audit.
 - **Who can enter:** Hermes (routing to Codex).
 - **Required evidence:** Full branch/proposed diff; Hermes verification result; DeepSeek self-review.
-- **Allowed next states:** `CODEX_AUDIT_COMPLETED`, `BLOCKED`, `CANCELLED`.
+- **Allowed next states:** `CODEX_AUDIT_COMPLETED`, `REQUEST_CHANGES`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `OWNER_PR_AUTHORIZED`, `MERGED`.
+- **Failure routing:** If the audit reveals issues (`CODEX_REQUEST_CHANGES`), the lane enters `REQUEST_CHANGES` for actionable corrections and returns to Gate 1; `CODEX_BLOCKED` routes to `BLOCKED`.
 
 ### CODEX_AUDIT_COMPLETED
 
@@ -138,8 +141,9 @@ MERGED | POST_MERGE_AUDIT_REQUESTED | POST_MERGE_VERIFIED | BRANCH_CLEANUP | CLO
   - `runtime_status`
   - `scope_status`
   - `blocking_findings_status`
-- **Allowed next states:** `OWNER_PR_AUTHORIZED`, `BLOCKED`, `CANCELLED`.
+- **Allowed next states:** `OWNER_PR_AUTHORIZED`, `REQUEST_CHANGES`, `BLOCKED`, `CANCELLED`.
 - **Forbidden next states:** `PR_OPENED`, `OWNER_MERGE_APPROVED`, `MERGED`, `CLOSED`.
+- **Failure routing:** If the completed audit recorded `CODEX_REQUEST_CHANGES` (audit_outcome REQUEST_CHANGES), the lane enters `REQUEST_CHANGES` for actionable corrections and returns to Gate 1; a blocking Codex outcome routes to `BLOCKED`.
 
 ### OWNER_PR_AUTHORIZED
 
@@ -252,7 +256,7 @@ POST_MERGE_VERIFIED
 - **Meaning:** Changes requested by Hermes, Codex, or Owner.
 - **Who can enter:** Hermes, Codex, or Owner.
 - **Required evidence:** Specific change requests listed; handoff back to DeepSeek.
-- **Allowed predecessors:** `IN_PROGRESS`, `OWNER_PR_AUTHORIZED`, `PR_OPENED`, `OWNER_MERGE_APPROVED`.
+- **Allowed predecessors:** `IN_PROGRESS`, `SELF_REVIEWED`, `HERMES_VERIFIED`, `CODEX_AUDIT_REQUESTED`, `CODEX_AUDIT_COMPLETED`, `OWNER_PR_AUTHORIZED`, `PR_OPENED`, `OWNER_MERGE_APPROVED`.
 - **Allowed next states:** the correction-appropriate state among `IN_PROGRESS`, `OWNER_PR_AUTHORIZED`, or `PR_OPENED`; otherwise `BLOCKED`, or `CANCELLED` when the cancellation contract is satisfied.
 - **Authorization effect:** Entering from `OWNER_MERGE_APPROVED` revokes the prior merge authorization. A material change to the base SHA, head SHA, or PR scope requires a fresh Codex audit and a new Owner decision.
 - **Forbidden next states:** Merge, closure, or any advancement without addressing the requested changes.
@@ -348,7 +352,7 @@ POST_MERGE_VERIFIED
 
 1. States advance forward only through explicit agent action with recorded evidence.
 2. `BLOCKED` can be entered from any state and ordinarily returns to the previous state upon resolution. The post-merge exception takes precedence: a blocker recorded by Gate 10 must resume through `POST_MERGE_AUDIT_REQUESTED` and a fresh Gate 10 execution, never directly through the prior `POST_MERGE_VERIFIED` record.
-3. `REQUEST_CHANGES` can be entered only from `IN_PROGRESS`, `OWNER_PR_AUTHORIZED`, `PR_OPENED`, or `OWNER_MERGE_APPROVED`.
+3. `REQUEST_CHANGES` can be entered only from `IN_PROGRESS`, `SELF_REVIEWED` (Gate 5 failure), `HERMES_VERIFIED` (Hermes routing), `CODEX_AUDIT_REQUESTED` or `CODEX_AUDIT_COMPLETED` (Codex change request), `OWNER_PR_AUTHORIZED`, `PR_OPENED`, or `OWNER_MERGE_APPROVED`.
 4. No state may be skipped in the forward path.
 5. `CLOSED` is terminal and indicates successful completion. A closed task cannot be reopened — a new task must be proposed.
 6. `CANCELLED` is terminal and indicates the lane was abandoned before completion. A cancelled task cannot be reopened — a new task must be proposed.
