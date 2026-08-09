@@ -6514,18 +6514,40 @@ function validateGovernanceRecoveryPhase() {
     return results;
   }
 
+  function normalizeMarkdownHeadingText(raw) {
+    return String(raw).replace(/^\s*#{1,6}\s*/, "").trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  const CANONICAL_POST_REVERT_HEADING = "post-revert context";
+
+  function isPostRevertContextHeading(raw) {
+    return normalizeMarkdownHeadingText(raw) === CANONICAL_POST_REVERT_HEADING;
+  }
+
   function extractOperativePRMergedStateAssignmentsWithContext(content) {
     const results = [];
     const lines = content.split("\n");
+    let currentHeading = null;
+    let inFencedCode = false;
     for (let i = 0; i < lines.length; i++) {
-      const m = lines[i].match(/^pr_merged_state:\s*(.+)$/);
+      const line = lines[i];
+      if (/^\s*```/.test(line)) {
+        inFencedCode = !inFencedCode;
+      }
+      const headingMatch = !inFencedCode && /^\s*#{1,6}\s+(.*)$/.exec(line);
+      if (headingMatch) {
+        currentHeading = headingMatch[1].trim();
+        continue;
+      }
+      const m = line.match(/^pr_merged_state:\s*(.+)$/);
       if (m) {
         const value = m[1].replace(/"/g, "").replace(/'/g, "").trim();
-        let start = i;
-        while (start > 0 && !/^\s*#{1,6}\s+/.test(lines[start - 1])) start--;
-        let end = i + 1;
-        while (end < lines.length && !/^\s*#{1,6}\s+/.test(lines[end])) end++;
-        results.push({ value, section: lines.slice(start, end).join("\n") });
+        results.push({
+          value,
+          line: i + 1,
+          heading: currentHeading,
+          postRevertContext: isPostRevertContextHeading(currentHeading)
+        });
       }
     }
     return results;
@@ -6802,10 +6824,14 @@ function validateGovernanceRecoveryPhase() {
   // ── REPAIR 2: Context-sensitive pr_merged_state value validation ──────────────
   // Initial post-merge audit contexts (Route A, Route B, Schema 10, post-merge
   // result) record that the PR was merged, so `pr_merged_state` MUST equal
-  // `merged` there. `reverted_after_merge` is valid only inside an explicit
-  // post-revert context (a section whose heading explicitly denotes post-revert
-  // context). There is no global allowlist that accepts reverted_after_merge in
-  // initial audit contexts. Uppercase `MERGED` is rejected everywhere.
+  // `merged` there. `reverted_after_merge` is accepted only when the operative
+  // assignment is structurally contained under a canonical `Post-Revert Context`
+  // heading (case/whitespace normalized; no case-sensitivity policy exists in
+  // this repo, so normalization is safe). Context is bound to the containing
+  // Markdown heading identity — ordinary prose that merely mentions post-revert
+  // must never create post-revert context, and there is no repository-wide
+  // substring allowlist. Uppercase `MERGED` is rejected everywhere. The Gate 10
+  // fixture suite below locks these semantics.
 
   const mergedStateFiles = [
     { name: "POST_MERGE_QUEUE.md", content: queue },
@@ -6835,10 +6861,12 @@ function validateGovernanceRecoveryPhase() {
         `${a.name}: operative pr_merged_state value "${a.value}" is invalid; must be 'merged' or 'reverted_after_merge'`);
     }
   }
+  let revertAssignmentIndex = 0;
   for (const a of revertedAssignments) {
-    check(`merged-state-revert-context-${a.name}`,
-      /post-revert|post revert|revert context|after revert/i.test(a.section),
-      `${a.name}: operative pr_merged_state 'reverted_after_merge' appears outside an explicit post-revert context; initial Route A/B post-merge audit contexts require 'merged'`);
+    revertAssignmentIndex++;
+    check(`merged-state-revert-context-${a.name}-${revertAssignmentIndex}`,
+      a.postRevertContext,
+      `${a.name}: pr_merged_state 'reverted_after_merge' at line ${a.line} is outside a canonical 'Post-Revert Context' heading section; initial Route A/B post-merge audit contexts require 'merged'`);
   }
 
   // Check that every result record with pr_merged_state also has merge_commit_sha
@@ -6854,6 +6882,110 @@ function validateGovernanceRecoveryPhase() {
           `${name}: expected ≥${mergedAssignments.length} merge_commit_sha assignments (found ${shaAssignments.length}) alongside ${mergedAssignments.length} pr_merged_state assignments`);
       }
     }
+  }
+
+  // ── Gate 10 structural regression fixtures ────────────────────────────────────
+  // `reverted_after_merge` is valid only when the operative assignment is
+  // structurally contained in a canonical `Post-Revert Context` heading section.
+  // These fixtures lock heading identity, section containment, and prose
+  // non-inference; a validator that merely rejects the supplied fixtures by
+  // luck is insufficient, so each fixture asserts the full structural verdict.
+
+  const gate10Fixtures = [
+    { id: "g10-1-initial-route-a", expect: "accepted",
+      content: [
+        "## Post-Merge Audit Result Template",
+        "",
+        "pr_merged_state: merged"
+      ].join("\n") },
+    { id: "g10-2-initial-route-b", expect: "accepted",
+      content: [
+        "## Post-Merge Audit Result With Issues",
+        "",
+        "pr_merged_state: merged"
+      ].join("\n") },
+    { id: "g10-3-route-a-reverted", expect: "rejected",
+      content: [
+        "## Post-Merge Audit Result Template",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-4-route-b-reverted", expect: "rejected",
+      content: [
+        "## Post-Merge Audit Result With Issues",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-5-explicit-post-revert-section", expect: "accepted",
+      content: [
+        "## Post-Revert Context",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-6-case-normalized-heading", expect: "accepted",
+      content: [
+        "## POST-REVERT CONTEXT",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-7-field-outside-section", expect: "rejected",
+      content: [
+        "## Post-Revert Context",
+        "",
+        "explanatory content",
+        "",
+        "## Another Section",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-8-prose-bypass", expect: "rejected",
+      content: [
+        "This discussion concerns post-revert behavior.",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-9-misleading-adjacent-heading", expect: "rejected",
+      content: [
+        "## Notes on Post-Revert Behavior",
+        "",
+        "pr_merged_state: reverted_after_merge",
+        "",
+        "## Post-Revert Context",
+        "",
+        "pr_merged_state: merged"
+      ].join("\n") },
+    { id: "g10-10-uppercase-value", expect: "rejected",
+      content: [
+        "## Post-Merge Audit Result Template",
+        "",
+        "pr_merged_state: MERGED"
+      ].join("\n") },
+    { id: "g10-11-prose-bypass-within-section", expect: "rejected",
+      content: [
+        "## Some Section",
+        "",
+        "Observers should consider post-revert outcomes here.",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-12-duplicate-canonical-headings", expect: "accepted",
+      content: [
+        "## Post-Revert Context",
+        "",
+        "pr_merged_state: reverted_after_merge",
+        "",
+        "## Post-Revert Context",
+        "",
+        "pr_merged_state: merged"
+      ].join("\n") }
+  ];
+  for (const fx of gate10Fixtures) {
+    const assignments = extractOperativePRMergedStateAssignmentsWithContext(fx.content);
+    const allValid = assignments.length > 0 && assignments.every((a) =>
+      a.value === "merged" || (a.value === "reverted_after_merge" && a.postRevertContext));
+    const pass = fx.expect === "accepted" ? allValid : !allValid;
+    check(`gate10-fixture-${fx.id}`, pass,
+      `Gate 10 fixture ${fx.id}: expected ${fx.expect} but got ${allValid ? "accepted" : "rejected"} (${assignments.length} operative assignment(s))`);
   }
 
   // ── MESSAGE_SCHEMA checks ─────────────────────────────────────────────────────

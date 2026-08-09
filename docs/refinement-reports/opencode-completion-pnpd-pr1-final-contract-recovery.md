@@ -66,12 +66,21 @@ Both files contained active usage of `CODEX_AUDIT_COMPLETED_WITH_CAVEATS` as a C
 ## Semantic Validator
 
 - **Path:** `scripts/pnpd-validate-schemas.mjs` (phase `governance-recovery` added)
-- **Assertions:** 131 contract assertions executed at runtime
-- **Runtime assertions vs static call sites:** the validator executes 131 assertions at runtime from 120 static `check()` call sites within the `validateGovernanceRecoveryPhase` function. The runtime count exceeds the static count because loop-carried checks (per-file lifecycle scans, per-assignment `pr_merged_state` scans, and per-route field validation) execute once per iteration. The earlier report claim of "25/25 assertions" was incorrect — the phase never ran only 25 checks; Codex independently observed 105. The authoritative figure is the count printed by the validator itself on each run: `Governance recovery: N contract assertions passed`.
+- **Assertions:** 143 contract assertions executed at runtime (final repaired-head count)
+- **Assertion call-site evidence (independently reproduced on the final repaired head):**
+  - Runtime executed assertions: 143
+  - Raw textual `check(` occurrences within `validateGovernanceRecoveryPhase`: 121
+  - Actual `check()` invocation call sites: 120
+  - Helper declaration occurrences excluded from the call-site count: 1
+  - Runtime-over-static-call-site delta: +23 (143 − 120)
+  - The earlier wording that called 120 the static call-site count was incorrect: 120 is the actual invocation call-site count. The raw textual `check(` occurrence count is 121, of which exactly one is the `check` helper declaration and 120 are invocation call sites. Two further raw `check(`-bearing lines exist outside the phase (string literals in `console.log` output; not call sites).
+  - The runtime count exceeds the static call-site count because loop-carried checks (per-file lifecycle scans, per-assignment `pr_merged_state` scans, per-route field validation, and the Gate 10 fixture suite) execute once per iteration.
+- **Gate 10 structural repair (second narrow repair):** `pr_merged_state: reverted_after_merge` acceptance is now bound structurally to the containing Markdown heading identity — the operative assignment must sit under a canonical `Post-Revert Context` heading (case/whitespace normalized). Ordinary prose mentioning post-revert and token-bearing neighboring headings create no context. A 12-fixture Gate 10 regression suite (G10-1 through G10-12) is embedded in the phase and locks initial Route A/B semantics, explicit and case-normalized post-revert sections, field-outside-section rejection, prose bypass rejection, misleading adjacent-heading rejection, uppercase `MERGED` rejection, and duplicate canonical-heading handling.
+- The earlier report claim of "25/25 assertions" was incorrect — the phase never ran only 25 checks; Codex independently observed 105; subsequent repairs raised the runtime count to 131, and the Gate 10 fixture suite brings the final repaired-head count to 143. The authoritative figure is the count printed by the validator itself on each run: `Governance recovery: N contract assertions passed`.
 - **Wiring:** `npm run validate` chain now includes `--phase governance-recovery` as the final step
 - **Direct execution:** `node scripts/pnpd-validate-schemas.mjs --phase governance-recovery`
 - **Test wiring:** `npm test` → `npm run validate` → includes governance-recovery phase
-- **Result:** 131/131 assertions passed
+- **Result:** 143/143 assertions passed
 
 ## Local Validation Results
 
@@ -82,7 +91,7 @@ Both files contained active usage of `CODEX_AUDIT_COMPLETED_WITH_CAVEATS` as a C
 | `npm run validate` | PASS (exit 0) | All 7 phases including governance-recovery |
 | `npm run dry-run` | PASS (exit 0) | Orchestrator dry-run |
 | `npm test` | PASS (exit 0) | validate + dry-run |
-| `node scripts/pnpd-validate-schemas.mjs --phase governance-recovery` | PASS (exit 0) | 131 contract assertions executed at runtime |
+| `node scripts/pnpd-validate-schemas.mjs --phase governance-recovery` | PASS (exit 0) | 143 contract assertions executed at runtime |
 
 ## Durable Report Path
 
