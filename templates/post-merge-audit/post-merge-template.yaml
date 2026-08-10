@@ -17,7 +17,48 @@
 | **Merge Commit** | |
 | **Auditor** | |
 | **Date** | |
-| **Trigger** | `HIGH_RISK` / `OWNER_OVERRIDE` / `OWNER_REQUEST` / `OPTIONAL` |
+| **Trigger** | `ALL_MERGES` / `HIGH_RISK_DEPTH` / `OWNER_OVERRIDE` / `OWNER_REQUEST` |
+
+---
+
+## Mandatory Layer 4 Confirmation Fields
+
+Every post-merge audit SHALL confirm and record all 22 mandatory fields below, grouped into seven evidence categories. A post-merge audit that omits any field is incomplete.
+
+| # | Category | Field | Description | Value |
+|---|----------|-------|-------------|-------|
+| 1 | PR identity | **PR Number** | GitHub PR number | |
+| 2 | PR identity | **PR URL** | GitHub PR URL | |
+| 3 | PR identity | **PR Merged State** | `merged` / `reverted_after_merge` | |
+| 4 | Merge identity | **Merge Commit SHA** | The merge commit hash on the target branch | |
+| 5 | Merge identity | **Canonical Main SHA** | The updated main branch SHA after merge | |
+| 6 | Merge identity | **Merged Scope** | Whether the merged diff matches the approved scope | |
+| 7 | CI evidence | **CI Status** | Whether CI checks passed on the merge commit | |
+| 8 | Runtime evidence | **Runtime Status** | Whether runtime evidence exists and is consistent with pre-merge evidence | |
+| 9 | Runtime evidence | **Runtime Evidence Reference** | Canonical reference URI or path to runtime evidence | |
+| 10 | Runtime evidence | **Runtime Reason** | Why runtime is or is not applicable | |
+| 11 | Runtime evidence | **Runtime Surface** | Classification of affected surface | |
+| 12 | Runtime evidence | **Runtime Evidence / Substitute Evidence** | Path to runtime evidence or substitute evidence | |
+| 13 | Runtime evidence | **Runtime Verified By** | Agent or human who confirmed runtime | |
+| 14 | Runtime evidence | **Runtime Verified At** | ISO 8601 timestamp of runtime verification | |
+| 15 | Cleanup evidence | **Branch Cleanup Status** | `pending` / `already_absent` / `not_applicable_with_reason` (recorded at Gate 10; cleanup is performed or verified at Gate 11) | |
+| 16 | Cleanup evidence | **Cleanup Eligibility** | Whether the lane is eligible for cleanup | |
+| 17 | Cleanup evidence | **Cleanup Required Actions** | Specific actions needed for clean closure | |
+| 18 | Cleanup evidence | **Cleanup Evidence Reference** | Path to cleanup evidence (finalized at Gate 11) | |
+| 19 | Closure evidence | **Lane Closure Ready** | Must be `false` at Gate 10 — cleanup and Gate 11 must complete first | |
+| 20 | Closure evidence | **Blocking Findings** | Any findings that prevent clean closure | |
+| 21 | Verification attribution | **Verified By** | Agent or human who performed the audit | |
+| 22 | Verification attribution | **Verified At** | ISO 8601 timestamp of verification | |
+
+**Rules:**
+- Post-merge audit is **mandatory for every merge** — risk affects verification depth only, not whether verification occurs.
+- `branch_cleanup_status` may be `pending` at Gate 10 — cleanup is performed at Gate 11.
+- `lane_closure_ready` **must remain `false`** until Gate 11 (Branch Cleanup and Closure) passes.
+- This template does **not** imply that Gate 10 closes the lane — closure requires Gate 11.
+- Gate 11 must verify `completed`, `already_absent`, or `not_applicable_with_reason`; already-absent and not-applicable cleanup are not self-validating.
+- `POST_MERGE_VERIFIED` records audit completion and findings; it does not mean zero findings or a clean merged state.
+- Non-blocking findings may proceed to Gate 11; zero findings are not required.
+- Any blocking finding routes to `BLOCKED`, requires remediation and fresh post-merge verification, and forbids Gate 11.
 
 ---
 
@@ -105,9 +146,31 @@
 
 ## Overall Verdict
 
-- [ ] `POST_MERGE_VERIFIED` — Merged state is clean
-- [ ] `POST_MERGE_ISSUES_FOUND` — Issues found, follow-up required
-- [ ] `POST_MERGE_ROLLBACK_RECOMMENDED` — Rollback recommended
+- [ ] `POST_MERGE_VERIFIED` — Mandatory audit completed and findings recorded
+
+**Result classification:** `findings_recorded`
+
+### Route A — No Blocking Findings
+
+```yaml
+blocking_findings: []
+next_state: BRANCH_CLEANUP
+lane_closure_ready: false
+remediation_required: false
+```
+
+### Route B — Blocking Findings Present
+
+```yaml
+blocking_findings:
+  - "<recorded blocker>"
+next_state: BLOCKED
+lane_closure_ready: false
+remediation_required: true
+```
+
+Route B forbids Gate 11 until remediation completes and post-merge verification
+is rerun. Rollback remains a recommendation field, not a lifecycle state.
 
 ---
 

@@ -260,11 +260,11 @@ function parseArgs(argv) {
         throw new Error("--bug-forecast is a standalone validator and cannot be combined with --phase.");
       }
       if (!argv[i + 1]) {
-        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, 1q-bug-forecast, 1q-bug-forecast-example, 1q-bug-forecast-example-negative, or 1q-bug-forecast-summary).");
+        throw new Error("--phase requires a value (0, 1b, 1c, 1f, 1h, 1m, 1n, 1o, 1o-example, 1p-profile, 1q-bug-forecast, 1q-bug-forecast-example, 1q-bug-forecast-example-negative, 1q-bug-forecast-summary, or governance-recovery).");
       }
       const phaseVal = argv[i + 1];
-      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast" && phaseVal !== "1q-bug-forecast-example" && phaseVal !== "1q-bug-forecast-example-negative" && phaseVal !== "1q-bug-forecast-summary") {
-        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", "1q-bug-forecast", "1q-bug-forecast-example", "1q-bug-forecast-example-negative", or "1q-bug-forecast-summary".');
+      if (phaseVal !== "0" && phaseVal !== "1b" && phaseVal !== "1c" && phaseVal !== "1f" && phaseVal !== "1h" && phaseVal !== "1m" && phaseVal !== "1n" && phaseVal !== "1o" && phaseVal !== "1o-example" && phaseVal !== "1p-profile" && phaseVal !== "1q-bug-forecast" && phaseVal !== "1q-bug-forecast-example" && phaseVal !== "1q-bug-forecast-example-negative" && phaseVal !== "1q-bug-forecast-summary" && phaseVal !== "governance-recovery") {
+        throw new Error('--phase must be "0", "1b", "1c", "1f", "1h", "1m", "1n", "1o", "1o-example", "1p-profile", "1q-bug-forecast", "1q-bug-forecast-example", "1q-bug-forecast-example-negative", "1q-bug-forecast-summary", or "governance-recovery".');
       }
       args.phase = phaseVal;
       i += 1;
@@ -449,7 +449,7 @@ function parseArgs(argv) {
       console.log(`PNPD Schema Validator
 
 Usage:
-  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast|1q-bug-forecast-example|1q-bug-forecast-example-negative|1q-bug-forecast-summary]
+  node scripts/pnpd-validate-schemas.mjs [--phase 0|1b|1c|1f|1h|1m|1n|1o|1o-example|1p-profile|1q-bug-forecast|1q-bug-forecast-example|1q-bug-forecast-example-negative|1q-bug-forecast-summary|governance-recovery]
   node scripts/pnpd-validate-schemas.mjs --runtime-readiness-report <path>
   node scripts/pnpd-validate-schemas.mjs --research-discovery-artifact <path>
   node scripts/pnpd-validate-schemas.mjs --product-delivery-artifact <path>
@@ -6407,6 +6407,730 @@ function validateBugForecastSummaryPhase() {
   console.log("non-capability: no production readiness claim");
 }
 
+// ── Phase: Governance Recovery ──────────────────────────────────────────────────
+
+function validateGovernanceRecoveryPhase() {
+  const ROOT = process.cwd();
+  const failures = [];
+  let executedAssertionCount = 0;
+
+  function check(name, condition, failureMessage) {
+    executedAssertionCount++;
+    if (!condition) failures.push(`${name}: ${failureMessage}`);
+  }
+
+  function file(path) { return path; }
+
+  function grep(filePath, pattern) {
+    try {
+      const content = fs.readFileSync(path.join(ROOT, filePath), "utf-8");
+      return pattern.test(content);
+    } catch { return false; }
+  }
+
+  function countOccurrences(filePath, pattern) {
+    try {
+      const content = fs.readFileSync(path.join(ROOT, filePath), "utf-8");
+      return (content.match(pattern) || []).length;
+    } catch { return 0; }
+  }
+
+  // ── Constants ──────────────────────────────────────────────────────────────────
+
+  const mandatoryPostMergeFields = [
+    "pr_number",
+    "pr_url",
+    "pr_merged_state",
+    "merge_commit_sha",
+    "canonical_main_sha",
+    "merged_scope",
+    "ci_status",
+    "runtime_status",
+    "runtime_evidence_reference",
+    "runtime_reason",
+    "runtime_surface",
+    "runtime_evidence_or_substitute_evidence",
+    "runtime_verified_by",
+    "runtime_verified_at",
+    "branch_cleanup_status",
+    "cleanup_eligibility",
+    "cleanup_required_actions",
+    "cleanup_evidence_reference",
+    "lane_closure_ready",
+    "blocking_findings",
+    "verified_by",
+    "verified_at"
+  ];
+
+  // ── Helpers ────────────────────────────────────────────────────────────────────
+
+  function extractYamlTopLevelKeys(sectionContent) {
+    const yamlBlock = sectionContent.match(/```yaml[\s\S]*?```/);
+    if (!yamlBlock) return [];
+    const keys = [];
+    for (const line of yamlBlock[0].split("\n")) {
+      const m = line.match(/^(\w[\w_-]*)\s*:/);
+      if (m) keys.push(m[1]);
+    }
+    return keys;
+  }
+
+  function validateRouteFields(keys, routeLabel) {
+    const missing = [];
+    for (const f of mandatoryPostMergeFields) {
+      if (!keys.includes(f)) missing.push(f);
+    }
+    check(`route-${routeLabel}-all-mandatory-fields`, missing.length === 0,
+      `POST_MERGE_QUEUE.md: ${routeLabel} missing mandatory fields: ${missing.join(", ")}`);
+    const seen = {};
+    const dupes = [];
+    for (const k of keys) {
+      if (mandatoryPostMergeFields.includes(k)) {
+        if (seen[k]) dupes.push(k);
+        seen[k] = true;
+      }
+    }
+    check(`route-${routeLabel}-no-duplicate-mandatory`, dupes.length === 0,
+      `POST_MERGE_QUEUE.md: ${routeLabel} has duplicate mandatory fields: ${dupes.join(", ")}`);
+  }
+
+  function extractOperativePRMergedStateAssignments(content) {
+    const results = [];
+    for (const line of content.split("\n")) {
+      const m = line.match(/^pr_merged_state:\s*(.+)$/);
+      if (m) {
+        results.push(m[1].replace(/"/g, "").replace(/'/g, "").trim());
+      }
+    }
+    return results;
+  }
+
+  function extractOperativeMergeCommitShaAssignments(content) {
+    const results = [];
+    for (const line of content.split("\n")) {
+      const m = line.match(/^merge_commit_sha:\s*(.+)$/);
+      if (m) results.push(m[1].replace(/"/g, "").replace(/'/g, "").trim());
+    }
+    return results;
+  }
+
+  function normalizeMarkdownHeadingText(raw) {
+    return String(raw).replace(/^\s*#{1,6}\s*/, "").trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  const CANONICAL_POST_REVERT_HEADING = "post-revert context";
+
+  function isPostRevertContextHeading(raw) {
+    return normalizeMarkdownHeadingText(raw) === CANONICAL_POST_REVERT_HEADING;
+  }
+
+  function extractOperativePRMergedStateAssignmentsWithContext(content) {
+    const results = [];
+    const lines = content.split("\n");
+    let currentHeading = null;
+    let inFencedCode = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^\s*```/.test(line)) {
+        inFencedCode = !inFencedCode;
+      }
+      const headingMatch = !inFencedCode && /^\s*#{1,6}\s+(.*)$/.exec(line);
+      if (headingMatch) {
+        currentHeading = headingMatch[1].trim();
+        continue;
+      }
+      const m = line.match(/^pr_merged_state:\s*(.+)$/);
+      if (m) {
+        const value = m[1].replace(/"/g, "").replace(/'/g, "").trim();
+        results.push({
+          value,
+          line: i + 1,
+          heading: currentHeading,
+          postRevertContext: isPostRevertContextHeading(currentHeading)
+        });
+      }
+    }
+    return results;
+  }
+
+  // ── File reads ─────────────────────────────────────────────────────────────────
+
+  const queue = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/POST_MERGE_QUEUE.md"), "utf-8");
+  const schema = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/MESSAGE_SCHEMA.md"), "utf-8");
+  const handoff = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/HANDOFF_PROTOCOL.md"), "utf-8");
+  const ledger = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/TASK_LEDGER.md"), "utf-8");
+  const sm = fs.readFileSync(path.join(ROOT, "docs/pnpd/orchestrator-state-machine.md"), "utf-8");
+  const uep = fs.readFileSync(path.join(ROOT, "docs/pnpd/unified-execution-plan-and-taste-gate-design.md"), "utf-8");
+  const layer3 = fs.readFileSync(path.join(ROOT, "docs/review-audit-layer/LAYER_3_CODEX_PRE_MERGE_AUDIT.md"), "utf-8");
+  const layer4 = fs.readFileSync(path.join(ROOT, "docs/review-audit-layer/LAYER_4_CODEX_POST_MERGE_AUDIT.md"), "utf-8");
+  const template = fs.readFileSync(path.join(ROOT, "templates/post-merge-audit/post-merge-template.yaml"), "utf-8");
+  const checklist = fs.readFileSync(path.join(ROOT, "templates/pr-audit/audit-checklist.yaml"), "utf-8");
+  const dlog = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/DECISION_LOG.md"), "utf-8");
+
+  // ── Section-specific extracts ──────────────────────────────────────────────────
+
+  const example1 = dlog.match(/### Example 1[\s\S]*?(?=### Example \d|$)/);
+  const example2 = dlog.match(/### Example 2[\s\S]*?(?=### Example \d|$)/);
+  const routeA = queue.match(/Post-Merge Audit Result Template[\s\S]*?(?=Post-Merge Audit Result With Issues|$)/);
+  const routeB = queue.match(/Post-Merge Audit Result With Issues[\s\S]*?(?=## Rollback|## |$)/);
+  const mappingA = sm.match(/Mapping A[\s\S]*?(?=Mapping B\b|$)/);
+  const mappingB = sm.match(/Mapping B[\s\S]*?(?=####|# |$)/);
+
+  // ── Lifecycle status: no CODEX_AUDIT_COMPLETED_WITH_CAVEATS ────────────────────
+
+  const lifecycleFiles = [
+    "docs/agent-bridge/AUDIT_QUEUE.md",
+    "docs/review-audit-layer/LAYER_3_CODEX_PRE_MERGE_AUDIT.md",
+    "docs/pnpd/unified-execution-plan-and-taste-gate-design.md",
+    "docs/agent-bridge/AGENT_REGISTRY.md",
+    "docs/governance/ROLES.md"
+  ];
+  for (const f of lifecycleFiles) {
+    const c = countOccurrences(f, /CODEX_AUDIT_COMPLETED_WITH_CAVEATS/g);
+    check(`lifecycle-no-caveats-${f.replace(/[/.]/g, "-")}`, c === 0,
+      `${f}: contains ${c} occurrence(s) of CODEX_AUDIT_COMPLETED_WITH_CAVEATS; must be 0`);
+  }
+
+  // ── V: ARES-001 uses CODEX_AUDIT_COMPLETED + PASS_WITH_CAVEATS ─────────────────
+
+  const ares1 = fs.readFileSync(path.join(ROOT, "docs/agent-bridge/AUDIT_QUEUE.md"), "utf-8");
+  const ares1Codex = ares1.match(/audit_result_id: "ARES-001"[\s\S]*?codex_status: "([^"]+)"/);
+  check("V-ares1-codex-found", ares1Codex !== null,
+    "AUDIT_QUEUE.md: ARES-001 codex_status not found");
+  check("V-ares1-codex-value", ares1Codex !== null && ares1Codex[1] === "CODEX_AUDIT_COMPLETED",
+    `AUDIT_QUEUE.md: ARES-001 codex_status is "${ares1Codex ? ares1Codex[1] : "not found"}", expected CODEX_AUDIT_COMPLETED`);
+  const ares1Outcome = ares1.match(/audit_result_id: "ARES-001"[\s\S]*?audit_outcome: "([^"]+)"/);
+  check("V-ares1-outcome", ares1Outcome !== null && ares1Outcome[1] === "PASS_WITH_CAVEATS",
+    `AUDIT_QUEUE.md: ARES-001 audit_outcome is "${ares1Outcome ? ares1Outcome[1] : "not found"}", expected PASS_WITH_CAVEATS`);
+
+  // ── W: ARES-002 uses CODEX_AUDIT_COMPLETED + PASS ──────────────────────────────
+
+  const ares2Outcome = ares1.match(/audit_result_id: "ARES-002"[\s\S]*?audit_outcome: "([^"]+)"/);
+  check("W-ares2-outcome-found", ares2Outcome !== null,
+    "AUDIT_QUEUE.md: ARES-002 not found");
+  check("W-ares2-outcome-value", ares2Outcome !== null && ares2Outcome[1] === "PASS",
+    `AUDIT_QUEUE.md: ARES-002 audit_outcome is "${ares2Outcome ? ares2Outcome[1] : "not found"}", expected PASS`);
+  const ares2Codex = ares1.match(/audit_result_id: "ARES-002"[\s\S]*?codex_status: "([^"]+)"/);
+  check("W-ares2-codex", ares2Codex !== null && ares2Codex[1] === "CODEX_AUDIT_COMPLETED",
+    `AUDIT_QUEUE.md: ARES-002 codex_status is "${ares2Codex ? ares2Codex[1] : "not found"}", expected CODEX_AUDIT_COMPLETED`);
+
+  // ── TASK_LEDGER: IMPLEMENTED / CANCELLED ───────────────────────────────────────
+
+  check("ledger-no-all-commits-staged", !/All commits staged/.test(ledger),
+    "TASK_LEDGER.md: IMPLEMENTED evidence still uses 'All commits staged'");
+  check("ledger-scoped-changes", /ll scoped changes committed/i.test(ledger),
+    "TASK_LEDGER.md: IMPLEMENTED evidence missing 'all scoped changes committed'");
+  check("ledger-clean-worktree", /clean worktree/.test(ledger),
+    "TASK_LEDGER.md: IMPLEMENTED evidence missing 'clean worktree'");
+  check("ledger-commit-list", /commit list/.test(ledger),
+    "TASK_LEDGER.md: IMPLEMENTED evidence missing 'commit list'");
+  check("ledger-cancelled-rvr", /runtime_verification_reached/.test(ledger),
+    "TASK_LEDGER.md: CANCELLED missing runtime_verification_reached");
+
+  // ── PR1 Repair: REQUEST_CHANGES routing for Gate 5/6 failure sources ─────────
+
+  check("ledger-rc-top-level-rule",
+    /IN_PROGRESS \| SELF_REVIEWED \| HERMES_VERIFIED \| CODEX_AUDIT_REQUESTED \| CODEX_AUDIT_COMPLETED \| OWNER_PR_AUTHORIZED \| PR_OPENED \| OWNER_MERGE_APPROVED → REQUEST_CHANGES/.test(ledger),
+    "TASK_LEDGER.md: top-level → REQUEST_CHANGES rule missing Gate 5/6 failure-source states (SELF_REVIEWED, HERMES_VERIFIED, CODEX_AUDIT_REQUESTED, CODEX_AUDIT_COMPLETED)");
+
+  const rcStateSections = {};
+  for (const st of ["SELF_REVIEWED", "HERMES_VERIFIED", "CODEX_AUDIT_REQUESTED", "CODEX_AUDIT_COMPLETED", "REQUEST_CHANGES"]) {
+    const m = ledger.match(new RegExp(`### ${st}[\\s\\S]*?(?=\\n### )`));
+    rcStateSections[st] = m ? m[0] : "";
+  }
+  check("ledger-rc-self-reviewed-allowed", /Allowed next states:.*REQUEST_CHANGES/.test(rcStateSections.SELF_REVIEWED),
+    "TASK_LEDGER.md: SELF_REVIEWED allowed next states missing REQUEST_CHANGES");
+  check("ledger-rc-hermes-allowed", /Allowed next states:.*REQUEST_CHANGES/.test(rcStateSections.HERMES_VERIFIED),
+    "TASK_LEDGER.md: HERMES_VERIFIED allowed next states missing REQUEST_CHANGES");
+  check("ledger-rc-codex-requested-allowed", /Allowed next states:.*REQUEST_CHANGES/.test(rcStateSections.CODEX_AUDIT_REQUESTED),
+    "TASK_LEDGER.md: CODEX_AUDIT_REQUESTED allowed next states missing REQUEST_CHANGES");
+  check("ledger-rc-codex-completed-allowed", /Allowed next states:.*REQUEST_CHANGES/.test(rcStateSections.CODEX_AUDIT_COMPLETED),
+    "TASK_LEDGER.md: CODEX_AUDIT_COMPLETED allowed next states missing REQUEST_CHANGES");
+  check("ledger-rc-predecessors", /Allowed predecessors:.*(?:`SELF_REVIEWED`|`HERMES_VERIFIED`|`CODEX_AUDIT_REQUESTED`|`CODEX_AUDIT_COMPLETED`)/.test(rcStateSections.REQUEST_CHANGES),
+    "TASK_LEDGER.md: REQUEST_CHANGES allowed predecessors missing Gate 5/6 failure-source states");
+  check("ledger-rc-rule-3", /REQUEST_CHANGES` can be entered only from `IN_PROGRESS`, `SELF_REVIEWED`/.test(ledger),
+    "TASK_LEDGER.md: State Transition Rule 3 missing Gate 5/6 failure-source states");
+
+  // ── K, L: Owner routing ────────────────────────────────────────────────────────
+
+  check("K-owner-pr-authorization", !/\bpr_authorization\b/.test(sm) || /owner_pr_authorization/.test(sm),
+    "orchestrator-state-machine.md: contains bare 'pr_authorization' without owner_ prefix");
+  check("L-owner-merge-authorization", !/\bmerge_authorization\b/.test(sm) || /owner_merge_authorization/.test(sm),
+    "orchestrator-state-machine.md: contains bare 'merge_authorization' without owner_ prefix");
+
+  // ── M: pending_owner_decision_type values ──────────────────────────────────────
+
+  check("M-pending-owner-type-pr", /pending_owner_decision_type.*owner_pr_authorization/.test(sm),
+    "orchestrator-state-machine.md: missing pending_owner_decision_type = owner_pr_authorization");
+  check("M-pending-owner-type-merge", /pending_owner_decision_type.*owner_merge_authorization/.test(sm),
+    "orchestrator-state-machine.md: missing pending_owner_decision_type = owner_merge_authorization");
+
+  // ── N: Gate 7 mapping (Mapping A) ──────────────────────────────────────────────
+
+  check("N-mapping-a-exists", mappingA !== null,
+    "orchestrator-state-machine.md: Mapping A (Gate 7) section not found");
+  if (mappingA) {
+    check("N-mapping-a-coded-to-owner-pr", /CODEX_AUDIT_COMPLETED[\s\S]*OWNER_PR_AUTHORIZED/.test(mappingA[0]),
+      "orchestrator-state-machine.md: Mapping A missing CODEX_AUDIT_COMPLETED → OWNER_PR_AUTHORIZED");
+    check("N-mapping-a-merge-false", /merge_authority.*false/.test(mappingA[0]),
+      "orchestrator-state-machine.md: Mapping A missing merge_authority = false");
+  }
+
+  // ── O: Gate 9 mapping (Mapping B) ──────────────────────────────────────────────
+
+  check("O-mapping-b-exists", mappingB !== null,
+    "orchestrator-state-machine.md: Mapping B (Gate 9) section not found");
+  if (mappingB) {
+    check("O-mapping-b-pr-opened-to-approved", /PR_OPENED[\s\S]*OWNER_MERGE_APPROVED/.test(mappingB[0]),
+      "orchestrator-state-machine.md: Mapping B missing PR_OPENED → OWNER_MERGE_APPROVED");
+  }
+
+  // ── P: No owner_pr_authorization → APPROVED_FOR_MERGE ─────────────────────────
+
+  check("P-no-pr-to-merge", !/owner_pr_authorization.*APPROVED_FOR_MERGE/.test(sm),
+    "orchestrator-state-machine.md: contains owner_pr_authorization → APPROVED_FOR_MERGE mapping (must not exist)");
+
+  // ── High-risk enum: Layer 4 and Queue parity ───────────────────────────────────
+
+  check("layer4-production-integration", /production_integration/.test(layer4),
+    "LAYER_4.md: high-risk enum missing production_integration");
+  for (const cat of ["auth", "domain_data", "production_integration", "ai_safety", "rules_security"]) {
+    check(`enum-parity-layer4-${cat}`, layer4.includes(cat),
+      `LAYER_4.md: high-risk enum missing "${cat}"`);
+    check(`enum-parity-queue-${cat}`, queue.includes(cat),
+      `POST_MERGE_QUEUE.md: high-risk enum missing "${cat}"`);
+  }
+
+  // ── Post-merge template ────────────────────────────────────────────────────────
+
+  check("template-pr-merged-state", /merged.*reverted_after_merge/.test(template),
+    "post-merge-template.yaml: pr_merged_state not using 'merged / reverted_after_merge'");
+  check("template-no-old-phrasing", !/Merged, closed, or reverted/.test(template),
+    "post-merge-template.yaml: still contains 'Merged, closed, or reverted'");
+
+  const fieldTableSection = template.match(/^\| # \| Category.*(?:\n\|.*)*?(?=\n\n\*\*Rules)/m);
+  const fieldTableRows = fieldTableSection ? (fieldTableSection[0].match(/^\| \d+ \|/gm) || []).length : 0;
+  check("B-template-22-fields", fieldTableRows === 22,
+    `post-merge-template.yaml: expected 22 field rows in Layer 4 table, found ${fieldTableRows}`);
+
+  check("template-runtime-ref", /runtime_evidence_reference/.test(template) || /Runtime Evidence Reference/.test(template),
+    "post-merge-template.yaml: missing runtime_evidence_reference");
+  check("template-runtime-substitute", /runtime_evidence_or_substitute_evidence/.test(template) || /Runtime Evidence \/ Substitute Evidence/.test(template),
+    "post-merge-template.yaml: missing runtime_evidence_or_substitute_evidence");
+
+  // ── REPAIR 3: Audit checklist — 13 named semantic checks ──────────────────────
+
+  check("chk-section-exists", /Head SHA Integrity/.test(checklist),
+    "audit-checklist.yaml: missing Head SHA Integrity section");
+  check("chk-audited-head-sha-mentioned", /audited_head_sha/.test(checklist) || /audited.*head.*sha/i.test(checklist),
+    "audit-checklist.yaml: missing audited_head_sha binding");
+
+  check("chk-1-diff-bound", /diff uses.*audited_base_sha.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 1 missing diff bound to audited_base_sha...audited_head_sha");
+  check("chk-2-ci-head-bound", /CI workflow head equals.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 2 missing CI workflow head equals audited_head_sha");
+  check("chk-3-required-checks-bound", /required status check identifies.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 3 missing required checks bound to audited_head_sha");
+  check("chk-4-runtime-evidence-bound", /Runtime evidence identifies.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 4 missing runtime evidence bound to audited_head_sha");
+  check("chk-5-runtime-na-sub-bound", /Runtime N\/A substitute evidence identifies.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 5 missing N/A substitute evidence bound to audited_head_sha");
+  check("chk-6-audit-result-bound", /Codex audit result identifies.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 6 missing audit result bound to audited_head_sha");
+  check("chk-7-audit-verdict-bound", /Codex verdict identifies.*audited_head_sha/.test(checklist),
+    "audit-checklist.yaml: item 7 missing audit verdict bound to audited_head_sha");
+  check("chk-8-comparison-base-bound", /Comparison base equals.*audited_base_sha/.test(checklist),
+    "audit-checklist.yaml: item 8 missing comparison base bound to audited_base_sha");
+  check("chk-9-different-sha-invalid", /Evidence from a different SHA is invalid/.test(checklist),
+    "audit-checklist.yaml: item 9 missing different-SHA evidence invalidation");
+  check("chk-10-base-sha-change-invalidates", /Base SHA change invalidates this checklist/.test(checklist),
+    "audit-checklist.yaml: item 10 missing base-SHA change invalidation");
+  check("chk-11-head-sha-change-invalidates", /Head SHA change invalidates this checklist/.test(checklist),
+    "audit-checklist.yaml: item 11 missing head-SHA change invalidation");
+  check("chk-12-scope-change-invalidates", /Material scope change invalidates this checklist/.test(checklist),
+    "audit-checklist.yaml: item 12 missing material-scope change invalidation");
+  check("chk-13-invalidation-requires-fresh", /Invalidation requires fresh applicable runtime evidence/.test(checklist),
+    "audit-checklist.yaml: item 13 missing invalidation-requires-fresh");
+
+  const shaItems = checklist.match(/- \[ \] \d+\./g);
+  check("chk-supplementary-count-13", shaItems !== null && shaItems.length === 13,
+    `audit-checklist.yaml: expected 13 numbered SHA-binding checklist items, found ${shaItems ? shaItems.length : 0}`);
+
+  // ── REPAIR 1: Route A/B field-level validation ────────────────────────────────
+
+  check("route-a-section-exists", routeA !== null,
+    "POST_MERGE_QUEUE.md: Route A section not found");
+  if (routeA) {
+    const keysA = extractYamlTopLevelKeys(routeA[0]);
+    validateRouteFields(keysA, "A");
+    const aYaml = routeA[0].match(/```yaml[\s\S]*?```/);
+    if (aYaml) {
+      check("route-a-blocking-findings-empty", /blocking_findings:\s*\[\s*\]/.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A blocking_findings must be empty");
+      check("route-a-next-state-branch-cleanup", /next_state:\s*"?BRANCH_CLEANUP"?/.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A next_state must be BRANCH_CLEANUP");
+      check("route-a-remediation-false", /remediation_required:\s*"?false"?/.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A remediation_required must be false");
+      check("route-a-lane-closure-false", /lane_closure_ready:\s*"?false"?/.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A lane_closure_ready must be false");
+      check("route-a-merged-state-merged", /^pr_merged_state:\s*"?merged"?\s*$/m.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A pr_merged_state must equal 'merged'");
+      check("route-a-no-reverted-after-merge", !/^pr_merged_state:\s*"?reverted_after_merge"?\s*$/m.test(aYaml[0]),
+        "POST_MERGE_QUEUE.md: Route A must not use pr_merged_state 'reverted_after_merge'");
+    }
+  }
+
+  check("route-b-section-exists", routeB !== null,
+    "POST_MERGE_QUEUE.md: Route B section not found");
+  if (routeB) {
+    const keysB = extractYamlTopLevelKeys(routeB[0]);
+    validateRouteFields(keysB, "B");
+    const bYaml = routeB[0].match(/```yaml[\s\S]*?```/);
+    if (bYaml) {
+      check("route-b-blocking-findings-non-empty", /blocking_findings:\s*\n\s+-/.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B blocking_findings must be non-empty");
+      check("route-b-next-state-blocked", /next_state:\s*"?BLOCKED"?/.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B next_state must be BLOCKED");
+      check("route-b-remediation-true", /remediation_required:\s*"?true"?/.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B remediation_required must be true");
+      check("route-b-cleanup-ineligible", /cleanup_eligibility:\s*"?ineligible"?/.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B cleanup_eligibility must be ineligible");
+      check("route-b-lane-closure-false", /lane_closure_ready:\s*"?false"?/.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B lane_closure_ready must be false");
+      check("route-b-merged-state-merged", /^pr_merged_state:\s*"?merged"?\s*$/m.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B pr_merged_state must equal 'merged'");
+      check("route-b-no-reverted-after-merge", !/^pr_merged_state:\s*"?reverted_after_merge"?\s*$/m.test(bYaml[0]),
+        "POST_MERGE_QUEUE.md: Route B must not use pr_merged_state 'reverted_after_merge'");
+    }
+  }
+
+  check("route-b-no-config-drift", !/Minor config\.py drift/.test(queue),
+    "POST_MERGE_QUEUE.md: Route B still contains non-blocking config drift example");
+  check("route-b-blocking-finding-text", /Auth session/.test(queue) || /CRITICAL/.test(queue),
+    "POST_MERGE_QUEUE.md: Route B missing genuinely blocking finding");
+
+  // ── B-03: POST_MERGE_QUEUE 22-field table + YAML block ────────────────────────
+
+  check("B03-table-pr-identity", /\| PR identity \|.*pr_number.*pr_url.*pr_merged_state/.test(queue),
+    "POST_MERGE_QUEUE.md: B-03 missing PR identity row in 22-field table");
+  check("B03-table-runtime-evidence", /\| Runtime evidence \|.*runtime_evidence_or_substitute_evidence/.test(queue),
+    "POST_MERGE_QUEUE.md: B-03 missing runtime_evidence_or_substitute_evidence in table");
+  check("B03-yaml-block", /# Mandatory 22-field post-merge audit result record/.test(queue),
+    "POST_MERGE_QUEUE.md: B-03 missing 22-field YAML block");
+
+  check("B-queue-22-fields", /22 mandatory fields/.test(queue),
+    "POST_MERGE_QUEUE.md: missing '22 mandatory fields'");
+
+  // ── REPAIR 2: Context-sensitive pr_merged_state value validation ──────────────
+  // Initial post-merge audit contexts (Route A, Route B, Schema 10, post-merge
+  // result) record that the PR was merged, so `pr_merged_state` MUST equal
+  // `merged` there. `reverted_after_merge` is accepted only when the operative
+  // assignment is structurally contained under a canonical `Post-Revert Context`
+  // heading (case/whitespace normalized; no case-sensitivity policy exists in
+  // this repo, so normalization is safe). Context is bound to the containing
+  // Markdown heading identity — ordinary prose that merely mentions post-revert
+  // must never create post-revert context, and there is no repository-wide
+  // substring allowlist. Uppercase `MERGED` is rejected everywhere. The Gate 10
+  // fixture suite below locks these semantics.
+
+  const mergedStateFiles = [
+    { name: "POST_MERGE_QUEUE.md", content: queue },
+    { name: "MESSAGE_SCHEMA.md", content: schema },
+    { name: "HANDOFF_PROTOCOL.md", content: handoff },
+    { name: "post-merge-template.yaml", content: template }
+  ];
+  let totalOperativeAssignments = 0;
+  const mergedStateAssignments = [];
+  for (const { name, content } of mergedStateFiles) {
+    for (const a of extractOperativePRMergedStateAssignmentsWithContext(content)) {
+      mergedStateAssignments.push({ name, ...a });
+      totalOperativeAssignments++;
+    }
+  }
+  const uppercaseMergedCount = mergedStateAssignments.filter((a) => a.value === "MERGED").length;
+  const revertedAssignments = mergedStateAssignments.filter((a) => a.value === "reverted_after_merge");
+  check("merged-state-operative-assignments-found", totalOperativeAssignments > 0,
+    "No operative pr_merged_state assignments found across 4 files");
+  check("merged-state-no-uppercase-MERGED", uppercaseMergedCount === 0,
+    `${uppercaseMergedCount} operative pr_merged_state assignment(s) still use uppercase MERGED`);
+  let invalidAssignmentIndex = 0;
+  for (const a of mergedStateAssignments) {
+    if (a.value !== "merged" && a.value !== "reverted_after_merge") {
+      invalidAssignmentIndex++;
+      check(`merged-state-invalid-${a.name}-${invalidAssignmentIndex}`, false,
+        `${a.name}: operative pr_merged_state value "${a.value}" is invalid; must be 'merged' or 'reverted_after_merge'`);
+    }
+  }
+  let revertAssignmentIndex = 0;
+  for (const a of revertedAssignments) {
+    revertAssignmentIndex++;
+    check(`merged-state-revert-context-${a.name}-${revertAssignmentIndex}`,
+      a.postRevertContext,
+      `${a.name}: pr_merged_state 'reverted_after_merge' at line ${a.line} is outside a canonical 'Post-Revert Context' heading section; initial Route A/B post-merge audit contexts require 'merged'`);
+  }
+
+  // Check that every result record with pr_merged_state also has merge_commit_sha
+  for (const { name, content } of mergedStateFiles) {
+    const mergedAssignments = extractOperativePRMergedStateAssignments(content);
+    if (mergedAssignments.length > 0) {
+      const shaAssignments = extractOperativeMergeCommitShaAssignments(content);
+      if (name === "post-merge-template.yaml") {
+        check(`merge-sha-${name}-present`, shaAssignments.length > 0,
+          `${name}: no merge_commit_sha assignment found alongside ${mergedAssignments.length} pr_merged_state assignments`);
+      } else {
+        check(`merge-sha-${name}-present`, shaAssignments.length >= mergedAssignments.length,
+          `${name}: expected ≥${mergedAssignments.length} merge_commit_sha assignments (found ${shaAssignments.length}) alongside ${mergedAssignments.length} pr_merged_state assignments`);
+      }
+    }
+  }
+
+  // ── Gate 10 structural regression fixtures ────────────────────────────────────
+  // `reverted_after_merge` is valid only when the operative assignment is
+  // structurally contained in a canonical `Post-Revert Context` heading section.
+  // These fixtures lock heading identity, section containment, and prose
+  // non-inference; a validator that merely rejects the supplied fixtures by
+  // luck is insufficient, so each fixture asserts the full structural verdict.
+
+  const gate10Fixtures = [
+    { id: "g10-1-initial-route-a", expect: "accepted",
+      content: [
+        "## Post-Merge Audit Result Template",
+        "",
+        "pr_merged_state: merged"
+      ].join("\n") },
+    { id: "g10-2-initial-route-b", expect: "accepted",
+      content: [
+        "## Post-Merge Audit Result With Issues",
+        "",
+        "pr_merged_state: merged"
+      ].join("\n") },
+    { id: "g10-3-route-a-reverted", expect: "rejected",
+      content: [
+        "## Post-Merge Audit Result Template",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-4-route-b-reverted", expect: "rejected",
+      content: [
+        "## Post-Merge Audit Result With Issues",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-5-explicit-post-revert-section", expect: "accepted",
+      content: [
+        "## Post-Revert Context",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-6-case-normalized-heading", expect: "accepted",
+      content: [
+        "## POST-REVERT CONTEXT",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-7-field-outside-section", expect: "rejected",
+      content: [
+        "## Post-Revert Context",
+        "",
+        "explanatory content",
+        "",
+        "## Another Section",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-8-prose-bypass", expect: "rejected",
+      content: [
+        "This discussion concerns post-revert behavior.",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-9-misleading-adjacent-heading", expect: "rejected",
+      content: [
+        "## Notes on Post-Revert Behavior",
+        "",
+        "pr_merged_state: reverted_after_merge",
+        "",
+        "## Post-Revert Context",
+        "",
+        "pr_merged_state: merged"
+      ].join("\n") },
+    { id: "g10-10-uppercase-value", expect: "rejected",
+      content: [
+        "## Post-Merge Audit Result Template",
+        "",
+        "pr_merged_state: MERGED"
+      ].join("\n") },
+    { id: "g10-11-prose-bypass-within-section", expect: "rejected",
+      content: [
+        "## Some Section",
+        "",
+        "Observers should consider post-revert outcomes here.",
+        "",
+        "pr_merged_state: reverted_after_merge"
+      ].join("\n") },
+    { id: "g10-12-duplicate-canonical-headings", expect: "accepted",
+      content: [
+        "## Post-Revert Context",
+        "",
+        "pr_merged_state: reverted_after_merge",
+        "",
+        "## Post-Revert Context",
+        "",
+        "pr_merged_state: merged"
+      ].join("\n") }
+  ];
+  for (const fx of gate10Fixtures) {
+    const assignments = extractOperativePRMergedStateAssignmentsWithContext(fx.content);
+    const allValid = assignments.length > 0 && assignments.every((a) =>
+      a.value === "merged" || (a.value === "reverted_after_merge" && a.postRevertContext));
+    const pass = fx.expect === "accepted" ? allValid : !allValid;
+    check(`gate10-fixture-${fx.id}`, pass,
+      `Gate 10 fixture ${fx.id}: expected ${fx.expect} but got ${allValid ? "accepted" : "rejected"} (${assignments.length} operative assignment(s))`);
+  }
+
+  // ── MESSAGE_SCHEMA checks ─────────────────────────────────────────────────────
+
+  check("schema-22-fields", /22 mandatory fields/.test(schema),
+    "MESSAGE_SCHEMA.md: missing '22 mandatory fields' count");
+  check("schema-no-21-fields", !/21 mandatory fields/.test(schema),
+    "MESSAGE_SCHEMA.md: still contains '21 mandatory fields'");
+  const schema6 = schema.match(/audit_result_id: "ARES-001"[\s\S]*?codex_status: "([^"]+)"/);
+  check("schema6-codex-found", schema6 !== null,
+    "MESSAGE_SCHEMA.md: Schema 6 codex_status not found");
+  check("schema6-codex-value", schema6 !== null && schema6[1] === "CODEX_AUDIT_COMPLETED",
+    `MESSAGE_SCHEMA.md: Schema 6 codex_status is "${schema6 ? schema6[1] : "not found"}", expected CODEX_AUDIT_COMPLETED`);
+  const schemaAres001 = schema.match(/codex_audit_reference: "ARES-001"/g);
+  check("schema-8-no-ares001", !schemaAres001 || schemaAres001.length === 0,
+    `MESSAGE_SCHEMA.md: ${schemaAres001 ? schemaAres001.length : 0} ARES-001 ref(s) remain in schemas 8a/8b`);
+  const reqTime = schema.match(/audit_request_id: "PMAR-001"[\s\S]*?timestamp: "([^"]+)"/);
+  const verTime = schema.match(/schema: post_merge_audit_result[\s\S]*?\nverified_at: "([^"]+)"/);
+  if (reqTime && verTime) {
+    const req = new Date(reqTime[1]);
+    const ver = new Date(verTime[1]);
+    check("schema10-timestamp-order", ver > req,
+      `MESSAGE_SCHEMA.md: Schema 10 verified_at (${verTime[1]}) must be after request timestamp (${reqTime[1]})`);
+  }
+  check("F-schema-pr-state-if-any", /pr_state_if_any/.test(schema),
+    "MESSAGE_SCHEMA.md: missing pr_state_if_any distinction");
+
+  // ── HANDOFF_PROTOCOL checks ──────────────────────────────────────────────────
+
+  const dec005Cancellation = handoff.match(/owner_decision_reference: "DEC-005"/g);
+  check("handoff-no-dec005", !dec005Cancellation || dec005Cancellation.length === 0,
+    `HANDOFF_PROTOCOL.md: ${dec005Cancellation ? dec005Cancellation.length : 0} DEC-005 cancellation ref(s) remain`);
+  check("handoff-dec006", /owner_decision_reference: "DEC-006"/.test(handoff),
+    "HANDOFF_PROTOCOL.md: cancellation missing DEC-006");
+
+  // ── PR1 Repair: Schema 8c cancellation reference DEC-006 ──────────────────────
+
+  const schemaDec005Cancellation = schema.match(/owner_decision_reference: "DEC-005"/g);
+  check("schema8c-no-dec005", !schemaDec005Cancellation || schemaDec005Cancellation.length === 0,
+    `MESSAGE_SCHEMA.md: ${schemaDec005Cancellation ? schemaDec005Cancellation.length : 0} owner_decision_reference "DEC-005" remain(s) (DEC-005 is reserved for reject-merge; owner cancellation uses DEC-006)`);
+  check("schema8c-dec006", /schema: owner_cancellation[\s\S]*?owner_decision_reference: "DEC-006"/.test(schema),
+    "MESSAGE_SCHEMA.md: Schema 8c owner cancellation missing owner_decision_reference \"DEC-006\"");
+  check("handoff-no-pre-gate4", !/before Gate 4.*Runtime Not Applicable/.test(handoff),
+    "HANDOFF_PROTOCOL.md: still has pre-Gate-4 Runtime Not Applicable text");
+  check("handoff-runtime-verification", /runtime_verification_reached/.test(handoff),
+    "HANDOFF_PROTOCOL.md: missing runtime_verification_reached in cancellation");
+
+  // ── B-01: HANDOFF_PROTOCOL cancellation inventory ──────────────────────────────
+
+  check("B01-handoff-inventory-rvr", /runtime_verification_reached/.test(handoff),
+    "HANDOFF_PROTOCOL.md: B-01 cancellation inventory missing runtime_verification_reached");
+  const cancelRow = handoff.match(/\| Owner → Cancelled.*\|/);
+  check("B01-cancel-row-found", cancelRow !== null,
+    "HANDOFF_PROTOCOL.md: B-01 Owner → Cancelled row not found");
+  if (cancelRow) {
+    check("B01-cancel-row-rvr", /Only when.*runtime_verification_reached/.test(cancelRow[0]),
+      `HANDOFF_PROTOCOL.md: B-01 Owner → Cancelled row missing 'Only when runtime_verification_reached': "${cancelRow[0]}"`);
+  }
+
+  // ── Q: HANDOFF_PROTOCOL material-change rule ───────────────────────────────────
+
+  check("Q-handoff-material-change", /material change to the base SHA, head SHA, or PR scope/.test(handoff),
+    "HANDOFF_PROTOCOL.md: missing 'base SHA, head SHA, or PR scope' material-change rule");
+
+  const mergeHandoffRule = handoff.match(/- A material change to the base SHA, head SHA, or PR scope invalidates this handoff/);
+  check("B07-merge-handoff-rule", mergeHandoffRule !== null,
+    "HANDOFF_PROTOCOL.md: merge handoff missing material-change rule");
+
+  // ── LAYER_3: all six fields are evidence ───────────────────────────────────────
+
+  check("layer3-no-process-split", !/Process Check Fields/.test(layer3),
+    "LAYER_3.md: still has 'Process Check Fields' split");
+  check("layer3-unified-evidence", !/Evidence Fields/.test(layer3) || /All six are Runtime Truth evidence/.test(layer3),
+    "LAYER_3.md: evidence/process split not unified");
+
+  // ── LAYER_4 22 fields ──────────────────────────────────────────────────────────
+
+  check("layer4-22-mandatory", /22 mandatory/.test(layer4),
+    "LAYER_4.md: missing '22 mandatory'");
+
+  // ── R, S: UEP Gate 8/9 material-change ─────────────────────────────────────────
+
+  const uep22Occurrences = (uep.match(/22 mandatory/g) || []).length;
+  check("uep-22-mandatory", uep22Occurrences >= 2,
+    `UEP.md: expected ≥2 occurrences of '22 mandatory', found ${uep22Occurrences}`);
+  check("R-uep-gate8-rule", /material change to the base SHA, head SHA, or PR scope/.test(uep),
+    "UEP.md: missing 'base SHA, head SHA, or PR scope'");
+  const gate9Invalidation = uep.match(/\| Head-Change Invalidation \|.*?\|/);
+  check("S-gate9-row-found", gate9Invalidation !== null,
+    "UEP.md: Gate 9 Head-Change Invalidation row not found");
+  if (gate9Invalidation) {
+    check("S-gate9-material-change", /material change to the base SHA, head SHA, or PR scope/.test(gate9Invalidation[0]),
+      "UEP.md: Gate 9 missing 'base SHA, head SHA, or PR scope'");
+    check("S-gate9-must-not-merge", /must not merge/.test(gate9Invalidation[0]),
+      "UEP.md: Gate 9 missing 'must not merge'");
+  }
+
+  // ── T: TASK_LEDGER Material-Change Rule ────────────────────────────────────────
+
+  check("T-ledger-material-change-header", /Material-Change Rule/.test(ledger),
+    "TASK_LEDGER.md: missing 'Material-Change Rule' header");
+  check("T-ledger-stale-owner-pr", /OWNER_PR_AUTHORIZED.*must not open/.test(ledger),
+    "TASK_LEDGER.md: stale OWNER_PR_AUTHORIZED must not open PR");
+  check("T-ledger-stale-owner-merge", /OWNER_MERGE_APPROVED.*must not merge/.test(ledger),
+    "TASK_LEDGER.md: stale OWNER_MERGE_APPROVED must not merge");
+  check("T-ledger-no-new-state", /does not create a new lifecycle state/.test(ledger),
+    "TASK_LEDGER.md: missing 'does not create a new lifecycle state'");
+
+  // ── H, I, J: DECISION_LOG example references ───────────────────────────────────
+
+  check("H-example1-exists", example1 !== null,
+    "DECISION_LOG.md: Example 1 section not found");
+  if (example1) {
+    check("H-example1-ares002", /codex_audit_reference: "ARES-002"/.test(example1[0]),
+      "DECISION_LOG.md: Example 1 must use ARES-002 (clean pass)");
+  }
+
+  check("I-example2-exists", example2 !== null,
+    "DECISION_LOG.md: Example 2 section not found");
+  if (example2) {
+    check("I-example2-ares001", /codex_audit_reference: "ARES-001"/.test(example2[0]),
+      "DECISION_LOG.md: Example 2 must use ARES-001 (caveat-bearing)");
+  }
+
+  if (example1) {
+    check("J-example1-no-ares001", !/codex_audit_reference: "ARES-001"/.test(example1[0]),
+      "DECISION_LOG.md: Example 1 (clean pass) must not reference ARES-001");
+  }
+
+  check("B05-owner-override", /owner_override_accepted/.test(dlog),
+    "DECISION_LOG.md: B-05 missing owner_override_accepted reference");
+
+  // ── B-06: orchestrator-state-machine mapping table header ──────────────────────
+
+  check("B06-mapping-table-header", /pending_owner_decision_type[\s\S]*Orchestrator State[\s\S]*AgentBridge State/.test(sm),
+    "orchestrator-state-machine.md: B-06 missing Owner decision mapping table header");
+
+  // ── Final verdict ──────────────────────────────────────────────────────────────
+
+  if (failures.length > 0) {
+    throw new Error("Governance recovery contract failures:\n  - " + failures.join("\n  - "));
+  }
+
+  console.log(`Governance recovery: ${executedAssertionCount} contract assertions passed`);
+}
 // ── Main ────────────────────────────────────────────────────────────────────────
 
 try {
@@ -6537,6 +7261,12 @@ try {
 
   if (runPhase1qBugForecastSummary) {
     validateBugForecastSummaryPhase();
+  }
+
+  const runGovernanceRecovery = args.phase === "governance-recovery";
+
+  if (runGovernanceRecovery) {
+    validateGovernanceRecoveryPhase();
   }
 
   const runPhase0 = args.phase === null || args.phase === "0" || args.phase === "1b" || args.phase === "1c";

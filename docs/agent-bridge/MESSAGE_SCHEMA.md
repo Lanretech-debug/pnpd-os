@@ -15,7 +15,8 @@ task_id:              # unique task identifier, e.g. "TASK-001"
 project:              # project name, e.g. "example-project"
 branch:               # git branch name
 worktree:             # absolute worktree path
-pr_number:            # GitHub PR number, or "N/A" if no PR yet
+pr_number:            # GitHub PR number — "N/A" only before PR is opened; must be a real PR number from OWNER_MERGE_APPROVED onward
+pr_url:               # GitHub PR URL, required once PR is opened
 current_agent:        # agent currently responsible
 next_agent:           # agent to receive this message
 status:               # current task state from TASK_LEDGER.md
@@ -29,6 +30,13 @@ blockers:             # list of blocker IDs blocking this task
 risk_level:           # LOW | MEDIUM | HIGH | CRITICAL
 codex_status:         # Codex audit status if applicable
 owner_decision_needed: # true | false
+runtime_status:       # Runtime Verified | Runtime Not Verified | Runtime Not Applicable
+runtime_reason:       # Why runtime is or is not applicable
+runtime_surface:      # Classification of affected surface
+runtime_evidence_reference:   # Reference URI or canonical evidence path (mandatory — not an alias for runtime_evidence_or_substitute_evidence)
+runtime_evidence_or_substitute_evidence: # Paths to runtime or substitute evidence
+runtime_verified_by:  # Agent or human who confirmed runtime
+runtime_verified_at:  # ISO 8601 timestamp of runtime verification
 next_action:          # single next action for the receiving agent
 timestamp:            # ISO 8601 UTC, e.g. "2026-06-10T12:00:00Z"
 commit_hash:          # git commit hash at time of message
@@ -95,6 +103,12 @@ evidence:
   - "audits/diff-TASK-001.txt"
 blockers: []
 risk_level: "LOW"
+runtime_status: "Runtime Not Applicable"
+runtime_reason: "Governance-only docs, no executable surface"
+runtime_surface: "Governance templates and protocols"
+runtime_evidence_or_substitute_evidence: "audits/substitute-evidence-TASK-001.md"
+runtime_verified_by: "deepseek"
+runtime_verified_at: "2026-06-10T11:55:00Z"
 codex_status: "PENDING_CODEX_FINAL_AUDIT"
 owner_decision_needed: true
 next_action: "Hermes verify branch, dirty tree, evidence completeness"
@@ -124,6 +138,12 @@ gates_run:
   - "no_secrets_scan"
 gates_skipped:
   - "integration_test"  # reason: docs-only, no runtime
+runtime_status: "Runtime Not Applicable"
+runtime_reason: "Governance-only documentation changes"
+runtime_surface: "AgentBridge protocols and governance templates"
+runtime_evidence_or_substitute_evidence: "npm run validate, npm run dry-run, npm test, git diff --check"
+runtime_verified_by: "deepseek"
+runtime_verified_at: "2026-06-10T11:55:00Z"
 blockers: []
 next_action: "Hermes verify branch, dirty tree, evidence completeness"
 timestamp: "2026-06-10T12:00:00Z"
@@ -160,8 +180,14 @@ checks:
 failed_checks: []
 skipped_checks: []
 blockers: []
+runtime_status: "Runtime Not Applicable"
+runtime_reason: "Governance-only lane, no executable runtime surface"
+runtime_surface: "Governance documentation and templates"
+runtime_evidence_or_substitute_evidence: "npm run validate, npm run dry-run, npm test, git diff --check"
+runtime_verified_by: "deepseek"
+runtime_verified_at: "2026-06-10T11:55:00Z"
 routing_decision: "codex"
-next_action: "Codex formal pre-merge audit of full PR diff"
+next_action: "Codex formal pre-merge audit of full branch/proposed diff"
 evidence_refs:
   - "audits/hermes-verify-TASK-001.md"
 timestamp: "2026-06-10T12:05:00Z"
@@ -189,8 +215,15 @@ evidence:
   - herm_verification: "audits/hermes-verify-TASK-001.md"
   - deepseek_self_review: "audits/self-review-TASK-001.md"
   - task_ledger: "TASK-001"
+  - runtime_evidence: "audits/runtime-evidence-TASK-001.md"
 status: "PENDING_CODEX_FINAL_AUDIT"
-next_action: "Codex audit full PR diff and record result"
+runtime_status: "Runtime Not Applicable"
+runtime_reason: "Governance-only documentation changes"
+runtime_surface: "AgentBridge protocols and governance templates"
+runtime_evidence_or_substitute_evidence: "npm run validate, npm run dry-run, npm test, git diff --check"
+runtime_verified_by: "deepseek"
+runtime_verified_at: "2026-06-10T11:55:00Z"
+next_action: "Codex audit full branch/proposed diff and record result"
 timestamp: "2026-06-10T12:05:00Z"
 commit_hash: "def456abc789"
 ```
@@ -205,7 +238,8 @@ audit_result_id: "ARES-001"
 audit_request_id: "AR-001"
 task_id: "TASK-001"
 auditor: "codex"
-codex_status: "CODEX_APPROVED_WITH_CAVEATS"
+codex_status: "CODEX_AUDIT_COMPLETED"
+audit_outcome: "PASS_WITH_CAVEATS"
 merge_recommendation: "MERGE_OK_OWNER_ACCEPTS_CAVEATS"
 caveats:
   - id: "CV-001"
@@ -221,7 +255,13 @@ findings:
     severity: "PASS"
 change_requests: []
 blockers: []
-next_action: "Owner review caveat CV-001 and decide merge or request wiring now"
+runtime_status: "Runtime Not Applicable"
+runtime_reason: "Governance-only documentation changes with no executable runtime surface"
+runtime_surface: "AgentBridge protocols and governance templates"
+runtime_evidence_or_substitute_evidence: "npm run validate, npm run dry-run, npm test, git diff --check"
+runtime_verified_by: "DeepSeek self-review"
+runtime_verified_at: "2026-06-10T12:10:00Z"
+next_action: "Owner review Codex audit result and authorize PR creation (not merge)"
 timestamp: "2026-06-10T12:15:00Z"
 evidence_refs:
   - "audits/codex-audit-TASK-001.md"
@@ -254,30 +294,92 @@ next_action: "Owner approve environment change or provide Java 17 path"
 
 ---
 
-## Schema 8: Owner Decision
+## Schema 8a: Owner PR Authorization
 
 ```yaml
-schema: owner_decision
+schema: owner_pr_authorization
 decision_id: "DEC-001"
 task_id: "TASK-001"
 owner: "owner"
-decision_type: "accept_caveat"  # approve_merge | reject_merge | request_patch | accept_caveat | override_audit_gate | defer | rollback
-rationale: "Caveat CV-001 (AGENTS.md wiring deferred) is acceptable. Wiring should be a separate small follow-up PR. Proceeding with merge."
-accepted_risks:
-  - "AgentBridge protocol not yet wired into AGENTS.md — low risk, docs-only"
+decision_type: "owner_pr_authorization"
+owner_pr_authorized: true
+pr_creation_only: true
+authorized_branch: "governance/execution-gates-patch"
+authorized_base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
+authorized_head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
+codex_audit_reference: "ARES-002"
+owner_decision_reference: "DEC-001"
+authorized_at: "2026-06-10T12:30:00Z"
+rationale: "Codex audit passed with no caveats. Governance-only scope. PR may be opened."
+accepted_risks: []
 rejected_recommendations: []
-overridden_gates: []
-merge_authorized: true
-merge_authorization:
-  pr_number: "N/A"
-  branch: "example-governance-branch"
-  target: "docs/example-protocol/"
-  timestamp: "2026-06-10T12:30:00Z"
-next_action: "DeepSeek prepare for merge; Codex queue post-merge audit if high-risk"
+next_state: "PR_OPENED"
+next_action: "DeepSeek open PR against main with full lifecycle metadata"
 timestamp: "2026-06-10T12:30:00Z"
 evidence_refs:
-  - "audits/decision-TASK-001.md"
+  - "audits/decision-DEC-001.md"
 ```
+
+## Schema 8b: Owner Merge Authorization
+
+```yaml
+schema: owner_merge_authorization
+decision_id: "DEC-002"
+task_id: "TASK-001"
+owner: "owner"
+decision_type: "owner_merge_authorization"
+owner_merge_approved: true
+pr_number: "PR-001"
+pr_url: "https://github.com/Lanretech-debug/pnpd-os/pull/1"
+base_branch: "main"
+base_sha: "4ba519f10e0f465876e88b8f9cc7ab227cc2bb6b"
+head_branch: "governance/execution-gates-patch"
+head_sha: "26a725577ccda1a43a726b320a70cee3b90bad2a"
+codex_audit_reference: "ARES-002"
+codex_verdict: "CODEX_AUDIT_COMPLETED"
+required_checks_status: "all_passed"
+approved_merge_method: "squash"
+approved_by: "owner"
+owner_decision_reference: "DEC-002"
+approved_at: "2026-06-10T12:45:00Z"
+rationale: "All checks passed. Codex audit completed. PR scope matches approved task. Merge authorized."
+accepted_risks: []
+rejected_recommendations: []
+next_state: "MERGED"
+next_action: "DeepSeek execute merge; Codex queue mandatory post-merge audit"
+timestamp: "2026-06-10T12:45:00Z"
+evidence_refs:
+  - "audits/decision-DEC-002.md"
+```
+
+Every field above is mandatory. `pr_number` cannot be `N/A`. The Codex audit and required checks must apply to the exact `head_sha`. Any material head change invalidates the audit and merge authorization and requires a new audit and Owner merge decision.
+
+## Schema 8c: Owner Cancellation
+
+```yaml
+schema: owner_cancellation
+task_id: "TASK-001"
+decision_type: "owner_cancellation"
+owner_cancelled: true
+owner_decision_reference: "DEC-006"
+cancellation_reason: "Owner ended the lane before merge because its scope is no longer required."
+last_valid_state: "PR_OPENED"
+unresolved_findings:
+  - "LOW: follow-up documentation clarification remains unresolved"
+pr_number_if_any: "PR-001"
+pr_state_if_any: "OPEN"
+branch_name_if_any: "governance/execution-gates-patch"
+branch_state: "retained_pending_safety_cleanup"
+repository_state: "clean_worktree; main unchanged"
+required_safety_cleanup:
+  - "Close the unmerged PR only with separate Owner authority"
+  - "Retain the branch until evidence is archived"
+cancelled_by: "owner"
+cancelled_at: "2026-06-10T15:30:00Z"
+next_state: "CANCELLED"
+```
+
+Only the Owner may authorize this message. Agents may recommend cancellation but cannot authorize it. Cancellation is unsuccessful termination, is neither `PASS` nor `CLOSED`, retains unresolved findings and safety cleanup, is forbidden after `MERGED`, and leaves `CANCELLED` terminal.
 
 ---
 
@@ -290,18 +392,18 @@ task_id: "TASK-001"
 audit_type: "post_merge"
 requested_by: "owner"
 assigned_to: "codex"
-pr_number: "N/A"
-merged_branch: "example-governance-branch"
-target_branch: "docs/example-protocol/"
+pr_number: "PR-001"
+merged_branch: "governance/execution-gates-patch"
+target_branch: "main"
 merge_commit: "ghi789jkl012"
 risk_level: "MEDIUM"
 risk_categories:
   - "rules_security"  # example only — actual risk depends on PR
 reason_for_post_merge_audit: "Owner override accepted; verify merged state in target branch"
-owner_decision_ref: "DEC-001"
+owner_decision_ref: "DEC-002"
 status: "POST_MERGE_AUDIT_REQUESTED"
 next_action: "Codex post-merge audit of merged diff in target branch"
-timestamp: "2026-06-10T12:35:00Z"
+timestamp: "2026-06-10T12:50:00Z"
 ```
 
 ---
@@ -315,6 +417,32 @@ audit_request_id: "PMAR-001"
 task_id: "TASK-001"
 auditor: "codex"
 post_merge_status: "POST_MERGE_VERIFIED"
+post_merge_result: "findings_recorded"
+pr_number: "PR-001"
+pr_url: "https://github.com/Lanretech-debug/pnpd-os/pull/1"
+pr_merged_state: merged
+merge_commit_sha: "ghi789jkl012"
+canonical_main_sha: "ghi789jkl012"
+merged_scope: "matches_approved_scope"
+ci_status: "all_passed"
+runtime_status: "Runtime Not Applicable"
+runtime_evidence_reference: "audits/substitute-evidence-TASK-001.md"
+runtime_reason: "Governance-only merged scope has no executable runtime surface"
+runtime_surface: "Merged governance documentation and template changes"
+runtime_evidence_or_substitute_evidence: "audits/substitute-evidence-TASK-001.md"
+runtime_verified_by: "deepseek"
+runtime_verified_at: "2026-06-10T12:00:00Z"
+branch_cleanup_status: "pending"
+cleanup_eligibility: "eligible"
+cleanup_required_actions:
+  - "Verify one valid cleanup outcome at Gate 11"
+cleanup_evidence_reference: "pending_gate_11"
+lane_closure_ready: false
+blocking_findings: []
+next_state: "BRANCH_CLEANUP"
+remediation_required: false
+verified_by: "codex"
+verified_at: "2026-06-10T13:00:00Z"
 findings:
   - finding: "Merged diff matches approved PR scope"
     severity: "PASS"
@@ -324,10 +452,107 @@ issues_found: []
 rollback_recommended: false
 rollback_rationale: ""
 follow_up_actions: []
-next_action: "Task closed; no further action required"
-timestamp: "2026-06-10T12:45:00Z"
+next_action: "Post-merge verification passed. Branch cleanup is now required. Lane remains open until cleanup evidence recorded."
+timestamp: "2026-06-10T13:00:00Z"
 evidence_refs:
   - "audits/post-merge-audit-TASK-001.md"
+```
+
+The example above is Route A. Route B replaces the route-dependent fields with:
+
+```yaml
+post_merge_result: "findings_recorded"
+blocking_findings:
+  - "<recorded blocker>"
+next_state: "BLOCKED"
+remediation_required: true
+lane_closure_ready: false
+next_action: "Owner records BLOCKED; remediation must complete before a fresh post-merge audit request and Gate 10 execution"
+```
+
+Schema 10 normatively represents the Codex → Owner Post-Merge Audit Result. It records 22 mandatory fields grouped into seven evidence categories: PR identity (`pr_number`, `pr_url`, `pr_merged_state`); merge identity (`merge_commit_sha`, `canonical_main_sha`, `merged_scope`); CI evidence (`ci_status`); runtime evidence (`runtime_status`, `runtime_evidence_reference`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`); cleanup evidence (`branch_cleanup_status`, `cleanup_eligibility`, `cleanup_required_actions`, `cleanup_evidence_reference`); closure evidence (`lane_closure_ready`, `blocking_findings`); and verification attribution (`verified_by`, `verified_at`). `runtime_evidence_reference` is mandatory and distinct from `runtime_evidence_or_substitute_evidence`. `pr_merged_state` MUST be `merged` in this schema; it records whether the PR was merged into the target branch. The separate `pr_state_if_any` field (Schema 8c — Owner Cancellation) tracks arbitrary GitHub PR states and is not interchangeable.
+
+When `runtime_status` is `Runtime Not Applicable`, any missing canonical runtime field makes the result incomplete and prohibits routing. `next_state: BRANCH_CLEANUP` is valid only when `blocking_findings` is empty; non-blocking entries may remain in `findings`. A non-empty `blocking_findings` requires `next_state: BLOCKED`, `remediation_required: true`, and a matching single `next_action`. Gate 11 is forbidden while remediation is required. After remediation, a fresh post-merge audit request and Gate 10 execution are mandatory; the previous `POST_MERGE_VERIFIED` record cannot be reused. No `POST_MERGE_ISSUES_FOUND` lifecycle state is permitted.
+
+Gate 10 keeps `lane_closure_ready: false`, may record cleanup as pending, does not perform normal branch deletion, and does not close the lane. Gate 11 must perform or independently verify `completed`, `already_absent`, or `not_applicable_with_reason` cleanup before setting `lane_closure_ready: true` and permitting `BRANCH_CLEANUP` to transition to `CLOSED`.
+
+---
+
+## Schema 11a: Branch Cleanup Record — completed
+
+A feature branch existed and was removed.
+
+```yaml
+schema: branch_cleanup_record
+cleanup_id: "CLN-001"
+task_id: "TASK-001"
+pr_number: "PR-001"
+branch_cleanup_status: "completed"
+branch_previously_existed: true
+branch_name: "governance/execution-gates-patch"
+deletion_command_or_authoritative_source: "git branch -d governance/execution-gates-patch && git push origin --delete governance/execution-gates-patch"
+local_branch_status_before: "exists"
+local_branch_status_after: "deleted"
+remote_branch_status_before: "exists"
+remote_branch_status_after: "deleted"
+canonical_main_sha: "ghi789jkl012"
+merged_head_sha: "ce363883c5ff1472bc926cb3e2376ce59d85d22c"
+merged_head_reachable_from_main: true
+verified_by: "opencode"
+verified_at: "2026-07-10T12:00:00Z"
+next_action: "Record BRANCH_CLEANUP state in task ledger; lane ready for CLOSED"
+timestamp: "2026-07-10T12:00:00Z"
+evidence_refs:
+  - "audits/cleanup-CLN-001.md"
+```
+
+## Schema 11b: Branch Cleanup Record — already_absent
+
+A feature branch was automatically or previously removed before Gate 11.
+
+```yaml
+schema: branch_cleanup_record
+cleanup_id: "CLN-002"
+task_id: "TASK-001"
+pr_number: "PR-001"
+branch_cleanup_status: "already_absent"
+branch_name: "governance/execution-gates-patch"
+independent_absence_verification: "git branch -a | grep governance/execution-gates-patch || echo 'absent'"
+automatic_or_prior_deletion_evidence: "GitHub auto-delete-branch setting enabled; branch absent from remote"
+local_branch_status: "absent"
+remote_branch_status: "absent"
+canonical_main_sha: "ghi789jkl012"
+merged_head_sha: "ce363883c5ff1472bc926cb3e2376ce59d85d22c"
+merged_head_reachable_from_main: true
+verified_by: "opencode"
+verified_at: "2026-07-10T12:05:00Z"
+next_action: "Record BRANCH_CLEANUP state in task ledger; lane ready for CLOSED"
+timestamp: "2026-07-10T12:05:00Z"
+evidence_refs:
+  - "audits/cleanup-CLN-002.md"
+```
+
+## Schema 11c: Branch Cleanup Record — not_applicable_with_reason
+
+No feature branch existed for the lane.
+
+```yaml
+schema: branch_cleanup_record
+cleanup_id: "CLN-003"
+task_id: "TASK-001"
+pr_number: "PR-001"
+branch_cleanup_status: "not_applicable_with_reason"
+explicit_reason: "Changes delivered via direct commit to main; no feature branch was created"
+evidence_no_feature_branch_was_used: "git log --oneline main | grep <commit>"
+change_delivery_method: "direct commit to main"
+canonical_main_sha: "ghi789jkl012"
+relevant_commit_or_merge_evidence: "abc123def456"
+verified_by: "opencode"
+verified_at: "2026-07-10T12:10:00Z"
+next_action: "Record BRANCH_CLEANUP state in task ledger; lane ready for CLOSED"
+timestamp: "2026-07-10T12:10:00Z"
+evidence_refs:
+  - "audits/cleanup-CLN-003.md"
 ```
 
 ---

@@ -16,6 +16,8 @@
 | **Task ID** | |
 | **Auditor** | |
 | **Date** | |
+| **Audited Head SHA** | |
+| **Audited Base SHA** | |
 
 ---
 
@@ -54,7 +56,22 @@
 
 ---
 
-### 4. Secret Scan
+### 4. Runtime Verification
+
+- [ ] Runtime smoke test completed and passed on working branch (or `Runtime Not Applicable` declared)
+- [ ] Runtime evidence documented (screenshots, logs, terminal output, or HTTP responses) — or substitute evidence for N/A lanes
+- [ ] Runtime evidence proves the app starts and the affected flows respond correctly — or substitute evidence confirms correctness
+- [ ] Runtime status declared in audit verdict (`Runtime Verified`, `Runtime Not Verified`, or `Runtime Not Applicable`)
+
+**Notes:**
+
+If `Runtime Not Verified` is declared, the Pre-Merge Audit SHALL produce `DO_NOT_MERGE_REQUEST_CHANGES`.
+
+If `Runtime Not Applicable` is declared, the canonical six-key N/A evidence contract is required (`runtime_status`, `runtime_reason`, `runtime_surface`, `runtime_evidence_or_substitute_evidence`, `runtime_verified_by`, `runtime_verified_at`). Substitute evidence may include `npm run validate`, `npm run dry-run`, `npm test`, `git diff --check`, cross-document contradiction analysis, or state-machine transition review.
+
+---
+
+### 5. Secret Scan
 
 - [ ] No API keys, tokens, or credentials in diff
 - [ ] No private keys or certificates
@@ -65,7 +82,7 @@
 
 ---
 
-### 5. Authority Drift Scan
+### 6. Authority Drift Scan
 
 - [ ] No agent certified its own work as final
 - [ ] Merge-authorized only by owner (not by implementing agent)
@@ -76,7 +93,7 @@
 
 ---
 
-### 6. Merge Recommendation
+### 7. Merge Recommendation
 
 - [ ] `MERGE_OK` — PR is safe to merge as-is
 - [ ] `MERGE_OK_OWNER_ACCEPTS_CAVEATS` — Owner must accept listed caveats
@@ -89,6 +106,28 @@
 
 ---
 
+### Head SHA Integrity — Exact Evidence Binding
+
+All SHAs MUST be full 40-character hexadecimal. Prefix matching is insufficient. Evidence from any other SHA is invalid.
+
+**Binding Checklist:**
+
+- [ ] 1. Proposed diff uses `audited_base_sha...audited_head_sha` (`git diff audited_base_sha...audited_head_sha`)
+- [ ] 2. CI workflow head equals `audited_head_sha`
+- [ ] 3. Every required status check identifies `audited_head_sha`
+- [ ] 4. Runtime evidence identifies `audited_head_sha`
+- [ ] 5. Runtime N/A substitute evidence identifies `audited_head_sha`
+- [ ] 6. Codex audit result identifies `audited_head_sha`
+- [ ] 7. Codex verdict identifies `audited_head_sha`
+- [ ] 8. Comparison base equals `audited_base_sha`
+- [ ] 9. Evidence from a different SHA is invalid for this audit
+- [ ] 10. Base SHA change invalidates this checklist
+- [ ] 11. Head SHA change invalidates this checklist
+- [ ] 12. Material scope change invalidates this checklist
+- [ ] 13. Invalidation requires fresh applicable runtime evidence, fresh checks, and a fresh audit
+
+---
+
 ## Audit Summary
 
 | Check | Result |
@@ -96,6 +135,7 @@
 | Scope Check | |
 | File Diff Check | |
 | Test / Gate Check | |
+| Runtime Verification | |
 | Secret Scan | |
 | Authority Drift Scan | |
 | **Overall** | |
